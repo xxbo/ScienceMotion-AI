@@ -92,10 +92,55 @@ export class LocalArtifactLifecycleManager implements ArtifactLifecycleManager {
     if (!artifact) throw new Error("Artifact not found: " + artifactId);
     const existing = project.assets.find((asset) => asset.id === metadata.assetId);
     if (existing && (existing.uri !== artifact.uri || existing.contentHash !== artifact.contentHash)) throw new Error("Project asset ID already points to different content: " + metadata.assetId);
-    await this.attach({ artifactId, ownerType: "project", ownerId: project.project.id, role: metadata.role });
+    await this.attach({ artifactId, ownerType: "project", ownerId: project.project.id, role: "asset:" + metadata.assetId });
     const next = structuredClone(project);
     if (!existing) next.assets.push({ id: metadata.assetId, kind: metadata.kind, uri: artifact.uri, contentHash: artifact.contentHash, license: artifact.license, attribution: artifact.attribution, metadata: { ...artifact.metadata, mediaType: artifact.mediaType, sizeBytes: artifact.sizeBytes } });
     return next;
+  }
+
+  async detachProjectAsset(project: ProjectDocument, assetId: string): Promise<ProjectDocument> {
+    const asset = project.assets.find((item) => item.id === assetId);
+    if (!asset) return structuredClone(project);
+    const next = structuredClone(project);
+    next.assets = next.assets.filter((item) => item.id !== assetId);
+    if (asset.contentHash) {
+      const artifactId = "sha256:" + asset.contentHash;
+      const reference = (await this.referencesStore.list({ artifactId, ownerType: "project", ownerId: project.project.id }))
+        .find((item) => item.role === "asset:" + assetId);
+      if (reference) await this.detach(reference.id);
+    }
+    return next;
+  }
+
+  async reconcileProjectReferences(project: ProjectDocument): Promise<{ attached: string[]; detached: string[]; missingArtifacts: string[] }> {
+    const result = { attached: [] as string[], detached: [] as string[], missingArtifacts: [] as string[] };
+    const expected = new Map<string, { artifactId: string; role: string }>();
+    for (const asset of project.assets) {
+      const hash = asset.contentHash ?? /^artifact:\/\/sha256\/([a-f0-9]{64})$/.exec(asset.uri)?.[1];
+      if (!hash || !/^[a-f0-9]{64}$/.test(hash)) continue;
+      const artifactId = "sha256:" + hash;
+      const role = "asset:" + asset.id;
+      expected.set(role, { artifactId, role });
+      if (!await this.artifacts.get(artifactId)) {
+        result.missingArtifacts.push(asset.id);
+        continue;
+      }
+      const existing = (await this.referencesStore.list({ artifactId, ownerType: "project", ownerId: project.project.id }))
+        .some((reference) => reference.role === role);
+      if (!existing) {
+        await this.attach({ artifactId, ownerType: "project", ownerId: project.project.id, role });
+        result.attached.push(asset.id);
+      }
+    }
+    const current = await this.referencesStore.list({ ownerType: "project", ownerId: project.project.id });
+    for (const reference of current) {
+      if (!reference.role.startsWith("asset:")) continue;
+      if (!expected.has(reference.role)) {
+        await this.detach(reference.id);
+        result.detached.push(reference.role.slice("asset:".length));
+      }
+    }
+    return result;
   }
 
   async collectGarbage(options: { olderThanMs?: number; now?: Date } = {}): Promise<ArtifactGarbageCollectionResult> {
