@@ -4,6 +4,7 @@ import type { AgentTool, AgentToolManifest, ToolCallContext, ToolResult } from "
 import { InMemoryAgentToolRegistry, LocalAgentToolGateway } from "./tool-registry";
 import { InMemoryToolExecutionStore } from "./tool-execution-store";
 import { InMemoryArtifactStore } from "./artifact-store";
+import { InMemoryArtifactReferenceStore, LocalArtifactLifecycleManager } from "./artifact-lifecycle";
 
 const context: ToolCallContext = { projectId: "project-test", runId: "run-test", callId: "call-test" };
 
@@ -248,4 +249,30 @@ test("gateway validates artifact references returned by tools", async () => {
   const rejected = await badGateway.invoke("geometry.primitive.create", { kind: "box" }, { ...context, callId: "artifact-bad" });
   assert.equal(rejected.ok, false);
   assert.equal(rejected.diagnostics[0].code, "TOOL_EXECUTION_FAILED");
+});
+
+
+test("gateway automatically attaches successful tool artifacts to execution lifecycle", async () => {
+  const artifacts = new InMemoryArtifactStore();
+  const references = new InMemoryArtifactReferenceStore();
+  const lifecycle = new LocalArtifactLifecycleManager(artifacts, references);
+  const stored = await artifacts.put({
+    bytes: new TextEncoder().encode("tool output asset"),
+    kind: "image",
+    mediaType: "image/png",
+  });
+  const registry = new InMemoryAgentToolRegistry();
+  registry.register(makeTool({}, async () => ({
+    ok: true,
+    output: { kind: "box" },
+    diagnostics: [],
+    artifacts: [{ id: stored.id, uri: stored.uri, mediaType: stored.mediaType, contentHash: stored.contentHash }],
+  })));
+  const gateway = new LocalAgentToolGateway(registry, { artifactStore: artifacts, artifactLifecycle: lifecycle });
+  const result = await gateway.invoke("geometry.primitive.create", { kind: "box" }, context);
+  assert.equal(result.ok, true);
+  const attached = await lifecycle.references(stored.id);
+  assert.equal(attached.length, 1);
+  assert.equal(attached[0].ownerType, "tool-run");
+  assert.equal(attached[0].ownerId, "project-test:run-test:call-test");
 });
