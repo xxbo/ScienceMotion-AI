@@ -4,6 +4,8 @@ import {
   interpolate,
   useCurrentFrame,
   useVideoConfig,
+  Audio,
+  staticFile,
 } from "remotion";
 
 const C = {
@@ -69,7 +71,7 @@ const Slide: React.FC<{
         borderRadius: 4,
       }}
     >
-      <div style={{ width: `${((frame + 1) / 900) * 100}%`, height: "100%", background: C.cyan }} />
+      <div style={{ width: `${((frame + 1) / 1800) * 100}%`, height: "100%", background: C.cyan }} />
     </div>
     <div style={{ position: "absolute", left: 112, bottom: 62, color: C.faint, fontSize: 18, letterSpacing: 2 }}>
       SCIENCEMOTION AI · CPU CACHE EXPLAINER
@@ -282,13 +284,13 @@ const Outro: React.FC<{ frame: number }> = ({ frame }) => (
 );
 
 const shots = [
-  { start: 0, end: 120, Component: Intro },
-  { start: 120, end: 240, Component: WaitScene },
-  { start: 240, end: 390, Component: Hierarchy },
-  { start: 390, end: 540, Component: HitScene },
-  { start: 540, end: 690, Component: MissScene },
-  { start: 690, end: 810, Component: LocalityScene },
-  { start: 810, end: 900, Component: Outro },
+  { start: 0, end: 240, Component: Intro },
+  { start: 240, end: 480, Component: WaitScene },
+  { start: 480, end: 780, Component: Hierarchy },
+  { start: 780, end: 1080, Component: HitScene },
+  { start: 1080, end: 1380, Component: MissScene },
+  { start: 1380, end: 1620, Component: LocalityScene },
+  { start: 1620, end: 1800, Component: Outro },
 ];
 
 const subtitles = [
@@ -310,6 +312,7 @@ export const ScienceMotionDemo: React.FC = () => {
   return (
     <AbsoluteFill>
       <Scene frame={frame - shot.start} />
+      <Audio src={staticFile("episodes/cpu-cache/narration.mp3")} volume={0.92} />
       <div style={{ position: "absolute", left: 210, right: 210, bottom: 145, minHeight: 56, padding: "12px 26px", boxSizing: "border-box", borderRadius: 14, background: "rgba(4, 12, 23, .88)", border: "1px solid #29445c", color: "#f4f7fb", fontFamily: FONT, fontSize: 23, lineHeight: 1.5, textAlign: "center" }}>
         {subtitle}
       </div>
