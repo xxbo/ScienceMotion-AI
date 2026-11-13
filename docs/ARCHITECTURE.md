@@ -1,359 +1,163 @@
 # Architecture
 
+Last updated: 2026-11-13
+
 ## Product architecture
 
-ScienceMotion AI is an agent-native professional video creation framework. It must be able to host hundreds of creative tools and multiple specialist engines without requiring the AI orchestration core to know each tool implementation.
+ScienceMotion AI is an agent-native creative framework for producing professional science explainers and other complex videos. Its primary architecture goal is to host hundreds of composable creative tools and multiple specialist engines without hard-coding each tool into the agent orchestration layer.
 
-The platform is organized around six concerns:
+The platform has six major boundaries:
+
 1. **Project model:** canonical, renderer-neutral project and scene graph.
-2. **Tool platform:** discoverable manifests, registry, gateway, plugin lifecycle, and execution trace.
-3. **Agent orchestration:** planning, tool discovery, composition, approvals, and iterative feedback.
-4. **Worker execution:** isolated render, simulation, audio, asset, and code-execution workers.
+2. **Tool platform:** manifests, registry, discovery, gateway, plugins, and execution records.
+3. **Agent orchestration:** planning, tool selection, composition, approval, and iteration.
+4. **Worker execution:** isolated rendering, simulation, audio, asset, and sandbox workloads.
 5. **Engine adapters:** Remotion, Three.js, Blender, Manim, FFmpeg, and future engines.
-6. **Asset and artifact services:** durable references, content hashes, provenance, licenses, and render outputs.
+6. **Asset/artifact services:** stable references, hashes, provenance, licensing, and output storage.
 
-## High-level flow
+## Current implementation status
+
+### Completed: P1.0 canonical project model and scene graph
+
+P1.0 is accepted on main commit `9cbcf933f3654e94699f199b85a4c0f7bbae1d12`.
+
+Acceptance evidence: [GitHub Actions run #43390347025](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43390347025) completed successfully. It passed:
+- TypeScript type checking.
+- Episode, Project, and Project Patch schema validation.
+- Platform unit tests.
+- Independent SVG storyboard rendering.
+- Mandarin TTS environment setup.
+- Remotion MP4 rendering.
+- MP4 metadata and audio-stream validation.
+- Render artifact upload.
+
+The CPU-cache reference project passed the canonical project validator.
+
+P1.0 delivers:
+- Project Schema v1.1.0 and TypeScript contracts for projects, sequences, shots, scenes, nodes, transforms, components, tracks, animation tracks, clips, assets, prefabs, constraints, dependencies, and revisions.
+- Semantic validation for identifiers, scene hierarchy, sequence/shot membership, timing, clips, prefab roots, constraints, dependencies, and animation references.
+- Versioned non-destructive patch operations for adding, updating, removing, and reparenting nodes.
+- Atomic patch application against cloned project state, base-revision checks, duplicate revision rejection, and an in-memory compare-and-swap repository.
+- Prefab subtree instantiation with internal node, constraint, dependency, and animation-reference remapping.
+- Renderer-neutral animation track validation and deterministic scalar/vector sampling for supported interpolation modes.
+- Constraint semantic validation. This is validation only; it is not a physics or constraint solver.
+- Schema migration from Project v1.0.0 to v1.1.0.
+- Canonical JSON hashing, in-memory snapshots, and a filesystem snapshot backend with SHA-256 integrity verification and restore.
+- Unit and property-based tests, including patch atomicity, repository concurrency behavior, prefab boundaries, migration, and snapshot lifecycle.
+
+P1.0 intentionally does not include:
+- A physical constraint solver or full simulation runtime.
+- Distributed database transactions or multi-process compare-and-swap.
+- Remote object storage or a production distributed worker fleet.
+- A complete visual editor or the full AI preview/inspect/repair loop.
+
+These are future engine, worker, and platform capabilities, not unfinished P1.0 requirements.
+
+### Existing media foundation (P0)
+
+The repository also retains a working Remotion-based 1080p render pipeline, Chinese TTS integration, renderer-neutral episode package, independent SVG storyboard output, and CI validation. The accepted CI run above rendered an MP4 and validated its metadata/audio stream.
+
+Caption-to-speech alignment, richer music/SFX mixing, a polished 2–3 minute reference episode, proxy rendering, and a formal render manifest remain media-quality enhancements. They do not block P1.1 platform work.
+
+### P1.1 starting point
+
+An initial tool manifest schema, TypeScript contracts, in-memory registry, and local schema-validating gateway prototype already exist. They are scaffolding only. P1.1 will harden and extend them with namespaces, capability discovery, version policy, plugin lifecycle, cancellation, idempotency, retries, execution records, artifact references, and governance.
+
+## Core data and execution flow
 
 ```text
 Creative brief
-  -> Agent plans work and discovers tools
-  -> Tool registry returns manifests, schemas, examples, capabilities
-  -> Tool gateway validates, authorizes, schedules and records calls
-  -> Project/Scene Graph is updated through non-destructive patches
-  -> Worker executes the requested capability through an engine adapter
-  -> Structured result, diagnostics and artifact references return to agent
+  -> Agent plans and discovers tools
+  -> Registry returns manifests, schemas, examples, and capabilities
+  -> Gateway validates, authorizes, and records calls
+  -> Tools modify the canonical Project Graph through versioned operations
+  -> Workers execute rendering, simulation, audio, or asset jobs
+  -> Structured results, diagnostics, and artifact references return
   -> Agent previews, inspects, revises, and re-renders
-  -> Render manifest + final media
+  -> Render manifest and final media
 ```
 
-## Architecture principles
+## Architectural principles
 
-### Content and rendering are strictly decoupled
-- Editorial meaning: research, claims, sources, narration, captions, creative brief.
-- Creative intent: storyboard, shot purpose, scene semantics, visual direction.
-- Project graph: objects, relationships, transforms, materials, cameras, lights, tracks, simulations.
-- Render configuration: engine, quality settings, output profile, and capability requirements.
+### Renderer-neutral project data
 
-The renderer consumes an approved, versioned project snapshot. It must not call LLMs, invent editorial content, or mutate the source project. Multiple engines can consume the same project snapshot through adapters. Engine-specific extensions must be namespaced and capability-gated.
+Editorial meaning, creative intent, project graph, asset graph, tool execution records, and render configuration are separate concerns. Renderers consume approved project snapshots; they do not call language models or mutate editorial content. Engine-specific features are namespaced and capability-gated.
 
 ### Agent freedom with professional controls
-- Expose both high-level creative helpers and low-level primitives.
-- High-level templates are built on lower-level tools and remain optional.
-- Agents dynamically discover tools and inspect schemas/examples; do not hard-code tool catalog knowledge into the orchestration layer.
-- All operations return structured results, diagnostics, and artifact references.
-- Expensive, destructive, or code-executing operations are governed by permissions and budgets.
 
-### Scale through modular boundaries
-Start with a **modular monolith for the control plane and isolated worker processes** for rendering and risky workloads. Do not prematurely split every subsystem into a network service. The boundaries must permit later horizontal scaling and remote workers without changing public tool contracts.
+Expose both high-level creative helpers and low-level primitives. Templates are optional accelerators. Agents discover tools and schemas dynamically. Every tool returns structured results, diagnostics, and artifact references. Expensive, destructive, or code-executing operations are governed by permissions and resource budgets.
 
-## Canonical project and scene graph
+### Modular control plane and isolated workers
 
-The project model is the source of truth for creative work. It is separate from any renderer's internal scene representation.
+Start with a modular monolith for project state, discovery, authorization, and orchestration. Run renderers and risky workloads in isolated worker processes. Preserve stable contracts so workers can later move to remote pools without changing the agent-facing tool API.
 
-### Entity hierarchy
+## Canonical Project Graph
+
+The Project Graph is the source of truth for creative work and is independent of renderer-specific scene representations.
 
 ```text
 Project
-  ├─ Editorial Package
-  │   ├─ Research / Sources / Claims
-  │   ├─ Script / Narration / Captions
-  │   └─ Creative Brief / Style References
+  ├─ Editorial package
+  │   ├─ Research / sources / claims
+  │   ├─ Script / narration / captions
+  │   └─ Creative brief / style references
   ├─ Sequences
-  │   ├─ Shots / Tracks / Clips / Markers
+  │   ├─ Shots / tracks / clips
   │   └─ Scenes
-  │       └─ Scene Graph Nodes
-  │           ├─ Geometry / Text / Image / Video
-  │           ├─ Camera / Light / Environment
-  │           ├─ Material / Texture
-  │           ├─ Animation Tracks / Constraints
-  │           └─ Simulation Components
-  ├─ Asset Graph
-  ├─ Tool Execution Graph
-  ├─ Render Profiles / Render Manifests
-  └─ Revision History / Snapshots
+  │       └─ Scene graph nodes
+  │           ├─ Geometry / text / image / video
+  │           ├─ Camera / light / environment
+  │           ├─ Material / texture
+  │           ├─ Animation tracks / constraints
+  │           └─ Simulation components
+  ├─ Prefabs / dependencies
+  ├─ Asset graph
+  ├─ Revisions / snapshots
+  └─ Render profiles / manifests
 ```
 
-### Required model properties
+The v1.1 model defines stable IDs, parent/child relationships, scene roots, coordinate systems, units, timebase, color space, component extension points, animation tracks, prefab roots, constraints, dependencies, assets, and revisions.
 
-- Stable IDs for projects, sequences, shots, scenes, nodes, components, tracks, assets, and tool calls.
-- Parent-child relationships, references, reusable prefabs/components, and dependency graph.
-- Non-destructive patch operations with optimistic concurrency/version checks.
-- Explicit units, coordinate conventions, frame/time base, color space, and asset URI semantics.
-- Schema versions and migration paths.
-- Immutable render snapshots so a render is reproducible even while a working project evolves.
-- Engine-neutral core components plus namespaced extension data for specialist features.
+Project mutations use versioned Patch documents. Patch batches are applied to a cloned document and return a new project only after all operations succeed. Repository commits compare the supplied base revision with the current revision. The current repository implementation is in-memory and single-process.
 
-## Agent tool platform
-
-### Tool manifest
+## Tool platform contract
 
 Every tool manifest declares:
 - Stable ID and semantic version.
-- Name, description, examples, category, tags, and namespace.
+- Name, description, examples, namespace, and category.
 - Typed input/output JSON Schemas.
 - Capabilities and engine/provider requirements.
-- Determinism, statefulness, cost, destructive behavior, timeout, cancellation support, and permissions.
-- Output artifact types and expected diagnostics.
-- Compatibility constraints and deprecation status.
+- Determinism, statefulness, cost, destructive behavior, timeout, cancellation, and permissions.
+- Output artifact types and diagnostics.
 
-### Registry and discovery
+The registry provides search, manifest/schema retrieval, version selection, capability filtering, and plugin lifecycle. The gateway is the only supported execution path and owns validation, permissions, quotas, cancellation, retries, traces, and artifact persistence.
 
-The registry supports:
-- Search by natural-language intent, tags, category, namespace, capability, and engine.
-- Manifest and schema retrieval before invocation.
-- Version pinning, compatibility filtering, and deprecation notices.
-- Plugin registration, health, enable/disable, dependency resolution, and unload.
-- Pagination and compact tool descriptions so hundreds of tools do not overwhelm the agent context.
+## Worker model
 
-### Tool gateway
+Worker classes are expected for rendering, simulation, assets, audio, and sandboxed code. Jobs use versioned envelopes and artifact references. They report progress and diagnostics and support cancellation and safe retry. Worker isolation is a P1.2 deliverable; it is not represented as complete by the current local registry prototype.
 
-The gateway is the only supported execution path for agent-invoked tools. It owns:
-- Input/output schema validation.
-- Authentication, permissions, approval policy, quotas, and resource budgets.
-- Timeout, cancellation, idempotency, retries, and concurrency control.
-- Structured errors and diagnostics.
-- Tool-call traces, metrics, and artifact persistence.
-- Project revision checks and non-destructive state updates.
+## Engine adapters
 
-Tool implementations do not receive unrestricted access to project storage or the host environment.
-
-### Tool namespaces
-
-Initial namespaces:
-- `project.*`: project, sequence, shot, scene, node, layer, track, timeline.
-- `graphics.2d.*`: text, shape, path, SVG, mask, gradient, chart, diagram.
-- `geometry.*`: primitive, mesh, transform, group, parenting, coordinate conversion.
-- `animation.*`: keyframe, easing, path, interpolation, transition, constraint.
-- `camera.*`, `lighting.*`, `materials.*`: cinematography and look development.
-- `simulation.*`: particles, forces, springs, waves, rigid bodies, trajectories.
-- `assets.*`: search, import, inspect, transform, provenance, licensing.
-- `audio.*`: TTS, narration, captions, music, SFX, mixing, ducking.
-- `compositing.*`: layers, blends, masks, keys, grading, effects.
-- `render.*`: preview, still, proxy, final, cancel, status, manifest.
-- `inspect.*`: frame, metadata, visual QA, audio QA, compare, diagnostics.
-- `engine.<provider>.*`: explicit engine-specific advanced features.
-
-The goal is a coherent catalogue that can grow to hundreds of tools, not a fixed hard-coded list.
-
-## Execution and worker model
-
-### Control plane
-Owns project state, tool discovery, agent orchestration, authorization, job scheduling, execution metadata, and revision history.
-
-### Worker classes
-- **Render workers:** Remotion, Blender, Manim, Three.js/headless browser, FFmpeg.
-- **Simulation workers:** numerical and physical simulation workloads.
-- **Asset workers:** media import, transformation, thumbnails, model conversion, metadata.
-- **Audio workers:** TTS, speech alignment, mixing, loudness and audio QA.
-- **Sandbox workers:** custom scripts, shaders, procedural generation, and user/agent code.
-
-Workers communicate through versioned job envelopes and artifact references. They are isolated so a crash or resource spike does not terminate the control plane. Jobs support progress, cancellation, retries where safe, and resumable execution.
-
-### Scaling strategy
-1. Local development: in-process registry/gateway plus child-process workers.
-2. Single-host production: durable job queue and isolated worker pools.
-3. Distributed production: remote workers, object storage, scheduling, quotas, and horizontal scaling.
-
-Keep public tool and project contracts stable across all three stages.
-
-## Engine adapter layer
-
-Adapters translate portable project components and tool semantics into engine-specific operations.
-
-- **Remotion:** 2D motion graphics, typography, diagrams, compositing, and video timelines.
-- **Three.js:** interactive and procedural 3D scenes, camera, materials, lighting, and shader-driven effects.
-- **Blender:** high-quality offline 3D, procedural geometry, rigging, animation, rendering, and compositing.
+- **Remotion:** 2D motion design, typography, diagrams, compositing, and video timelines.
+- **Three.js:** procedural and interactive 3D scenes, cameras, materials, lights, and shaders.
+- **Blender:** high-fidelity offline 3D, procedural geometry, rigging, rendering, and compositing.
 - **Manim:** equations, plots, geometry, and mathematical derivations.
 - **FFmpeg:** media encoding, muxing, audio/video filters, and delivery formats.
 
-Adapters declare capabilities and supported schema versions. Unsupported features must trigger an explicit diagnostic or documented fallback, never silent semantic loss.
+Adapters declare capabilities and supported schema versions. Unsupported features produce explicit diagnostics or documented fallbacks rather than silent semantic loss.
 
 ## Asset and artifact model
 
-- Store large binaries outside project JSON; project files reference stable artifact IDs/URIs.
-- Use content hashes for deduplication, cache keys, and reproducibility.
-- Track source, provider, license, attribution, creation parameters, and transformations.
-- Return structured artifact references from tools rather than large inline binary payloads.
-- Preserve render manifests, thumbnails, logs, and QA reports as addressable artifacts.
+Large binaries stay outside project JSON and are referenced by stable artifact IDs/URIs. Content hashes support integrity, deduplication, and cache keys. Provenance, licenses, attribution, provider, creation parameters, and transformations travel with assets. Tools return structured artifact references rather than large inline binary payloads.
 
-## Safety, reliability, and observability
+## Reliability and security
 
-- Apply least-privilege permissions to tools and workers.
-- Enforce CPU, memory, GPU, disk, network, and wall-time budgets.
-- Require explicit approval for destructive changes, external publishing, or expensive jobs according to policy.
-- Treat tool inputs, assets, scripts, and model outputs as untrusted data.
-- Log project/run/call IDs, tool versions, timings, retries, diagnostics, and artifact hashes.
-- Use snapshots, rollback, and optimistic concurrency for project mutations.
+Apply least-privilege permissions to tools and workers. Enforce CPU, memory, GPU, disk, network, and wall-time budgets. Treat tool inputs, assets, scripts, and model outputs as untrusted data. Record project/run/call IDs, tool versions, timings, retries, diagnostics, and artifact hashes. Use snapshots, rollback, and revision checks for project mutations.
 
-## Current implementation and migration
+## Engineering workflow
 
-Existing assets remain useful:
-- Remotion is the first proven video renderer.
-- React/TypeScript is the platform/control-plane language.
-- Episode JSON and its schema are the first editorial interchange format.
-- The initial renderer contract and tool manifest/gateway prototype are starting points.
-- Edge TTS is a replaceable voice adapter.
-- SVG storyboard rendering is a lightweight independent output.
-- The CPU-cache episode is a reference fixture.
-
-These are foundations, not the final architecture. Incrementally evolve the episode format into the canonical project model; do not discard working renderers or force every subsystem into one package.
-
-## Implementation stages
-
-1. Project/scene graph schemas and patch model.
-2. Tool manifest, discovery, gateway, plugin lifecycle, and execution records.
-3. Worker/job envelope and isolated process execution.
-4. Initial composable project, geometry, graphics, animation, timeline, asset, audio, preview, and inspection tools.
-5. Agent iteration loop with preview/inspect/patch/re-render.
-6. Specialist engine adapters and professional tool depth.
-7. Distributed execution and production operations when justified.
-
-
-## Project Schema v1.0.0 — initial implementation
-
-The first canonical project model is defined in:
-- `schemas/project.schema.json`
-- `src/contracts/project.ts`
-- `projects/cpu-cache/project.json`
-
-It models project metadata, editorial linkage, sequences, scenes, scene nodes, transforms, typed component slots, tracks, shots, clips, assets, and revision records. Coordinate system, units, timebase, and color space are explicit project-level settings.
-
-Validation is performed by `scripts/validate-project.mjs` and checks:
-- JSON Schema conformance.
-- Unique IDs within each entity collection.
-- Scene root, parent/child, shot/scene, sequence/shot, track/clip, clip/asset, and revision references.
-- Cyclic node hierarchy and parent/child consistency.
-
-This is the first project graph contract, not yet the complete final model. Constraints, simulation-specific typed components, reusable prefabs, dependency graph, patch execution, optimistic concurrency, snapshots, and schema migrations remain planned. Component payloads are currently extensible JSON objects; specialist component schemas will be introduced by capability/plugin namespaces.
-
-
-## Project patch model — initial implementation
-
-- `schemas/project-patch.schema.json` defines versioned patch documents with project ID and required base revision ID.
-- `src/contracts/project-patch.ts` defines add-node, update-node, remove-node, and reparent-node operations.
-- `src/platform/project-patches.ts` applies a patch batch to a cloned project, checks revision conflicts, prevents node ID changes, requires explicit recursive deletion, validates hierarchy cycles, and appends a new revision record.
-- A failed patch throws before returning a new project; the source project object is not mutated.
-
-This first patch engine is an in-memory domain primitive. Persistent snapshots, full project-wide optimistic concurrency, operation-level schema validation at the gateway, and comprehensive automated unit tests remain outstanding.
-
-
-## Project Schema v1.1.0, migrations, snapshots, and patch tests
-
-The project contract has been versioned to v1.1.0. It adds:
-- Prefab definitions and node prefab references.
-- Scene constraints with typed constraint kinds and source/target node references.
-- Project dependency edges between nodes, scenes, shots, assets, prefabs, and clips.
-- Additional component kinds for physics, rigs, environments, post-processing, and custom extensions.
-- JSON Schema definitions for keyframes, animation tracks, simulation settings, and physics body parameters.
-
-Migration and snapshot utilities:
-- `src/platform/project-migrations.ts` performs an additive v1.0.0 → v1.1.0 migration without mutating the input.
-- `src/platform/project-snapshots.ts` provides canonical JSON serialization, SHA-256 content hashes, an in-memory snapshot store, integrity verification, and restore.
-- Snapshots are currently in-memory reference implementations; durable storage is a later worker/platform concern.
-
-Patch and test improvements:
-- Node removal now cleans constraints and node-related dependency edges.
-- `src/platform/project-platform.test.ts` covers add, reparent, recursive removal, stale revision rejection, cycle rejection, migration, and snapshot restoration.
-- CI runs the project platform unit tests and validates project, patch, and episode documents.
-
-Remaining P1.0 work includes durable snapshot persistence, optimistic concurrency at a persistent repository boundary, more complete scene/sequence membership rules, and broader property-based tests. The current snapshot store is not yet a production persistence layer.
-
-
-### CI correction — Project Patch Schema v1.1.0
-
-The first CI run after the Project Schema v1.1.0 migration failed at `validate:project-patch`, not in TypeScript or the project graph tests. The validator's synthetic patch fixture still declared `schemaVersion: 1.0.0` while the patch contract had been advanced to `1.1.0`. Updated the fixture to v1.1.0 in commit `d2360869bc8c213a82906fc52eb44a80a0336c0b`. The previous run had already passed typecheck, episode validation, project validation, and all six platform tests. The corrected full pipeline is running separately; success is pending its result.
-
-
-P1.0 follow-up implementation (2026-11-13):
-- Added `FileSystemSnapshotStore` as a durable local backend implementing an asynchronous persistence contract. Snapshot writes use a temporary file and rename; restore verifies SHA-256 integrity. The in-memory store remains useful for fast unit tests.
-- Added fast-check property-based coverage for arbitrary node transforms, asserting patch application does not mutate the source project.
-- Strengthened patch operations to reject parenting across scene boundaries.
-- Strengthened project semantic validation: every root belongs to exactly one scene, roots cannot have parents, and parent/child links must be reciprocal with no duplicate child references.
-- Added filesystem snapshot tests for persistence, listing, restoration, path traversal rejection, and tamper detection.
-
-
-## P1.0 follow-up: prefab instances and reference project migration
-
-- `src/platform/prefabs.ts` implements deterministic prefab subtree cloning with instance-prefixed IDs, remapped parent/child references, optional naming suffix, and root position offset. It clones the project before mutation and returns created node IDs.
-- Node deletion now removes prefab root references as well as constraints and dependency edges.
-- Reparent operations report both old and new parent nodes as changed.
-- The CPU-cache project fixture now contains all seven episode scenes and shots, a narration clip linked to its audio track, a reusable memory-module prefab, and explicit dependency edges.
-- Unit tests cover prefab instance immutability, hierarchy remapping, cross-scene parenting rejection, prefab cleanup, and changed-node reporting.
-
-The filesystem snapshot backend is the first durable local adapter. Database/object-storage implementations should follow the same asynchronous persistence contract without changing project or snapshot semantics.
-
-
-### CI correction — recursive removal test fixture
-
-The latest P1.0 CI run passed TypeScript, episode validation, project validation, and the first two patch tests, then failed in `recursive removal cleans constraints and dependency edges`. The test incorrectly expected the entire dependency collection to become empty, although the migrated CPU-cache project already contains unrelated dependency edges. The implementation correctly removes only edges referencing deleted nodes. Updated the assertion to preserve the pre-existing constraint/dependency counts and explicitly verify the test edge is removed. Fix commit: `1dc45f6b26c0ec8ae0cb3d9e7dd0603f0e2d62f7`.
-
-
-### CI correction — dependency edge count in recursive deletion test
-
-The next CI run exposed a second, more precise fixture assumption: the CPU-cache fixture already has a dependency edge from `node-cpu` to `node-data-path`. Deleting `node-cpu` must remove that pre-existing edge as well as the test-created edge. The correct expected count is therefore the original dependency count minus one, while unrelated edges must remain. Updated the test to assert no remaining dependency references either deleted node. Implementation behavior is correct; the test expectation now reflects the real dependency graph.
-
-
-## P1.0 animation and transaction semantics
-
-- Project Schema v1.1.0 now exposes first-class `animationTracks`, each with a stable ID, target node/property, ordered keyframes, interpolation metadata, and optional looping/enabled state.
-- `src/platform/animation.ts` validates track/keyframe structure and samples numeric/scalar or numeric-vector values deterministically. Step interpolation is supported; unsupported value shapes use step semantics rather than guessed interpolation.
-- The CPU-cache project fixture now contains explicit animation tracks for the data-path progress and CPU pulse.
-- Patch batches are atomic at the domain-function boundary: operations apply to a cloned project, and if any later operation fails, no partially modified project is returned and the source remains unchanged. A dedicated test verifies this rollback behavior.
-- Project validation checks animation-track target references, duplicate keyframes, frame ordering, and non-negative frame positions.
-
-The current animation evaluator is renderer-neutral and deliberately does not perform easing-curve evaluation or mutate node transforms. Renderers consume sampled values or implement richer interpolation through declared capabilities. Constraint solving remains a separate future runtime capability; P1.0 currently defines and validates constraint relationships.
-
-
-## P1.0 continuation: constraint validation, prefab graph cloning, and project concurrency
-
-- `src/platform/constraints.ts` validates constraint IDs, source/target node references, self-targeting, cross-scene relationships, and parameters for distance, limit-position/rotation, and follow-path constraints. This is semantic validation, not a constraint solver; engine-specific solving remains an adapter capability.
-- Prefab instantiation now clones constraints whose endpoints are both inside the prefab subtree and internal node-to-node dependency edges. It remaps every cloned ID/reference and returns created node/constraint/dependency IDs. External references are intentionally not cloned.
-- `src/platform/project-repository.ts` adds an in-memory project repository with compare-and-swap revision semantics. Two concurrent patches based on the same revision cannot both commit. Persistent multi-process repositories must implement the same contract using database transactions or conditional writes.
-- Tests cover prefab constraint/dependency remapping, concurrent revision conflicts, and constraint validation.
-
-These implementations extend the P1.0 domain foundation. They do not yet provide a physical constraint solver or distributed database concurrency.
-
-
-## P1.0 final hardening — animation lifecycle and revision integrity
-
-- Prefab instantiation now clones animation tracks targeting nodes inside the prefab subtree and remaps their target node IDs and track IDs.
-- Recursive node removal removes animation tracks targeting removed nodes, preventing dangling animation references.
-- Patch application verifies that the declared current revision matches the latest revision stored in the project and rejects duplicate new revision IDs.
-- Tests cover prefab animation remapping, malformed prefab roots, generated ID collisions, animation cleanup on node deletion, duplicate revision IDs, and repository immutability after rejected commits.
-- Project validation now rejects animation keyframes beyond the longest sequence duration.
-
-The project model now has a more complete lifecycle for node-linked animation, constraints, dependencies, and revisions. P1.0 acceptance still requires the full end-to-end validation run and a final consistency audit of the CPU-cache project fixture.
-
-
-### CI correction — prefab animation track count
-
-The first CI run for prefab animation remapping failed in the new test because the CPU-cache fixture already has an animation track targeting a descendant included in the prefab subtree. The implementation correctly cloned both the newly-added test track and the pre-existing data-path animation track. Updated the test to expect both cloned tracks and verify the existing descendant track's remapped target. This was a fixture expectation correction, not a runtime defect.
-
-
-### CI correction — prefab animation assertion targeted the wrong fixture track
-
-CI #43388480573 passed type checking and project validation, with 21/22 platform tests passing. The failing assertion expected the prefab rooted at `node-cpu` to clone `animation-data-packet`, which targets the sibling `node-data-path` and is not inside that prefab subtree. The implementation correctly cloned the CPU root's existing `animation-cpu-pulse` track plus the test-created track. Corrected the assertion to verify `pair-copy__animation-cpu-pulse` targets `pair-copy__node-cpu`. No runtime code change was needed.
-
-
-## P1.0 acceptance hardening — generated graph edits and full project lifecycle
-
-Added integration coverage in `src/platform/project-platform.test.ts`:
-- Property-generated root-node additions across multiple sequential revisions, checking unique scene-root ownership and graph consistency.
-- Prefab cloning boundary: internal node-to-node references are remapped, while external asset dependencies remain attached to the original source object and are not incorrectly cloned into the prefab instance.
-- End-to-end project lifecycle: create repository → apply revisioned patch → persist filesystem snapshot → restore snapshot → compare canonical hashes and latest revision.
-
-Database/object-storage snapshot adapters are explicitly deferred until the platform introduces multi-worker or remote persistence requirements. The filesystem backend is sufficient for the P1.0 local project foundation. P1.0 completion is based on the successful full CI run and project fixture validation recorded below; remote persistence is intentionally deferred.
-
-
-## P1.0 final consistency audit
-
-The project validator additionally checks:
-- Every shot is assigned to exactly one sequence, with no duplicate membership and no shot extending beyond its sequence duration.
-- Clip start/duration/source-in values are valid.
-- Prefabs have non-empty, unique root lists.
-- Enabled constraints do not cross scene boundaries; distance and follow-path constraints have valid required parameters.
-- Dependency edges cannot point from an entity back to itself.
-
-The v1.0 legacy migration type correctly excludes the v1.1-only `animationTracks` field. Tests cover current-version migration idempotence, unknown-version rejection, cross-scene constraint rejection, and repository read-copy isolation.
-
-The remaining P1.0 gate is a clean full CI run on the current code plus final fixture inspection. Database/object-storage persistence remains intentionally deferred until remote/multi-worker deployment.
+- Keep `main` releasable and CI-validated.
+- Version schemas and tool contracts; add explicit migrations for breaking project-format changes.
+- Keep project model, tool runtime, providers, workers, and renderer adapters behind explicit boundaries.
+- Prefer composable tools with structured results over a monolithic generate-video endpoint.
+- Inspect representative outputs and CI evidence before marking a phase complete.
