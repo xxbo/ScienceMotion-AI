@@ -112,6 +112,7 @@ test("gateway propagates caller cancellation to cooperative tool execution", asy
   const controller = new AbortController();
   const gateway = new LocalAgentToolGateway(registry);
   const pending = gateway.invoke("geometry.primitive.create", { kind: "box" }, { ...context, signal: controller.signal });
+  await new Promise((resolve) => setImmediate(resolve));
   controller.abort();
   const result = await pending;
   assert.equal(observedAbort, true);
