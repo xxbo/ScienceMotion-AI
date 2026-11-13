@@ -14,6 +14,7 @@ import { FileSystemSnapshotStore } from "./filesystem-snapshot-store";
 import { instantiatePrefab } from "./prefabs";
 import { sampleAnimationTrack, validateAnimationTrack } from "./animation";
 import { InMemoryProjectRepository } from "./project-repository";
+import { validateSceneConstraints } from "./constraints";
 
 const project = structuredClone(fixture) as unknown as ProjectDocument;
 const options = { currentRevisionId: "revision-initial", newRevisionId: "revision-test", createdAt: "2026-11-13T12:00:00.000Z", message: "unit test patch" };
@@ -295,4 +296,17 @@ test("project repository compare-and-swap allows only one concurrent patch", asy
   assert.ok(latest);
   assert.equal(latest!.revisions.at(-1)?.id.startsWith("revision-concurrent-"), true);
   assert.equal(latest!.nodes.filter((item) => ["concurrent-a", "concurrent-b"].includes(item.id)).length, 1);
+});
+
+
+test("constraint validation checks node references, scene boundaries, and parameters", () => {
+  const valid = {
+    id: "distance-valid", type: "distance" as const, sourceNodeId: "node-cpu",
+    targetNodeId: "node-memory", enabled: true, parameters: { distance: 120 },
+  };
+  assert.deepEqual(validateSceneConstraints(project, [valid]), []);
+  assert.ok(validateSceneConstraints(project, [{ ...valid, parameters: { distance: -1 } }]).some((error) => error.includes("non-negative distance")));
+  assert.ok(validateSceneConstraints(project, [{ ...valid, targetNodeId: "missing-node" }]).some((error) => error.includes("missing target")));
+  assert.ok(validateSceneConstraints(project, [{ ...valid, type: "limit-position", parameters: { min: [2, 0, 0], max: [1, 1, 1] } }]).some((error) => error.includes("min values greater")));
+  assert.ok(validateSceneConstraints(project, [{ ...valid, type: "follow-path", parameters: { pathNodeId: "missing-path" } }]).some((error) => error.includes("pathNodeId")));
 });
