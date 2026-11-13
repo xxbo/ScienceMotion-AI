@@ -34,28 +34,39 @@ Templates are optional accelerators. They must never define the creative ceiling
 - [x] Tool manifest schema and TypeScript tool/registry/gateway contracts.
 - [x] Initial in-memory registry and local schema-validating gateway prototype.
 - [x] Platform vision and initial architecture for an agent-facing creative toolkit.
-- [ ] Production-grade project/scene graph, tool runtime, persistence, worker isolation, and visual feedback loop.
-- [ ] Latest narration-enabled CI run and MP4 audio validation fully inspected.
+- [x] P1.0 local project/scene graph foundation, filesystem snapshots, patch/revision lifecycle, and validation suite (see P1.0 acceptance evidence below).
+- [x] Full narration-enabled CI render and MP4 metadata/audio-track validation inspected.
+- [ ] Production-grade Agent tool runtime, plugin lifecycle, isolated workers, and visual feedback loop (P1.1+).
 
 ## Roadmap
 
 ### P0 — Reliable media foundation
 
+**Status: core rendering foundation verified; editorial/audio polish remains deferred and does not block P1.1.**
+
 - [x] Establish repository, documentation, Remotion render, and CI.
 - [x] Produce an initial 1080p 30 FPS Chinese CPU-cache visual prototype.
 - [x] Add configurable Mandarin TTS adapter and audio track integration.
-- [ ] Verify narrated render in CI, including audio metadata and sampled audio/video sync.
-- [ ] Align captions to measured speech timings.
+- [x] Verify narrated render in CI, including MP4 metadata and audio-stream presence.
+- [ ] Align captions to measured speech timings and verify perceptual audio/video synchronization.
 - [ ] Add music, ambience, SFX, fades, and narration ducking.
 - [ ] Complete a polished 2–3 minute reference episode.
-- [ ] Add preview/proxy rendering and render-manifest reporting.
+- [ ] Add preview/proxy rendering and a formal render manifest.
+
+P0 is not claimed as a fully polished video-production experience. The verified baseline is sufficient to support platform development; remaining items are quality/product enhancements.
 
 ### P1 — Scalable platform skeleton (highest priority)
 
 The exit goal is an extensible platform foundation that can host hundreds of tools without turning the agent, registry, or renderer into a monolith.
 
-#### P1.0 — Canonical project model and scene graph <badge>Complete</badge>
-- [x] Define versioned Project, Sequence, Shot, Scene, Node, Track, Transform, Component, Asset, Clip, and Revision models in Project Schema v1.0.0.
+#### P1.0 — Canonical project model and scene graph
+
+<badge color="success">Complete — accepted on 2026-11-13</badge>
+
+Acceptance evidence: GitHub Actions run [#43390347025](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43390347025), commit `9cbcf933f3654e94699f199b85a4c0f7bbae1d12`, completed successfully. The run passed TypeScript checking, episode/project/patch schema validation, platform unit tests, SVG storyboard rendering, Mandarin TTS setup, Remotion MP4 rendering, MP4 metadata/audio validation, and artifact upload. The CPU-cache project fixture passed semantic project validation.
+
+P1.0 scope is the local renderer-neutral project foundation. It does not claim a physical constraint solver, distributed database transactions, remote object storage, or a production multi-worker runtime; those belong to engine/worker/platform phases.
+- [x] Define versioned Project, Sequence, Shot, Scene, Node, Track, Transform, Component, Asset, Clip, and Revision models in Project Schema v1.1.0.
 - [x] Support stable IDs, parent/child relationships, scene roots, sequence-to-shot references, and component data.
 - [x] Define coordinate-system, units, timebase, color-space, and asset URI fields.
 - [x] Separate editorial reference, sequences, scenes, nodes, tracks, shots, assets, and revisions in the canonical project document.
@@ -88,6 +99,8 @@ The exit goal is an extensible platform foundation that can host hundreds of too
 - [Deferred to P1.2/P4] Add database/object-storage snapshot adapter when durable multi-worker deployment is introduced.
 
 #### P1.1 — Tool platform and extensibility
+
+**Next active phase.** Build on the completed P1.0 Project Graph and Patch APIs; do not create a parallel project model.
 - [x] Define tool manifest schema and typed tool/registry/gateway contracts.
 - [x] Implement initial in-memory registry and local schema-validating gateway prototype.
 - [ ] Define tool namespaces, categories, tags, capability requirements, engine bindings, and semantic version policy.
