@@ -260,17 +260,24 @@ test("prefab instantiation remaps internal constraints and node dependencies", (
     id: "dependency-pair", fromType: "node", fromId: "node-cpu",
     toType: "node", toId: "node-memory", relation: "references",
   });
+  source.animationTracks.push({
+    id: "animation-pair", targetNodeId: "node-cpu", targetProperty: "transform.scale",
+    keyframes: [{ frame: 0, value: [1, 1, 1] }, { frame: 20, value: [2, 2, 2] }],
+  });
   const before = hashProject(source);
   const result = instantiatePrefab(source, "prefab-pair", "scene-hit", { instanceIdPrefix: "pair-copy" });
   assert.equal(hashProject(source), before);
   assert.equal(result.createdConstraintIds.length, 1);
   assert.equal(result.createdDependencyIds.length, 1);
+  assert.equal(result.createdAnimationTrackIds.length, 1);
   const constraint = result.project.constraints.find((item) => item.id === "pair-copy__constraint-pair")!;
   assert.equal(constraint.sourceNodeId, "pair-copy__node-cpu");
   assert.equal(constraint.targetNodeId, "pair-copy__node-memory");
   const dependency = result.project.dependencies.find((item) => item.id === "pair-copy__dependency-pair")!;
   assert.equal(dependency.fromId, "pair-copy__node-cpu");
   assert.equal(dependency.toId, "pair-copy__node-memory");
+  const animation = result.project.animationTracks.find((item) => item.id === "pair-copy__animation-pair")!;
+  assert.equal(animation.targetNodeId, "pair-copy__node-cpu");
 });
 
 test("project repository compare-and-swap allows only one concurrent patch", async () => {
@@ -309,4 +316,29 @@ test("constraint validation checks node references, scene boundaries, and parame
   assert.ok(validateSceneConstraints(project, [{ ...valid, targetNodeId: "missing-node" }]).some((error) => error.includes("missing target")));
   assert.ok(validateSceneConstraints(project, [{ ...valid, type: "limit-position", parameters: { min: [2, 0, 0], max: [1, 1, 1] } }]).some((error) => error.includes("min values greater")));
   assert.ok(validateSceneConstraints(project, [{ ...valid, type: "follow-path", parameters: { pathNodeId: "missing-path" } }]).some((error) => error.includes("pathNodeId")));
+});
+
+
+test("recursive node removal cleans targeted animation tracks", () => {
+  const source = structuredClone(project);
+  source.animationTracks.push({
+    id: "animation-child", targetNodeId: "node-cpu", targetProperty: "opacity",
+    keyframes: [{ frame: 0, value: 0 }, { frame: 10, value: 1 }],
+  });
+  const patch: ProjectPatchDocument = {
+    schemaVersion: "1.1.0", projectId: source.project.id, baseRevisionId: "revision-initial",
+    patches: [{ op: "remove-node", nodeId: "node-cpu", recursive: true }],
+  };
+  const result = applyProjectPatch(source, patch, options);
+  assert.ok(!result.project.animationTracks.some((track) => track.targetNodeId === "node-cpu"));
+});
+
+test("project patch rejects duplicate revision IDs", () => {
+  const patch: ProjectPatchDocument = {
+    schemaVersion: "1.1.0", projectId: project.project.id, baseRevisionId: "revision-initial",
+    patches: [{ op: "add-node", sceneId: "scene-intro", node: node("revision-duplicate-node") }],
+  };
+  assert.throws(() => applyProjectPatch(project, patch, {
+    ...options, newRevisionId: "revision-initial",
+  }), /Revision already exists/);
 });
