@@ -45,6 +45,9 @@ jobs:
       - name: Validate project patch schema
         run: npm run validate:project-patch
 
+      - name: Validate agent tool manifests
+        run: npm run validate:tool-manifests
+
       - name: Render independent SVG storyboard
         run: npm run render:storyboard
 
