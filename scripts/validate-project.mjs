@@ -30,6 +30,9 @@ const assets = unique(project.assets, "assets");
 const shots = unique(project.shots ?? [], "shots");
 const clips = unique(project.clips ?? [], "clips");
 const revisions = unique(project.revisions, "revisions");
+const prefabs = unique(project.prefabs ?? [], "prefabs");
+unique(project.constraints ?? [], "constraints");
+unique(project.dependencies ?? [], "dependencies");
 
 for (const scene of project.scenes) {
   for (const id of scene.rootNodeIds) {
@@ -51,6 +54,18 @@ for (const track of project.tracks ?? []) {
 }
 for (const clip of project.clips ?? []) {
   if (!assets.has(clip.assetId)) errors.push(`clip ${clip.id} references missing asset ${clip.assetId}`);
+}
+for (const prefab of project.prefabs ?? []) {
+  for (const id of prefab.rootNodeIds) if (!nodes.has(id)) errors.push(`prefab ${prefab.id} references missing root node ${id}`);
+}
+for (const constraint of project.constraints ?? []) {
+  if (!nodes.has(constraint.sourceNodeId)) errors.push(`constraint ${constraint.id} references missing source node ${constraint.sourceNodeId}`);
+  if (!nodes.has(constraint.targetNodeId)) errors.push(`constraint ${constraint.id} references missing target node ${constraint.targetNodeId}`);
+}
+const entityExists = (type, id) => ({ node: nodes, scene: scenes, shot: shots, asset: assets, prefab: prefabs, clip: clips }[type]?.has(id) ?? false);
+for (const dependency of project.dependencies ?? []) {
+  if (!entityExists(dependency.fromType, dependency.fromId)) errors.push(`dependency ${dependency.id} references missing source ${dependency.fromType}:${dependency.fromId}`);
+  if (!entityExists(dependency.toType, dependency.toId)) errors.push(`dependency ${dependency.id} references missing target ${dependency.toType}:${dependency.toId}`);
 }
 for (const revision of project.revisions) {
   if (revision.parentRevisionId && !revisions.has(revision.parentRevisionId)) errors.push(`revision ${revision.id} references missing parent revision`);
