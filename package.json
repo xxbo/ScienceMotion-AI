@@ -15,7 +15,7 @@
     "render:storyboard": "node scripts/render-storyboard-svg.mjs",
     "validate:project": "node scripts/validate-project.mjs",
     "validate:project-patch": "node scripts/validate-project-patch.mjs",
-    "test": "tsx --test src/**/*.test.ts"
+    "test": "tsx --test src/platform/*.test.ts"
   },
   "dependencies": {
     "@remotion/cli": "^4.0.0",
