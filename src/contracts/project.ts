@@ -20,6 +20,7 @@ export interface ProjectDocument {
   scenes: Scene[];
   nodes: SceneNode[];
   tracks?: Track[];
+  animationTracks: ProjectAnimationTrack[];
   shots?: Shot[];
   clips?: Clip[];
   assets: ProjectAsset[];
@@ -37,6 +38,14 @@ export interface SceneNode {
   metadata?: Record<string, unknown>;
 }
 export interface Keyframe<T = unknown> { frame: number; value: T; interpolation?: Interpolation; easing?: string }
+export interface ProjectAnimationTrack {
+  id: string;
+  targetNodeId: string;
+  targetProperty: string;
+  keyframes: Keyframe[];
+  loop?: boolean;
+  enabled?: boolean;
+}
 export interface AnimationTrack { id: string; targetProperty: string; keyframes: Keyframe[]; loop?: boolean }
 export interface SimulationSettings { solver: string; timeStep: number; seed: number; parameters: Record<string, unknown>; units?: string; coordinateSystem?: string }
 export interface PhysicsBody { bodyType: "static" | "dynamic" | "kinematic"; mass: number; friction: number; restitution: number; linearDamping?: number; angularDamping?: number }
