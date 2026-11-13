@@ -63,7 +63,10 @@ The exit goal is an extensible platform foundation that can host hundreds of too
 - [x] Define versioned patch document schema and typed add/update/remove/reparent operations.
 - [x] Implement atomic in-memory patch application with immutable source input, explicit recursive deletion, hierarchy checks, and base-revision conflict detection.
 - [x] Add patch schema validation to CI.
-- [ ] Add schema migrations, persistent immutable snapshots, and full patch operation test coverage.
+- [x] Add explicit v1.0.0 → v1.1.0 project migration.
+- [x] Add canonical JSON hashing and an in-memory immutable snapshot store with integrity verification and restore.
+- [x] Add unit tests for add, reparent, recursive remove, stale revisions, cycle rejection, migration, and snapshot restore.
+- [ ] Add persistent snapshot backend and full property-based patch operation coverage.
 
 #### P1.1 — Tool platform and extensibility
 - [x] Define tool manifest schema and typed tool/registry/gateway contracts.
