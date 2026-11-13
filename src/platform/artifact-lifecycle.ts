@@ -5,6 +5,11 @@ import type { ArtifactKind, ArtifactRecord, ArtifactStore } from "../contracts/a
 import type { ArtifactGarbageCollectionResult, ArtifactLifecycleManager, ArtifactReference, ArtifactReferenceStore } from "../contracts/artifact-lifecycle";
 import type { ProjectDocument } from "../contracts/project";
 
+function assertReferenceId(id: string): string {
+  if (!/^ref:[a-f0-9]{64}$/.test(id)) throw new Error("Invalid artifact reference ID");
+  return id.slice(4);
+}
+
 function referenceId(input: Omit<ArtifactReference, "id" | "createdAt">): string {
   const key = [input.artifactId, input.ownerType, input.ownerId, input.role].join("\0");
   return "ref:" + createHash("sha256").update(key).digest("hex");
@@ -36,7 +41,7 @@ export class FileSystemArtifactReferenceStore implements ArtifactReferenceStore 
     catch (error) { await rm(temp, { force: true }); try { await readFile(path); return false; } catch { throw error; } }
   }
   async detach(id: string): Promise<boolean> {
-    const path = join(this.rootDirectory, id.replace("ref:", "") + ".json");
+    const path = join(this.rootDirectory, assertReferenceId(id) + ".json");
     try { await rm(path); return true; } catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return false; throw error; }
   }
   async list(query: { artifactId?: string; ownerType?: ArtifactReference["ownerType"]; ownerId?: string } = {}): Promise<ArtifactReference[]> {
