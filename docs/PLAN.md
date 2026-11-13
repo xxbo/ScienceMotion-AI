@@ -58,8 +58,10 @@ This is a foundational requirement, not a later refactor.
 - [x] Refactor the Remotion composition to select scene adapters from package scene types and read captions/audio cues from package data.
 - [x] Add schema and semantic cross-reference validation to CI.
 - [ ] Define renderer-neutral scene primitives (text, shape, arrow, chart, timeline, equation, diagram, 3D asset reference) and explicit units/coordinate systems.
-- [ ] Define renderer adapter interfaces, capability negotiation, unsupported-feature handling, and deterministic fallback behavior.
-- [ ] Add golden fixture episodes and schema compatibility tests.
+- [x] Define the provider-neutral renderer adapter interface and capability declaration model.
+- [x] Add schema validation and semantic cross-reference checks to CI.
+- [x] Add a second, independent SVG storyboard output that reads the same package without importing Remotion.
+- [ ] Add golden fixture episodes, schema migration tests, and capability/fallback tests.
 
 **P1.1 — Build content generation against the contract**
 - [ ] Define provider-independent research, script, storyboard, and scene-intent interfaces.
@@ -69,13 +71,14 @@ This is a foundational requirement, not a later refactor.
 - [ ] Add human review gates and per-shot regeneration without changing unrelated approved content.
 
 **P1.2 — Prove true decoupling**
-- [ ] Move the CPU cache episode into a renderer-neutral episode package.
-- [ ] Refactor Remotion to consume that package through an adapter.
-- [ ] Add a second minimal renderer adapter or theme consuming the exact same package.
+- [x] Move the CPU cache episode into a renderer-neutral episode package.
+- [x] Refactor Remotion to consume the episode package for shot order, scene type, captions, audio cues, and output profile.
+- [x] Add an independent SVG storyboard renderer consuming the exact same package without Remotion dependencies.
+- [ ] Add a second video renderer/theme consuming the same package (SVG storyboard currently validates a second visual output, not a second MP4 renderer).
 - [ ] Compare package hashes/semantic fields before and after rendering to prove the content package is unchanged.
 - [ ] Keep AI director tests runnable without browser or video-renderer dependencies.
 
-**Exit criteria:** one approved, versioned episode package can be generated and reviewed without loading rendering libraries, then rendered by multiple adapters without changing its content, narration, citations, or shot order. Initial schema, sample package, validator, and first Remotion consumer are in place; the second renderer and content-only dependency isolation remain outstanding.
+**Exit criteria:** one approved, versioned episode package can be generated and reviewed without loading rendering libraries, then rendered by multiple adapters without changing its content, narration, citations, or shot order. Initial schema, sample package, validator, renderer interface, Remotion consumer, and independent SVG storyboard output are in place. A second MP4 renderer, immutable-package hash test, and content-only dependency isolation remain outstanding.
 
 ### P2 — Scientific visual toolkit
 
