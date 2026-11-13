@@ -79,8 +79,11 @@ The exit goal is an extensible platform foundation that can host hundreds of too
 - [x] Reject duplicate revision IDs and verify repository state matches the declared base revision.
 - [x] Test prefab constraint/dependency/animation remapping, malformed prefab roots, ID collisions, and duplicate revision rejection.
 - [x] Test project repository compare-and-swap conflicts and failed commit immutability.
-- [ ] Add database/object-storage snapshot adapter (filesystem backend is the current durable local implementation).
-- [ ] Expand property-based testing to arbitrary hierarchy edits and cross-entity references.
+- [x] Add property-based coverage for generated scene-root additions and hierarchy invariants.
+- [x] Verify prefab cloning remaps internal node references while preserving external asset dependencies.
+- [x] Verify repository patch → revision update → filesystem snapshot → restore as one end-to-end lifecycle.
+- [ ] Complete the final P1.0 acceptance run across schema, migration, project validation, patch operations, animation, constraints, prefab, repository concurrency, snapshots, and CPU-cache fixture.
+- [Deferred to P1.2/P4] Add database/object-storage snapshot adapter when durable multi-worker deployment is introduced.
 
 #### P1.1 — Tool platform and extensibility
 - [x] Define tool manifest schema and typed tool/registry/gateway contracts.
