@@ -161,3 +161,16 @@ Apply least-privilege permissions to tools and workers. Enforce CPU, memory, GPU
 - Keep project model, tool runtime, providers, workers, and renderer adapters behind explicit boundaries.
 - Prefer composable tools with structured results over a monolithic generate-video endpoint.
 - Inspect representative outputs and CI evidence before marking a phase complete.
+
+
+## P1.1 initial implementation — manifest discovery and gateway hardening
+
+The first P1.1 slice adds:
+- Expanded `AgentToolManifest` with namespace, tags, project schema compatibility, lifecycle status, plugin identity, cancellation/idempotency declarations, and concurrency hints.
+- Expanded manifest JSON Schema and a catalogue validation script. CI validates all JSON manifests under `tools/manifests/`.
+- `InMemoryAgentToolRegistry.discover()` filters by free-text, namespace, category, tags, required capabilities, engine, project schema version, and deprecation state. Results are sorted by semantic version and support bounded pagination.
+- Registry registration validates namespaced IDs, namespace syntax, and MAJOR.MINOR.PATCH versions. Latest-version resolution uses numeric semantic-version comparison (not lexical sorting).
+- Gateway passes a cooperative AbortSignal to tool implementations, propagates caller cancellation, aborts on timeout, validates inputs/outputs, checks permissions, and returns execution metadata.
+- Added a built-in geometry primitive manifest as the first catalogue fixture and automated tests for registry discovery, versioning, validation, permissions, cancellation, and timeout behavior.
+
+This is a local in-process platform slice. It does not yet provide plugin isolation, durable execution history, retry/idempotency storage, distributed quotas, or forceful termination of non-cooperative tool code. Those remain explicit follow-up work.
