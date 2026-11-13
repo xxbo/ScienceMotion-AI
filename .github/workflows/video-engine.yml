@@ -36,6 +36,9 @@ jobs:
       - name: Validate renderer-neutral episode package
         run: npm run validate:episode
 
+      - name: Validate canonical project graph
+        run: npm run validate:project
+
       - name: Render independent SVG storyboard
         run: npm run render:storyboard
 
