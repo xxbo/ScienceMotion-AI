@@ -16,7 +16,8 @@
     "revisions",
     "prefabs",
     "constraints",
-    "dependencies"
+    "dependencies",
+    "animationTracks"
   ],
   "properties": {
     "schemaVersion": {
@@ -649,6 +650,46 @@
               "parent-of",
               "derived-from"
             ]
+          }
+        }
+      }
+    },
+    "animationTracks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "targetNodeId",
+          "targetProperty",
+          "keyframes"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "targetNodeId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "targetProperty": {
+            "type": "string",
+            "minLength": 1
+          },
+          "keyframes": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/definitions/keyframe"
+            }
+          },
+          "loop": {
+            "type": "boolean"
+          },
+          "enabled": {
+            "type": "boolean"
           }
         }
       }
