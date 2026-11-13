@@ -207,3 +207,21 @@ These are foundations, not the final architecture. Incrementally evolve the epis
 5. Agent iteration loop with preview/inspect/patch/re-render.
 6. Specialist engine adapters and professional tool depth.
 7. Distributed execution and production operations when justified.
+
+
+## Project Schema v1.0.0 — initial implementation
+
+The first canonical project model is defined in:
+- `schemas/project.schema.json`
+- `src/contracts/project.ts`
+- `projects/cpu-cache/project.json`
+
+It models project metadata, editorial linkage, sequences, scenes, scene nodes, transforms, typed component slots, tracks, shots, clips, assets, and revision records. Coordinate system, units, timebase, and color space are explicit project-level settings.
+
+Validation is performed by `scripts/validate-project.mjs` and checks:
+- JSON Schema conformance.
+- Unique IDs within each entity collection.
+- Scene root, parent/child, shot/scene, sequence/shot, track/clip, clip/asset, and revision references.
+- Cyclic node hierarchy and parent/child consistency.
+
+This is the first project graph contract, not yet the complete final model. Constraints, simulation-specific typed components, reusable prefabs, dependency graph, patch execution, optimistic concurrency, snapshots, and schema migrations remain planned. Component payloads are currently extensible JSON objects; specialist component schemas will be introduced by capability/plugin namespaces.
