@@ -46,7 +46,9 @@ The CPU-cache explainer is the first reference project and integration test—no
 - [x] Initial renderer adapter interface.
 - [x] Initial agent tool manifest schema and TypeScript registry/gateway contracts.
 - [ ] Latest narration-enabled CI run and MP4 audio validation fully inspected.
-- [ ] Tool registry and invocation gateway implemented (contracts only so far).
+- [x] Implement an initial in-memory tool registry with search/list/version lookup.
+- [x] Implement a local invocation gateway with input/output schema validation, permission checks, timeouts, structured diagnostics, and execution lifecycle events.
+- [ ] Add cancellation propagation, persistent execution history, artifact storage, and plugin discovery.
 - [ ] Full project/scene graph model implemented.
 
 ## Roadmap
