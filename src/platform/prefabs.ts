@@ -11,6 +11,7 @@ export interface PrefabInstantiationResult {
   createdNodeIds: string[];
   createdConstraintIds: string[];
   createdDependencyIds: string[];
+  createdAnimationTrackIds: string[];
 }
 
 /**
@@ -57,12 +58,14 @@ export function instantiatePrefab(
     ...[...idMap.values()],
     ...source.constraints.filter((item) => collected.has(item.sourceNodeId) && collected.has(item.targetNodeId)).map((item) => `${options.instanceIdPrefix}__${item.id}`),
     ...source.dependencies.filter((item) => item.fromType === "node" && item.toType === "node" && collected.has(item.fromId) && collected.has(item.toId)).map((item) => `${options.instanceIdPrefix}__${item.id}`),
+    ...source.animationTracks.filter((item) => collected.has(item.targetNodeId)).map((item) => `${options.instanceIdPrefix}__${item.id}`),
   ];
   if (new Set(generatedIds).size !== generatedIds.length) throw new Error("Prefab contains colliding generated IDs");
   const existingIds = new Set([
     ...source.nodes.map((item) => item.id),
     ...source.constraints.map((item) => item.id),
     ...source.dependencies.map((item) => item.id),
+    ...source.animationTracks.map((item) => item.id),
   ]);
   for (const id of generatedIds) if (existingIds.has(id)) throw new Error(`Prefab instance ID already exists: ${id}`);
 
@@ -102,8 +105,17 @@ export function instantiatePrefab(
       toId: idMap.get(item.toId)!,
     }));
 
+  const clonedAnimationTracks = source.animationTracks
+    .filter((item) => collected.has(item.targetNodeId))
+    .map((item) => ({
+      ...structuredClone(item),
+      id: `${options.instanceIdPrefix}__${item.id}`,
+      targetNodeId: idMap.get(item.targetNodeId)!,
+    }));
+
   const project = structuredClone(source);
   project.nodes.push(...clones);
+  project.animationTracks.push(...clonedAnimationTracks);
   project.constraints.push(...clonedConstraints);
   project.dependencies.push(...clonedDependencies);
   project.scenes.find((item) => item.id === sceneId)!.rootNodeIds.push(...prefab.rootNodeIds.map((id) => idMap.get(id)!));
@@ -113,5 +125,6 @@ export function instantiatePrefab(
     createdNodeIds: clones.map((node) => node.id),
     createdConstraintIds: clonedConstraints.map((item) => item.id),
     createdDependencyIds: clonedDependencies.map((item) => item.id),
+    createdAnimationTrackIds: clonedAnimationTracks.map((item) => item.id),
   };
 }
