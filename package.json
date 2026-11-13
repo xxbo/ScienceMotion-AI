@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "voice:generate": "node scripts/voice/run-voice.mjs",
     "validate:video": "node scripts/validate-video.mjs out/science-motion-demo.mp4",
-    "validate:episode": "node scripts/validate-episode.mjs"
+    "validate:episode": "node scripts/validate-episode.mjs",
+    "render:storyboard": "node scripts/render-storyboard-svg.mjs"
   },
   "dependencies": {
     "@remotion/cli": "^4.0.0",
