@@ -1,40 +1,103 @@
-# ScienceMotion AI
+import test from "node:test";
+import assert from "node:assert/strict";
+import type { AgentTool, AgentToolManifest, ToolResult } from "../contracts/agent-tool";
+import type { AgentToolPlugin } from "../contracts/agent-plugin";
+import { InMemoryAgentToolRegistry } from "./tool-registry";
+import { InMemoryPluginManager } from "./plugin-manager";
 
-**A professional, extensible creative framework for AI agents that create videos.**
+function tool(id: string, pluginId: string): AgentTool<unknown, unknown> {
+  const manifest: AgentToolManifest = {
+    id, version: "1.0.0", namespace: id.split(".").slice(0, -1).join("."),
+    name: id, description: `Test tool ${id}`, category: "test", pluginId,
+    inputSchema: { type: "object" }, outputSchema: { type: "object" },
+    execution: { deterministic: true, stateful: false, destructive: false, cost: "low" },
+  };
+  return { manifest, execute: async (): Promise<ToolResult<unknown>> => ({ ok: true, output: {}, diagnostics: [] }) };
+}
 
-Our goal is to build a platform skeleton capable of hosting hundreds of composable creative tools and multiple specialist engines—not a fixed-template, one-click video generator.
+function plugin(
+  id: string,
+  tools: AgentTool<unknown, unknown>[] = [tool(`${id}.run`, id)],
+  extras: Partial<AgentToolPlugin["manifest"]> = {},
+  healthCheck?: AgentToolPlugin["healthCheck"]
+): AgentToolPlugin {
+  return {
+    manifest: { id, version: "1.0.0", name: id, description: `Plugin ${id}`, toolIds: tools.map((item) => item.manifest.id), ...extras },
+    tools,
+    healthCheck,
+  };
+}
 
-AI agents should discover tools and schemas dynamically, construct project/scene graphs, combine 2D/3D/animation/simulation/audio capabilities, inspect previews, revise individual elements, and render professional outputs. Templates are optional accelerators, never the creative ceiling.
+test("plugin installs disabled and exposes isolated status copies", () => {
+  const registry = new InMemoryAgentToolRegistry();
+  const manager = new InMemoryPluginManager(registry);
+  const installed = manager.install(plugin("science.math"));
+  assert.equal(installed.ok, true);
+  assert.equal(installed.status.state, "installed");
+  assert.equal(registry.getImplementation("science.math.run"), undefined);
+  const status = manager.getStatus("science.math")!;
+  status.state = "failed";
+  assert.equal(manager.getStatus("science.math")?.state, "installed");
+});
 
-## Project status
+test("plugin enable registers tools and disable unregisters them", async () => {
+  const registry = new InMemoryAgentToolRegistry();
+  const manager = new InMemoryPluginManager(registry);
+  manager.install(plugin("science.math"));
+  assert.equal((await manager.enable("science.math")).status.state, "enabled");
+  assert.ok(await registry.get("science.math.run"));
+  assert.equal(manager.disable("science.math").status.state, "disabled");
+  assert.equal(await registry.get("science.math.run"), undefined);
+});
 
-- **P1.0 — Complete:** canonical Project Graph v1.1, patch/revision operations, prefab instantiation, animation/constraint data, migration, filesystem snapshots, validation, and automated tests.
-- **P1.1 — Next:** dynamic tool discovery, registry/gateway hardening, namespaces, versioning, and plugin lifecycle.
-- **P1.2 — Planned:** isolated workers, job execution, cancellation, progress, and resource governance.
-- **P0 media polish — Non-blocking:** core Remotion/TTS/MP4 CI path works; speech-aligned captions, richer audio mixing, a polished long-form reference episode, proxy rendering, and formal render manifests remain enhancements.
+test("plugin dependencies require enabled compatible versions", async () => {
+  const registry = new InMemoryAgentToolRegistry();
+  const manager = new InMemoryPluginManager(registry);
+  manager.install(plugin("science.base"));
+  manager.install(plugin("science.advanced", undefined, {
+    dependencies: [{ pluginId: "science.base", versionRange: "^1.0.0" }],
+  }));
+  assert.equal((await manager.enable("science.advanced")).diagnostics[0].code, "PLUGIN_DEPENDENCY_NOT_ENABLED");
+  await manager.enable("science.base");
+  assert.equal((await manager.enable("science.advanced")).ok, true);
+  assert.equal(manager.disable("science.base").diagnostics[0].code, "PLUGIN_HAS_ENABLED_DEPENDENTS");
+});
 
-P1.0 acceptance evidence: [GitHub Actions #43390347025](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43390347025).
+test("plugin enable rolls back partial registration on collision", async () => {
+  const registry = new InMemoryAgentToolRegistry();
+  registry.register(tool("science.shared.run", "other.plugin"));
+  const manager = new InMemoryPluginManager(registry);
+  const first = tool("science.first.run", "science.bundle");
+  const collision = tool("science.shared.run", "science.bundle");
+  manager.install(plugin("science.bundle", [first, collision]));
+  const result = await manager.enable("science.bundle");
+  assert.equal(result.ok, false);
+  assert.equal(result.status.state, "failed");
+  assert.equal(await registry.get("science.first.run"), undefined);
+  assert.equal((await registry.get("science.shared.run"))?.id, "science.shared.run");
+});
 
-## Platform foundations
+test("unhealthy plugin is rolled back and marked failed", async () => {
+  const registry = new InMemoryAgentToolRegistry();
+  const manager = new InMemoryPluginManager(registry);
+  manager.install(plugin("science.unhealthy", undefined, {}, async () => ({ ok: false, message: "dependency unavailable" })));
+  const result = await manager.enable("science.unhealthy");
+  assert.equal(result.ok, false);
+  assert.equal(result.diagnostics[0].code, "PLUGIN_HEALTH_CHECK_FAILED");
+  assert.equal(result.status.state, "failed");
+  assert.equal(await registry.get("science.unhealthy.run"), undefined);
+});
 
-- **Canonical project model:** versioned project, scene graph, timeline, assets, and non-destructive revisions.
-- **Agent tool platform:** discoverable manifests, registry, gateway, plugins, permissions, and execution traces.
-- **Worker execution:** isolated render, simulation, asset, audio, and sandbox workers.
-- **Specialist engines:** Remotion, Three.js, Blender, Manim, FFmpeg, and future adapters.
-- **Visual feedback:** preview → inspect → diagnose → patch → re-render.
-- **Reproducibility:** stable IDs, schema versions, artifact hashes, provenance, and render manifests.
-
-## Existing foundations
-
-- Remotion-based 1080p render pipeline and Chinese CPU-cache reference episode.
-- Renderer-neutral episode package and canonical Project Graph v1.1.
-- Remotion episode-package consumer and independent SVG storyboard output.
-- Renderer adapter interface.
-- Tool manifest schema, registry/gateway contracts, and initial local runtime prototype.
-- Mandarin TTS adapter and CI render workflow.
-
-These foundations will be evolved incrementally; working components are reused rather than discarded.
-
-## Roadmap
-
-See [Platform Vision](docs/PLATFORM_VISION.md), [Development Plan](docs/PLAN.md), and [Architecture](docs/ARCHITECTURE.md). The immediate priority is P1.1: hardening the agent-facing tool platform on top of the completed Project Graph.
+test("plugin uninstall requires disabled state and no dependents", async () => {
+  const registry = new InMemoryAgentToolRegistry();
+  const manager = new InMemoryPluginManager(registry);
+  manager.install(plugin("science.base"));
+  manager.install(plugin("science.ext", undefined, { dependencies: [{ pluginId: "science.base" }] }));
+  assert.equal(manager.uninstall("science.base").diagnostics[0].code, "PLUGIN_HAS_DEPENDENTS");
+  await manager.enable("science.base");
+  assert.equal(manager.uninstall("science.base").diagnostics[0].code, "PLUGIN_MUST_BE_DISABLED");
+  manager.disable("science.base");
+  assert.equal(manager.uninstall("science.base").ok, false);
+  manager.uninstall("science.ext");
+  assert.equal(manager.uninstall("science.base").ok, true);
+});
