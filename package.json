@@ -1,0 +1,24 @@
+{
+  "name": "sciencemotion-ai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-assisted code-driven science explainer video production",
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts ScienceMotionDemo out/science-motion-demo.mp4",
+    "render:still": "remotion still src/index.ts ScienceMotionDemo out/preview.png --frame=45",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "remotion": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.7.0"
+  }
+}
