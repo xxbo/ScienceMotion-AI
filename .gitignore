@@ -10,3 +10,6 @@ coverage/
 *.log
 .cache/
 .remotion/
+
+.venv/
+public/episodes/**/narration.mp3
