@@ -2,6 +2,7 @@ import Ajv, { type ValidateFunction } from "ajv";
 import { InMemoryToolExecutionStore, hashToolInput } from "./tool-execution-store";
 import type { ToolExecutionRecord, ToolExecutionStore } from "../contracts/agent-tool";
 import type { ArtifactStore } from "../contracts/artifact";
+import type { ArtifactLifecycleManager } from "../contracts/artifact-lifecycle";
 import type {
   AgentTool,
   AgentToolGateway,
@@ -29,6 +30,7 @@ export interface ToolGatewayOptions {
   executionStore?: import("../contracts/agent-tool").ToolExecutionStore;
   maxAttempts?: number;
   artifactStore?: ArtifactStore;
+  artifactLifecycle?: ArtifactLifecycleManager;
 }
 
 type RegisteredTool = AgentTool<unknown, unknown>;
@@ -263,6 +265,16 @@ export class LocalAgentToolGateway implements AgentToolGateway {
                   (artifact.contentHash && stored.contentHash !== artifact.contentHash)) {
                 throw new Error(`Tool returned an unknown or inconsistent artifact reference: ${artifact.id}`);
               }
+            }
+          }
+          if (result.ok && result.artifacts?.length && this.options.artifactLifecycle) {
+            for (const artifact of result.artifacts) {
+              await this.options.artifactLifecycle.attach({
+                artifactId: artifact.id,
+                ownerType: "tool-run",
+                ownerId: `${context.projectId}:${context.runId}:${context.callId}`,
+                role: "tool-output",
+              });
             }
           }
           finalResult = {
