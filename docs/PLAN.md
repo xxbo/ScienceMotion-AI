@@ -100,14 +100,16 @@ P1.0 scope is the local renderer-neutral project foundation. It does not claim a
 
 #### P1.1 — Tool platform and extensibility
 
-**Next active phase.** Build on the completed P1.0 Project Graph and Patch APIs; do not create a parallel project model.
+**Active phase.** Build on the completed P1.0 Project Graph and Patch APIs; do not create a parallel project model.
 - [x] Define tool manifest schema and typed tool/registry/gateway contracts.
 - [x] Implement initial in-memory registry and local schema-validating gateway prototype.
 - [x] Define tool namespaces, categories, tags, capability requirements, engine bindings, project-schema compatibility, lifecycle, and semantic version policy in the manifest contract.
 - [x] Implement dynamic registry discovery/search with namespace/category/tag/capability/engine/schema filters, pagination, deprecation filtering, and manifest retrieval.
 - [x] Implement cooperative caller cancellation and timeout signaling in the local gateway; retain input/output validation, permission checks, and structured errors.
 - [ ] Add idempotency keys, retry policy, per-tool concurrency limits, and durable execution records.
-- [ ] Add plugin registration, enable/disable, version pinning, dependency resolution, and health checks.
+- [x] Add in-process plugin installation, enable/disable/uninstall, dependency/version checks, health checks, and rollback on failed registration or health validation.
+- [x] Define plugin manifest schema, built-in geometry plugin manifest, and CI catalogue validation.
+- [ ] Add plugin version pinning/upgrades, plugin compatibility checks, and dependency graph diagnostics.
 - [ ] Persist tool-call records, input/output summaries, diagnostics, artifacts, and execution provenance.
 - [ ] Add quotas, concurrency limits, resource budgets, and approval policies for expensive/destructive operations.
 - [ ] Define stable artifact references and content-addressed asset storage.
