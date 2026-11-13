@@ -54,8 +54,12 @@ test("recursive removal cleans constraints and dependency edges", () => {
   const result = applyProjectPatch(source, patch, options);
   assert.ok(!result.project.nodes.some((item) => ["node-cpu", "node-child"].includes(item.id)));
   assert.equal(result.project.constraints.length, originalConstraintCount);
-  assert.equal(result.project.dependencies.length, originalDependencyCount);
+  assert.equal(result.project.dependencies.length, originalDependencyCount - 1);
   assert.ok(!result.project.dependencies.some((item) => item.id === "dep-test"));
+  assert.ok(!result.project.dependencies.some((item) =>
+    (item.fromType === "node" && ["node-cpu", "node-child"].includes(item.fromId)) ||
+    (item.toType === "node" && ["node-cpu", "node-child"].includes(item.toId))
+  ));
 });
 
 test("rejects stale revisions and hierarchy cycles atomically", () => {
