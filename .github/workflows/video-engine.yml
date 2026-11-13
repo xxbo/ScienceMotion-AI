@@ -39,6 +39,9 @@ jobs:
       - name: Validate canonical project graph
         run: npm run validate:project
 
+      - name: Run platform unit tests
+        run: npm test
+
       - name: Validate project patch schema
         run: npm run validate:project-patch
 
