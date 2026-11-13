@@ -281,3 +281,8 @@ P1.0 follow-up implementation (2026-11-13):
 - Unit tests cover prefab instance immutability, hierarchy remapping, cross-scene parenting rejection, prefab cleanup, and changed-node reporting.
 
 The filesystem snapshot backend is the first durable local adapter. Database/object-storage implementations should follow the same asynchronous persistence contract without changing project or snapshot semantics.
+
+
+### CI correction — recursive removal test fixture
+
+The latest P1.0 CI run passed TypeScript, episode validation, project validation, and the first two patch tests, then failed in `recursive removal cleans constraints and dependency edges`. The test incorrectly expected the entire dependency collection to become empty, although the migrated CPU-cache project already contains unrelated dependency edges. The implementation correctly removes only edges referencing deleted nodes. Updated the assertion to preserve the pre-existing constraint/dependency counts and explicitly verify the test edge is removed. Fix commit: `1dc45f6b26c0ec8ae0cb3d9e7dd0603f0e2d62f7`.
