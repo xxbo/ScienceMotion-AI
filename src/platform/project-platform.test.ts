@@ -12,6 +12,7 @@ import { migrateProject } from "./project-migrations";
 import { hashProject, InMemorySnapshotStore } from "./project-snapshots";
 import { FileSystemSnapshotStore } from "./filesystem-snapshot-store";
 import { instantiatePrefab } from "./prefabs";
+import { sampleAnimationTrack, validateAnimationTrack } from "./animation";
 
 const project = structuredClone(fixture) as unknown as ProjectDocument;
 const options = { currentRevisionId: "revision-initial", newRevisionId: "revision-test", createdAt: "2026-11-13T12:00:00.000Z", message: "unit test patch" };
@@ -188,4 +189,38 @@ test("recursive removal cleans prefab roots and reports changed old parent", () 
   const moved = applyProjectPatch(reparentSource, move, options);
   assert.ok(moved.changedNodeIds.includes("node-parent"));
   assert.ok(moved.changedNodeIds.includes("node-cache-stack"));
+});
+
+
+test("animation tracks validate targets, ordering, and unique keyframe frames", () => {
+  const track = project.animationTracks[0];
+  assert.deepEqual(validateAnimationTrack(track), []);
+  assert.equal(validateAnimationTrack({ ...track, keyframes: [...track.keyframes].reverse() }).includes("Keyframes must be sorted by ascending frame"), true);
+  assert.ok(validateAnimationTrack({ ...track, keyframes: [track.keyframes[0], track.keyframes[0]] }).some((error) => error.includes("Duplicate")));
+});
+
+test("animation sampling interpolates numeric values and respects step keys", () => {
+  const track = {
+    id: "test-track", targetNodeId: "node-cpu", targetProperty: "opacity",
+    keyframes: [
+      { frame: 0, value: 0, interpolation: "linear" as const },
+      { frame: 10, value: 1, interpolation: "linear" as const },
+    ],
+  };
+  assert.equal(sampleAnimationTrack(track, 5)?.value, 0.5);
+  assert.equal(sampleAnimationTrack({ ...track, keyframes: track.keyframes.map((key) => ({ ...key, interpolation: "step" as const })) }, 5)?.value, 0);
+  assert.equal(sampleAnimationTrack(track, 20)?.value, 1);
+  assert.throws(() => sampleAnimationTrack(track, -1), /non-negative/);
+});
+
+test("animation sampling interpolates vector arrays and loops deterministically", () => {
+  const track = {
+    id: "vector-track", targetNodeId: "node-cpu", targetProperty: "transform.position", loop: true,
+    keyframes: [
+      { frame: 0, value: [0, 0, 0] },
+      { frame: 20, value: [20, 10, 0] },
+    ],
+  };
+  assert.deepEqual(sampleAnimationTrack(track, 10)?.value, [10, 5, 0]);
+  assert.deepEqual(sampleAnimationTrack(track, 25)?.value, [5, 2.5, 0]);
 });
