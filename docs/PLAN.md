@@ -4,126 +4,169 @@ Last updated: 2026-11-13
 
 ## Product goal
 
-Build a reusable AI-assisted production system for accurate, visually compelling science and technology explainer videos. The workflow should accept a topic and produce a reviewed research package, script, storyboard, narration, renderer-neutral scene specification, and final MP4.
+Build **ScienceMotion AI**, an extensible creative toolkit and execution framework for AI agents that create professional, complex, visually compelling videos.
 
-## Non-negotiable architecture principle: content generation and rendering are decoupled
+The platform provides a broad catalog of composable tools. An agent should be able to discover capabilities, plan a production, create and manipulate scenes, combine 2D/3D/simulation/media/audio tools, render previews, inspect results, and iteratively refine the work. Templates are accelerators, never the creative ceiling.
 
-This is a foundational requirement, not a later refactor.
+The CPU-cache explainer is the first reference project and integration test—not the product's only use case.
 
-- **Content generation owns meaning:** research, factual claims, sources, narration, timing intent, storyboard, and scene intent.
-- **Rendering owns presentation:** layout, animation curves, typography, camera motion, frame rendering, audio mixing, and encoding.
-- The boundary is a versioned, validated, renderer-neutral episode package (JSON first; typed TypeScript models and JSON Schema as the contract).
-- The AI director must not directly import Remotion, React, Three.js, Manim, FFmpeg, or renderer implementation details.
-- Renderers must not call LLMs or make editorial decisions. They consume approved episode packages and deterministic asset references.
-- A single episode package should be renderable by different renderer adapters (e.g. Remotion 2D, Three.js 3D, Manim math scenes) without regenerating its research or script.
-- Preserve stable IDs and explicit timing/units/source references across the pipeline. Validate package versions and reject unsupported schema versions clearly.
-- Keep provider adapters replaceable: model provider, TTS provider, and renderer should be independently swappable.
+## Non-negotiable architecture principles
 
-**Architecture acceptance test:** take one approved episode package, render it through two renderer adapters or two visual themes, and prove that its research, narration, shot order, source references, and semantic scene data remain unchanged.
+### 1. Content and rendering are decoupled
+- Editorial meaning (research, claims, sources, narration, captions, creative brief) is stored independently from rendering implementation.
+- A versioned project/episode package is the stable interchange contract.
+- Renderers consume approved project snapshots; they do not call LLMs or rewrite editorial content.
+- The same project should be renderable through multiple engines/adapters.
 
-## Principles
+### 2. The agent is a tool-using creative director
+- The agent is not limited to fixed video templates or a hard-coded scene sequence.
+- It discovers tools by task/capability, reads schemas/examples, composes calls, and uses structured outputs.
+- Tools range from high-level actions (create a sequence, build a chart, create a camera shot) to low-level controls (geometry, paths, keyframes, shaders, materials, masks, compositing).
+- High-level templates and workflows are optional shortcuts built on top of the same lower-level tools.
 
-1. Accuracy before visual spectacle: claims and numerical examples must be traceable.
-2. Code-generated visuals for explainable systems: diagrams, timelines, formulas, mechanisms, and charts should be deterministic.
-3. Reusable components: each scene should be independently testable and composable.
-4. Separate content from presentation: structured episode data is the stable contract between generation and rendering.
-5. Human approval gates: research, script, and storyboard must be reviewable before rendering.
-6. Measure the actual pipeline: record render time, output size, frame rate, and quality issues.
+### 3. Iterative visual feedback is a first-class capability
+- Preview a frame, scene, shot, or sequence.
+- Inspect rendered frames and diagnostics.
+- Compare versions and revise only affected objects/shots where possible.
+- Keep execution history, tool inputs/outputs, asset references, and render manifests reproducible.
 
-## Milestones
+### 4. Extensible specialist engines
+- Expose portable creative operations through stable tool contracts.
+- Implement them through engine adapters such as Remotion, Three.js, Blender, Manim, and future engines.
+- Engine-specific tools are allowed when explicitly namespaced and capability-gated.
+- Advanced custom code/shaders/simulations run in a restricted, reproducible execution environment.
 
-### P0 — Video engine validation
+## Current baseline
 
-- [x] Initialize repository and architecture documentation.
-- [x] Add a Remotion composition and initial motion-graphics scenes.
-- [ ] Install dependencies and verify the studio starts.
-- [x] Render a 1920×1080, 30 FPS, 30-second Chinese MP4 sample in GitHub Actions.
-- [x] Inspect representative frames for layout, clipping, typography, and timing.
-- [x] Add a configurable Mandarin TTS adapter using Edge TTS with a replaceable provider boundary.
-- [x] Add a narration track to the Remotion composition and extend the sample timeline.
-- [ ] Verify the latest narrated render in CI, including audio stream metadata.
-- [ ] Align subtitle boundaries to actual speech segments and add word-level captions.
-- [ ] Add background music, sound-effect tracks, and narration ducking.
-- [ ] Produce the first complete 2–3 minute CPU cache explainer.
+- [x] Public GitHub repository initialized.
+- [x] Remotion-based video render pipeline and initial Chinese CPU-cache visual sample.
+- [x] Renderer-neutral episode JSON, JSON Schema, and TypeScript contract.
+- [x] Remotion reads scene ordering, scene type, captions, audio cues, and output profile from episode data.
+- [x] Independent SVG storyboard output consumes the same episode package.
+- [x] Initial renderer adapter interface.
+- [x] Initial agent tool manifest schema and TypeScript registry/gateway contracts.
+- [ ] Latest narration-enabled CI run and MP4 audio validation fully inspected.
+- [ ] Tool registry and invocation gateway implemented (contracts only so far).
+- [ ] Full project/scene graph model implemented.
 
-**Exit criteria:** a reproducible command generates a complete MP4 from source with stable timing and no visual defects. The initial visual render is validated; the narrated render and full 2–3 minute episode remain open until CI output and audio are inspected.
+## Roadmap
 
-### P1 — Renderer-neutral episode contract and AI director
+### P0 — Reliable media/render foundation
+- [x] Initialize repository, documentation, Remotion render, and CI.
+- [x] Produce a 1080p 30 FPS Chinese CPU-cache visual prototype.
+- [x] Add configurable Mandarin TTS adapter and integrate an audio track.
+- [ ] Verify the current narration-enabled render in CI, including audio metadata and sampled audio/video sync.
+- [ ] Align captions to measured speech timings; support word/phrase-level captions.
+- [ ] Add music, ambience, SFX, fades, and narration ducking.
+- [ ] Complete the first polished 2–3 minute reference video.
+- [ ] Add preview/proxy rendering and render-manifest reporting.
 
-**P1.0 — Define the boundary before expanding AI generation**
-- [x] Define a versioned episode package schema and JSON Schema validation (schema v1.0.0).
-- [x] Model metadata, source records, factual claims, narration segments, shot list, scene intents, asset references, caption timing, and audio cues.
-- [x] Give every claim, narration segment, shot, scene, and asset a stable ID.
-- [x] Create the CPU-cache episode as a renderer-neutral JSON package.
-- [x] Refactor the Remotion composition to select scene adapters from package scene types and read captions/audio cues from package data.
-- [x] Add schema and semantic cross-reference validation to CI.
-- [ ] Define renderer-neutral scene primitives (text, shape, arrow, chart, timeline, equation, diagram, 3D asset reference) and explicit units/coordinate systems.
-- [x] Define the provider-neutral renderer adapter interface and capability declaration model.
-- [x] Add schema validation and semantic cross-reference checks to CI.
-- [x] Add a second, independent SVG storyboard output that reads the same package without importing Remotion.
-- [ ] Add golden fixture episodes, schema migration tests, and capability/fallback tests.
+**Exit criteria:** reliable repeatable render, inspected audio/video, captions, render diagnostics, and a complete reference episode.
 
-**P1.1 — Build content generation against the contract**
-- [ ] Define provider-independent research, script, storyboard, and scene-intent interfaces.
-- [ ] Generate source-backed claims and preserve citations through narration and shots.
-- [ ] Generate an editable shot list from an approved script.
-- [ ] Generate scene intent and typed props, never arbitrary renderer-specific application code as the default path.
-- [ ] Add human review gates and per-shot regeneration without changing unrelated approved content.
+### P1 — Agent platform spine
 
-**P1.2 — Prove true decoupling**
-- [x] Move the CPU cache episode into a renderer-neutral episode package.
-- [x] Refactor Remotion to consume the episode package for shot order, scene type, captions, audio cues, and output profile.
-- [x] Add an independent SVG storyboard renderer consuming the exact same package without Remotion dependencies.
-- [ ] Add a second video renderer/theme consuming the same package (SVG storyboard currently validates a second visual output, not a second MP4 renderer).
-- [ ] Compare package hashes/semantic fields before and after rendering to prove the content package is unchanged.
-- [ ] Keep AI director tests runnable without browser or video-renderer dependencies.
+#### P1.0 Project and scene graph
+- [ ] Define versioned project, sequence, shot, scene, node, layer, transform, keyframe, asset, and dependency schemas.
+- [ ] Support stable IDs, parent/child relationships, references, and non-destructive patches.
+- [ ] Define coordinate systems, units, time bases, color spaces, and asset URI rules.
+- [ ] Add migrations and compatibility tests.
 
-**Exit criteria:** one approved, versioned episode package can be generated and reviewed without loading rendering libraries, then rendered by multiple adapters without changing its content, narration, citations, or shot order. Initial schema, sample package, validator, renderer interface, Remotion consumer, and independent SVG storyboard output are in place. A second MP4 renderer, immutable-package hash test, and content-only dependency isolation remain outstanding.
+#### P1.1 Tool registry and gateway
+- [x] Define tool manifest schema with typed input/output contracts and execution metadata.
+- [x] Define TypeScript contracts for tool manifests, registry, gateway, and results.
+- [ ] Implement tool discovery/search and schema retrieval.
+- [ ] Implement invocation gateway with schema validation, permissions, timeouts, cancellation, execution logs, and artifact persistence.
+- [ ] Support tool versions, capability discovery, namespaces, and plugin registration.
+- [ ] Add tool examples and machine-readable usage documentation.
 
-### P2 — Scientific visual toolkit
+#### P1.2 Initial creative toolset
+- [ ] Project tools: create/open project, sequence, shot, scene, layer, group, and timeline operations.
+- [ ] 2D tools: text, shape, path, SVG, masks, gradients, arrows, labels, charts, diagrams, and layout.
+- [ ] Animation tools: keyframes, easing, path motion, transforms, morphing, timing, and transitions.
+- [ ] Asset tools: import, search, inspect, transform, provenance, and license metadata.
+- [ ] Audio tools: narration, TTS, captions, music/SFX placement, fades, mixing, and ducking.
+- [ ] Preview tools: render still/frame range/shot proxy, inspect frame, retrieve diagnostics, and compare versions.
 
-- [ ] Build 2D primitives: labels, callouts, arrows, charts, grids, timelines, equations.
-- [ ] Add Three.js scene integration for 3D objects and camera motion behind a renderer adapter.
-- [ ] Add optional Manim rendering/import behind a renderer adapter for mathematical scenes.
-- [ ] Create reusable science/technology visual templates.
-- [ ] Add unit-aware chart and diagram helpers.
-- [ ] Add renderer capability declarations and fallbacks for unsupported scene primitives.
+#### P1.3 Agent iteration loop
+- [ ] Define a structured creative brief and agent production plan.
+- [ ] Allow the agent to discover and combine tools dynamically instead of following a fixed template.
+- [ ] Add preview → inspect → diagnose → patch → re-render loops.
+- [ ] Add shot-level regeneration while preserving approved unrelated content.
+- [ ] Add a human approval/review surface and checkpoints.
+- [ ] Persist tool-call graph, decisions, outputs, and project revisions.
 
-**Exit criteria:** common scientific and engineering concepts can be expressed in renderer-neutral scene data and rendered by the appropriate adapter.
+#### P1.4 Prove platform openness
+- [ ] Build one reference video using low-level tool calls rather than a monolithic template.
+- [ ] Build a second distinct visual style from the same semantic content.
+- [ ] Prove tool extensions can be registered without changing the agent orchestration core.
+- [ ] Verify the content package remains unchanged when renderers/themes are swapped.
 
-### P3 — Production automation
+**Exit criteria:** an agent can discover tools, construct a non-trivial scene/sequence, render a preview, inspect it, revise it, and produce a final output without being restricted to a predefined template.
 
-- [ ] Integrate configurable TTS providers independently from the visual renderer.
-- [ ] Generate word- or sentence-aligned subtitles from actual speech timing.
-- [ ] Add music and sound-effect tracks with ducking.
-- [ ] Build automated render and frame-sampling quality checks.
-- [ ] Add batch rendering and resumable jobs.
-- [ ] Export platform presets for landscape and vertical formats.
-- [ ] Record reproducibility metadata: schema version, model/provider versions, renderer version, assets, and render settings.
+### P2 — Professional visual and simulation capabilities
 
-**Exit criteria:** one approved episode package can flow through replaceable content, voice, and renderer providers to a publishable video with limited manual intervention.
+- [ ] Advanced 2D motion design: vector paths, masks, typography, kinetic type, graph/diagram layout, particles.
+- [ ] Three.js 3D: procedural geometry, imported models, PBR materials, lights, cameras, rigging, depth of field, post-processing.
+- [ ] Blender adapter for higher-fidelity 3D, compositing, and procedural scenes.
+- [ ] Manim adapter for equations, plots, and mathematical derivations.
+- [ ] Scientific simulation tools: particles, forces, springs, waves, trajectories, rigid-body and selected fluid effects.
+- [ ] Data visualization tools with explicit units, scales, labels, and source bindings.
+- [ ] Camera language, shot composition, color grading, transitions, and advanced compositing.
+- [ ] Engine capability negotiation and graceful, explicit fallbacks.
 
-## First episode: CPU cache
+**Exit criteria:** the agent can combine multiple specialist engines and tool families to create professional scenes beyond simple slide-like motion graphics.
 
-Working title: **Why Does a CPU Need Cache?**
+### P3 — Asset intelligence and generative providers
 
-Proposed narrative:
-1. The CPU can execute instructions much faster than main memory can supply data.
-2. Waiting for data creates a performance bottleneck.
-3. Cache stores recently or frequently used data close to the CPU.
-4. L1, L2, and L3 trade capacity for latency.
-5. Cache hits avoid a trip to slower memory; cache misses do not.
+- [ ] Pluggable image/video/audio/3D asset search and generation providers.
+- [ ] Asset transformation, segmentation, background removal, texture generation, and model optimization.
+- [ ] Asset provenance, licensing, attribution, content hashes, and cache management.
+- [ ] Pluggable LLM/research providers with structured outputs and source tracking.
+- [ ] Pluggable TTS/voice providers and speech alignment.
+- [ ] Optional local model and local rendering integrations.
 
-Technical accuracy notes:
-- Avoid presenting one universal latency number; values vary by processor, clock, cache level, and memory configuration.
-- Explain locality (temporal and spatial) before implying cache contents are predictable.
-- Distinguish cache capacity, latency, bandwidth, and hit rate.
-- Clearly label illustrative diagrams and any non-measured timing examples.
+**Exit criteria:** providers can be swapped independently and agents can combine generated, sourced, and procedural assets with traceable rights/provenance.
+
+### P4 — Production operations and distribution
+
+- [ ] Render farm/worker queue, resumable jobs, caching, and incremental rendering.
+- [ ] Resource budgets, execution sandboxing, quotas, and cancellation.
+- [ ] Automated visual/audio QA and configurable quality gates.
+- [ ] Version comparison, project snapshots, rollback, and reproducibility manifests.
+- [ ] Batch generation, multiple aspect ratios, platform-specific exports, and delivery presets.
+- [ ] Optional web studio for project inspection, tool-call trace, timeline, and review.
+
+**Exit criteria:** reliable production workflows for multiple videos, projects, output profiles, and users.
+
+## Tool domain inventory
+
+The tool catalog should grow across:
+1. Project/sequence/timeline/scene graph.
+2. 2D graphics and motion design.
+3. 3D geometry, materials, lights, cameras, and animation.
+4. Physics and scientific simulation.
+5. Charts, equations, diagrams, and data visualization.
+6. Asset discovery, import, generation, and transformation.
+7. Audio, narration, music, SFX, and captions.
+8. Editing, compositing, color, and transitions.
+9. Preview, render, frame inspection, diagnostics, and QA.
+10. Specialist engine and sandboxed code/shader execution.
+
+Every tool must declare stable ID/version, description, typed schemas, capabilities, engine requirements, determinism/statefulness, cost, permissions, timeout, and output artifacts.
+
+## First reference project: CPU cache
+
+Continue using the CPU-cache explainer to validate the platform:
+- It should become a renderer-neutral project/scene graph.
+- It should use the same public tool APIs available to any agent.
+- It should demonstrate 2D diagrams, data flow, typography, camera/3D elements, narration, captions, and sound.
+- It should not receive privileged hard-coded shortcuts unavailable to other projects.
 
 ## Engineering workflow
 
-- Keep `main` releasable.
-- Use short-lived feature branches for substantial changes.
-- Add typecheck and render smoke tests before expanding the pipeline.
-- Keep generation packages and renderer packages as separate dependency graphs.
-- Do not claim a milestone is complete until the relevant command has run and output has been inspected.
+- Keep `main` releasable and CI-validated.
+- Keep schemas/contracts versioned and backward-compatible.
+- Keep content, tool orchestration, renderer adapters, and providers as separate dependency boundaries.
+- Prefer small composable tools with structured results over one giant "generate video" tool.
+- Preserve reproducibility and inspectability for every tool call and render.
+- Do not mark work complete until code, tests, and representative outputs have been inspected.
