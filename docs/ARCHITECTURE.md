@@ -286,3 +286,8 @@ The filesystem snapshot backend is the first durable local adapter. Database/obj
 ### CI correction — recursive removal test fixture
 
 The latest P1.0 CI run passed TypeScript, episode validation, project validation, and the first two patch tests, then failed in `recursive removal cleans constraints and dependency edges`. The test incorrectly expected the entire dependency collection to become empty, although the migrated CPU-cache project already contains unrelated dependency edges. The implementation correctly removes only edges referencing deleted nodes. Updated the assertion to preserve the pre-existing constraint/dependency counts and explicitly verify the test edge is removed. Fix commit: `1dc45f6b26c0ec8ae0cb3d9e7dd0603f0e2d62f7`.
+
+
+### CI correction — dependency edge count in recursive deletion test
+
+The next CI run exposed a second, more precise fixture assumption: the CPU-cache fixture already has a dependency edge from `node-cpu` to `node-data-path`. Deleting `node-cpu` must remove that pre-existing edge as well as the test-created edge. The correct expected count is therefore the original dependency count minus one, while unrelated edges must remain. Updated the test to assert no remaining dependency references either deleted node. Implementation behavior is correct; the test expectation now reflects the real dependency graph.
