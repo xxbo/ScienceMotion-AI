@@ -17,6 +17,7 @@ export function migrateProject(input: SupportedProjectInput): ProjectDocument {
     project.prefabs = [];
     project.constraints = [];
     project.dependencies = [];
+    project.animationTracks = [];
   } else if (input.schemaVersion !== "1.1.0") {
     throw new Error(`Unsupported project schema version: ${(input as { schemaVersion: string }).schemaVersion}`);
   }
