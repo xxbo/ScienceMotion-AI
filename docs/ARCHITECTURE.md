@@ -302,3 +302,13 @@ The next CI run exposed a second, more precise fixture assumption: the CPU-cache
 - Project validation checks animation-track target references, duplicate keyframes, frame ordering, and non-negative frame positions.
 
 The current animation evaluator is renderer-neutral and deliberately does not perform easing-curve evaluation or mutate node transforms. Renderers consume sampled values or implement richer interpolation through declared capabilities. Constraint solving remains a separate future runtime capability; P1.0 currently defines and validates constraint relationships.
+
+
+## P1.0 continuation: constraint validation, prefab graph cloning, and project concurrency
+
+- `src/platform/constraints.ts` validates constraint IDs, source/target node references, self-targeting, cross-scene relationships, and parameters for distance, limit-position/rotation, and follow-path constraints. This is semantic validation, not a constraint solver; engine-specific solving remains an adapter capability.
+- Prefab instantiation now clones constraints whose endpoints are both inside the prefab subtree and internal node-to-node dependency edges. It remaps every cloned ID/reference and returns created node/constraint/dependency IDs. External references are intentionally not cloned.
+- `src/platform/project-repository.ts` adds an in-memory project repository with compare-and-swap revision semantics. Two concurrent patches based on the same revision cannot both commit. Persistent multi-process repositories must implement the same contract using database transactions or conditional writes.
+- Tests cover prefab constraint/dependency remapping, concurrent revision conflicts, and constraint validation.
+
+These implementations extend the P1.0 domain foundation. They do not yet provide a physical constraint solver or distributed database concurrency.
