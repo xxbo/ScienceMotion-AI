@@ -99,6 +99,7 @@ export function applyProjectPatch(
       for (const scene of project.scenes) scene.rootNodeIds = scene.rootNodeIds.filter((id) => !removeIds.has(id));
       project.nodes = project.nodes.filter((item) => !removeIds.has(item.id));
       for (const item of project.nodes) item.childIds = (item.childIds ?? []).filter((id) => !removeIds.has(id));
+      for (const prefab of project.prefabs) prefab.rootNodeIds = prefab.rootNodeIds.filter((id) => !removeIds.has(id));
       project.constraints = project.constraints.filter((constraint) =>
         !removeIds.has(constraint.sourceNodeId) && !removeIds.has(constraint.targetNodeId)
       );
@@ -117,7 +118,9 @@ export function applyProjectPatch(
       if (operation.newParentId && !belongsToScene(project, operation.newParentId, operation.sceneId)) {
         throw new Error("New parent does not belong to the target scene");
       }
+      const oldParentId = node.parentId;
       detachFromParent(project.nodes, node);
+      if (oldParentId) changed.add(oldParentId);
       for (const item of project.scenes) item.rootNodeIds = item.rootNodeIds.filter((id) => id !== node.id);
       node.parentId = operation.newParentId;
       if (operation.newParentId) {
