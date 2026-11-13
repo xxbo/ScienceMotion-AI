@@ -451,3 +451,33 @@ test("repository patch and filesystem snapshot form a recoverable project lifecy
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+
+test("constraint validation rejects enabled cross-scene constraints", () => {
+  const crossScene = {
+    id: "cross-scene-look-at",
+    type: "look-at" as const,
+    sourceNodeId: "node-cpu",
+    targetNodeId: "node-cache-stack",
+    enabled: true,
+    parameters: {},
+  };
+  assert.ok(validateSceneConstraints(project, [crossScene]).some((error) => error.includes("crosses scene boundaries")));
+});
+
+test("migration is idempotent for current schema and rejects unknown versions", () => {
+  const current = migrateProject(project);
+  assert.equal(current.schemaVersion, "1.1.0");
+  assert.deepEqual(current, project);
+  const unsupported = { ...structuredClone(project), schemaVersion: "9.0.0" };
+  assert.throws(() => migrateProject(unsupported as never), /Unsupported project schema version/);
+});
+
+test("project repository returns isolated copies from reads", async () => {
+  const repository = new InMemoryProjectRepository();
+  await repository.create(project);
+  const firstRead = await repository.get(project.project.id);
+  firstRead!.nodes[0].name = "mutated outside repository";
+  const secondRead = await repository.get(project.project.id);
+  assert.notEqual(secondRead!.nodes[0].name, "mutated outside repository");
+});
