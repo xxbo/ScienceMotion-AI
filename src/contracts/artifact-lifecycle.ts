@@ -29,4 +29,6 @@ export interface ArtifactLifecycleManager {
   references(artifactId: string): Promise<ArtifactReference[]>;
   collectGarbage(options?: { olderThanMs?: number; now?: Date }): Promise<ArtifactGarbageCollectionResult>;
   attachToProject(project: import("./project").ProjectDocument, artifactId: string, metadata: { assetId: string; kind: Extract<ArtifactKind, "image" | "video" | "audio" | "model" | "texture" | "data" | "other">; role: string }): Promise<import("./project").ProjectDocument>;
+  detachProjectAsset(project: import("./project").ProjectDocument, assetId: string): Promise<import("./project").ProjectDocument>;
+  reconcileProjectReferences(project: import("./project").ProjectDocument): Promise<{ attached: string[]; detached: string[]; missingArtifacts: string[] }>;
 }
