@@ -33,6 +33,9 @@ jobs:
       - name: Type check
         run: npm run typecheck
 
+      - name: Validate renderer-neutral episode package
+        run: npm run validate:episode
+
       - name: Install system dependencies
         run: |
           sudo apt-get update
