@@ -11,7 +11,7 @@ const ajv = new Ajv({ allErrors: true, strict: true });
 ajv.addSchema(projectSchema);
 const validate = ajv.compile(schema);
 const sample = {
-  schemaVersion: "1.0.0",
+  schemaVersion: "1.1.0",
   projectId: "project-cpu-cache",
   baseRevisionId: "revision-initial",
   patches: [{
