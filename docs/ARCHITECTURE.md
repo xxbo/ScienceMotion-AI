@@ -225,3 +225,13 @@ Validation is performed by `scripts/validate-project.mjs` and checks:
 - Cyclic node hierarchy and parent/child consistency.
 
 This is the first project graph contract, not yet the complete final model. Constraints, simulation-specific typed components, reusable prefabs, dependency graph, patch execution, optimistic concurrency, snapshots, and schema migrations remain planned. Component payloads are currently extensible JSON objects; specialist component schemas will be introduced by capability/plugin namespaces.
+
+
+## Project patch model — initial implementation
+
+- `schemas/project-patch.schema.json` defines versioned patch documents with project ID and required base revision ID.
+- `src/contracts/project-patch.ts` defines add-node, update-node, remove-node, and reparent-node operations.
+- `src/platform/project-patches.ts` applies a patch batch to a cloned project, checks revision conflicts, prevents node ID changes, requires explicit recursive deletion, validates hierarchy cycles, and appends a new revision record.
+- A failed patch throws before returning a new project; the source project object is not mutated.
+
+This first patch engine is an in-memory domain primitive. Persistent snapshots, full project-wide optimistic concurrency, operation-level schema validation at the gateway, and comprehensive automated unit tests remain outstanding.
