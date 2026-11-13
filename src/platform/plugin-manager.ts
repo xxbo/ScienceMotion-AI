@@ -45,6 +45,7 @@ export class InMemoryPluginManager {
     if (entry.status.state === "enabled") return this.success(entry.status);
     for (const dependency of entry.plugin.manifest.dependencies ?? []) {
       const installedDependency = this.plugins.get(dependency.pluginId);
+      if (!installedDependency && dependency.optional) continue;
       if (!installedDependency || installedDependency.status.state !== "enabled") {
         return this.failure(pluginId, entry.status.version, "PLUGIN_DEPENDENCY_NOT_ENABLED", `Required plugin is not enabled: ${dependency.pluginId}`);
       }
