@@ -66,8 +66,9 @@ export class InMemoryPluginManager {
         entry.status.lastHealthCheck = { ...health, checkedAt: new Date().toISOString() };
         if (!health.ok) {
           for (const tool of registered) this.registry.unregister(tool.manifest.id, tool.manifest.version);
-          entry.status = { ...entry.status, state: "failed", error: health.message ?? "Plugin health check failed" };
-          return this.failure(pluginId, entry.status.version, "PLUGIN_HEALTH_CHECK_FAILED", entry.status.error, entry.status);
+          const healthError = health.message ?? "Plugin health check failed";
+          entry.status = { ...entry.status, state: "failed", error: healthError };
+          return this.failure(pluginId, entry.status.version, "PLUGIN_HEALTH_CHECK_FAILED", healthError, entry.status);
         }
       }
       return this.success(entry.status);
