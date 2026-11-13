@@ -1,103 +1,42 @@
-import test from "node:test";
-import assert from "node:assert/strict";
-import type { AgentTool, AgentToolManifest, ToolResult } from "../contracts/agent-tool";
-import type { AgentToolPlugin } from "../contracts/agent-plugin";
-import { InMemoryAgentToolRegistry } from "./tool-registry";
-import { InMemoryPluginManager } from "./plugin-manager";
+# ScienceMotion AI
 
-function tool(id: string, pluginId: string): AgentTool<unknown, unknown> {
-  const manifest: AgentToolManifest = {
-    id, version: "1.0.0", namespace: id.split(".").slice(0, -1).join("."),
-    name: id, description: `Test tool ${id}`, category: "test", pluginId,
-    inputSchema: { type: "object" }, outputSchema: { type: "object" },
-    execution: { deterministic: true, stateful: false, destructive: false, cost: "low" },
-  };
-  return { manifest, execute: async (): Promise<ToolResult<unknown>> => ({ ok: true, output: {}, diagnostics: [] }) };
-}
+An extensible creative framework for AI agents making science explainers and other complex videos. Build a platform that can discover, compose and govern hundreds of tools; templates remain optional accelerators, not the creative ceiling.
 
-function plugin(
-  id: string,
-  tools: AgentTool<unknown, unknown>[] = [tool(`${id}.run`, id)],
-  extras: Partial<AgentToolPlugin["manifest"]> = {},
-  healthCheck?: AgentToolPlugin["healthCheck"]
-): AgentToolPlugin {
-  return {
-    manifest: { id, version: "1.0.0", name: id, description: `Plugin ${id}`, toolIds: tools.map((item) => item.manifest.id), ...extras },
-    tools,
-    healthCheck,
-  };
-}
+## Current status
 
-test("plugin installs disabled and exposes isolated status copies", () => {
-  const registry = new InMemoryAgentToolRegistry();
-  const manager = new InMemoryPluginManager(registry);
-  const installed = manager.install(plugin("science.math"));
-  assert.equal(installed.ok, true);
-  assert.equal(installed.status.state, "installed");
-  assert.equal(registry.getImplementation("science.math.run"), undefined);
-  const status = manager.getStatus("science.math")!;
-  status.state = "failed";
-  assert.equal(manager.getStatus("science.math")?.state, "installed");
-});
+| Stage | Implemented scope |
+| --- | --- |
+| P0 | Working Remotion, Mandarin TTS and MP4 CI pipeline; media polish remains open |
+| P1.0 | Accepted local Project Graph, patch/revision operations, prefab/animation data and snapshots |
+| P1.1-A–C | Local discovery, gateway, plugin lifecycle, execution records and content-addressed artifacts |
+| P1.1-D | Local artifact references, project links/unlinks, reconciliation and garbage collection |
+| P1.1-E | Multi-version plugin installation, one active version, pins, version locks, guarded switching and rollback |
+| P1.2+ | Isolated workers, professional creative tools and the agent visual feedback loop are planned |
 
-test("plugin enable registers tools and disable unregisters them", async () => {
-  const registry = new InMemoryAgentToolRegistry();
-  const manager = new InMemoryPluginManager(registry);
-  manager.install(plugin("science.math"));
-  assert.equal((await manager.enable("science.math")).status.state, "enabled");
-  assert.ok(await registry.get("science.math.run"));
-  assert.equal(manager.disable("science.math").status.state, "disabled");
-  assert.equal(await registry.get("science.math.run"), undefined);
-});
+P1.1-E is a local implementation with focused tests. It is not a declaration that P1.1 as a whole is finished. See [the implementation and acceptance notes](docs/P1.1-E.md) for tested boundaries.
 
-test("plugin dependencies require enabled compatible versions", async () => {
-  const registry = new InMemoryAgentToolRegistry();
-  const manager = new InMemoryPluginManager(registry);
-  manager.install(plugin("science.base"));
-  manager.install(plugin("science.advanced", undefined, {
-    dependencies: [{ pluginId: "science.base", versionRange: "^1.0.0" }],
-  }));
-  assert.equal((await manager.enable("science.advanced")).diagnostics[0].code, "PLUGIN_DEPENDENCY_NOT_ENABLED");
-  await manager.enable("science.base");
-  assert.equal((await manager.enable("science.advanced")).ok, true);
-  assert.equal(manager.disable("science.base").diagnostics[0].code, "PLUGIN_HAS_ENABLED_DEPENDENTS");
-});
+The geometry tool and plugin JSON files are catalogue fixtures. Their presence does not mean a complete executable geometry plugin or generic Project Graph video renderer has been delivered.
 
-test("plugin enable rolls back partial registration on collision", async () => {
-  const registry = new InMemoryAgentToolRegistry();
-  registry.register(tool("science.shared.run", "other.plugin"));
-  const manager = new InMemoryPluginManager(registry);
-  const first = tool("science.first.run", "science.bundle");
-  const collision = tool("science.shared.run", "science.bundle");
-  manager.install(plugin("science.bundle", [first, collision]));
-  const result = await manager.enable("science.bundle");
-  assert.equal(result.ok, false);
-  assert.equal(result.status.state, "failed");
-  assert.equal(await registry.get("science.first.run"), undefined);
-  assert.equal((await registry.get("science.shared.run"))?.id, "science.shared.run");
-});
+## Development checks
 
-test("unhealthy plugin is rolled back and marked failed", async () => {
-  const registry = new InMemoryAgentToolRegistry();
-  const manager = new InMemoryPluginManager(registry);
-  manager.install(plugin("science.unhealthy", undefined, {}, async () => ({ ok: false, message: "dependency unavailable" })));
-  const result = await manager.enable("science.unhealthy");
-  assert.equal(result.ok, false);
-  assert.equal(result.diagnostics[0].code, "PLUGIN_HEALTH_CHECK_FAILED");
-  assert.equal(result.status.state, "failed");
-  assert.equal(await registry.get("science.unhealthy.run"), undefined);
-});
+Node.js 22 is used by CI.
 
-test("plugin uninstall requires disabled state and no dependents", async () => {
-  const registry = new InMemoryAgentToolRegistry();
-  const manager = new InMemoryPluginManager(registry);
-  manager.install(plugin("science.base"));
-  manager.install(plugin("science.ext", undefined, { dependencies: [{ pluginId: "science.base" }] }));
-  assert.equal(manager.uninstall("science.base").diagnostics[0].code, "PLUGIN_HAS_DEPENDENTS");
-  await manager.enable("science.base");
-  assert.equal(manager.uninstall("science.base").diagnostics[0].code, "PLUGIN_MUST_BE_DISABLED");
-  manager.disable("science.base");
-  assert.equal(manager.uninstall("science.base").ok, false);
-  manager.uninstall("science.ext");
-  assert.equal(manager.uninstall("science.base").ok, true);
-});
+```bash
+npm install
+npm run typecheck
+npm test
+npm run validate:episode
+npm run validate:project
+npm run validate:project-patch
+npm run validate:tool-manifests
+npm run validate:plugin-manifests
+npm run render:storyboard
+```
+
+`npm run studio` and `npm run render` also generate narration and require the Python voice environment described by the repository's voice scripts and CI workflow.
+
+## Design
+
+Editorial content and animation/rendering stay separate. P1.0's Project Graph is the common data model. P1.1 supplies tool manifests, registry, gateway, plugins, execution records and artifact references. Specialist renderers and workers will consume approved snapshots through explicit contracts.
+
+Read [Platform Vision](docs/PLATFORM_VISION.md), [Development Plan](docs/PLAN.md), [Architecture](docs/ARCHITECTURE.md), and [P1.1-E](docs/P1.1-E.md).
