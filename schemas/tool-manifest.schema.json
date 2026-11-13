@@ -4,31 +4,148 @@
   "title": "ScienceMotion Agent Tool Manifest",
   "type": "object",
   "additionalProperties": false,
-  "required": ["id", "version", "name", "description", "category", "inputSchema", "outputSchema", "execution"],
+  "required": [
+    "id",
+    "version",
+    "namespace",
+    "name",
+    "description",
+    "category",
+    "inputSchema",
+    "outputSchema",
+    "execution"
+  ],
   "properties": {
-    "id": { "type": "string", "pattern": "^[a-z][a-z0-9._-]+$" },
-    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
-    "name": { "type": "string", "minLength": 1 },
-    "description": { "type": "string", "minLength": 1 },
-    "category": { "type": "string", "minLength": 1 },
-    "examples": { "type": "array", "items": { "type": "object" } },
-    "inputSchema": { "type": "object" },
-    "outputSchema": { "type": "object" },
-    "capabilities": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
-    "engines": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9._-]+$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "category": {
+      "type": "string",
+      "minLength": 1
+    },
+    "examples": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "inputSchema": {
+      "type": "object"
+    },
+    "outputSchema": {
+      "type": "object"
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "engines": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
     "execution": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["deterministic", "stateful", "destructive", "cost"],
+      "required": [
+        "deterministic",
+        "stateful",
+        "destructive",
+        "cost"
+      ],
       "properties": {
-        "deterministic": { "type": "boolean" },
-        "stateful": { "type": "boolean" },
-        "destructive": { "type": "boolean" },
-        "cost": { "enum": ["low", "medium", "high"] },
-        "timeoutMs": { "type": "integer", "minimum": 1 },
-        "permissions": { "type": "array", "items": { "type": "string" } }
+        "deterministic": {
+          "type": "boolean"
+        },
+        "stateful": {
+          "type": "boolean"
+        },
+        "destructive": {
+          "type": "boolean"
+        },
+        "cost": {
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "timeoutMs": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "permissions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "supportsCancellation": {
+          "type": "boolean"
+        },
+        "idempotent": {
+          "type": "boolean"
+        },
+        "maxConcurrency": {
+          "type": "integer",
+          "minimum": 1
+        }
       }
     },
-    "artifacts": { "type": "array", "items": { "type": "string" } }
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "namespace": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*(\\\\.[a-z][a-z0-9_-]*)*$"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "projectSchemaVersions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^\\\\d+\\\\.\\\\d+\\\\.\\\\d+$"
+      },
+      "uniqueItems": true
+    },
+    "lifecycle": {
+      "enum": [
+        "stable",
+        "beta",
+        "deprecated"
+      ]
+    },
+    "pluginId": {
+      "type": "string",
+      "minLength": 1
+    }
   }
 }
