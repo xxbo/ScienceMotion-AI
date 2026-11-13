@@ -57,7 +57,11 @@ export function applyProjectPatch(
 ): ProjectPatchResult {
   if (patch.schemaVersion !== source.schemaVersion) throw new Error("Patch schema version does not match project schema");
   if (patch.projectId !== source.project.id) throw new Error("Patch targets a different project");
-  if (patch.baseRevisionId !== options.currentRevisionId) throw new Error("Revision conflict: project has changed since patch was created");
+  const actualRevisionId = source.revisions[source.revisions.length - 1]?.id;
+  if (!actualRevisionId || actualRevisionId !== options.currentRevisionId) {
+    throw new Error(`Revision conflict: repository is at ${actualRevisionId ?? "no revision"}, expected ${options.currentRevisionId}`);
+  }
+  if (patch.baseRevisionId !== actualRevisionId) throw new Error("Revision conflict: project has changed since patch was created");
   if (projectRevisionExists(source, options.newRevisionId)) throw new Error(`Revision already exists: ${options.newRevisionId}`);
 
   const project = clone(source);
