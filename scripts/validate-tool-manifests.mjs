@@ -5,6 +5,14 @@ import { join } from "node:path";
 const schema = JSON.parse(await readFile("schemas/tool-manifest.schema.json", "utf8"));
 const ajv = new Ajv({ allErrors: true, strict: false });
 const validate = ajv.compile(schema);
+const namespacePattern = new RegExp(schema.properties.namespace.pattern);
+const projectVersionPattern = new RegExp(schema.properties.projectSchemaVersions.items.pattern);
+for (const namespace of ["geometry", "graphics.2d", "engine.3d", "audio.sfx", "simulation.physics"]) {
+  if (!namespacePattern.test(namespace)) throw new Error(`Tool namespace schema rejects valid namespace: ${namespace}`);
+}
+for (const version of ["1.0.0", "1.1.0", "12.34.56"]) {
+  if (!projectVersionPattern.test(version)) throw new Error(`Tool project schema version pattern rejects valid version: ${version}`);
+}
 const directory = "tools/manifests";
 const files = (await readdir(directory)).filter((name) => name.endsWith(".json")).sort();
 if (files.length === 0) {
