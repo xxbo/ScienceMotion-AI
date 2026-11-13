@@ -46,9 +46,11 @@ export function validateSceneConstraints(
         errors.push(`Constraint ${constraint.id} requires a non-negative distance parameter`);
       }
     } else if (constraint.type === "limit-position" || constraint.type === "limit-rotation") {
-      if (!finiteVector(constraint.parameters.min) || !finiteVector(constraint.parameters.max)) {
+      const min = constraint.parameters.min;
+      const max = constraint.parameters.max;
+      if (!finiteVector(min) || !finiteVector(max)) {
         errors.push(`Constraint ${constraint.id} requires finite min/max Vector3 parameters`);
-      } else if (constraint.parameters.min.some((value, index) => value > constraint.parameters.max[index])) {
+      } else if (min.some((value, index) => value > max[index])) {
         errors.push(`Constraint ${constraint.id} has min values greater than max values`);
       }
     } else if (constraint.type === "follow-path") {
