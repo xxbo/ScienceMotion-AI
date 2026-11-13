@@ -8,7 +8,7 @@ export type Vector3 = [number, number, number];
 export type Interpolation = "linear" | "step" | "bezier" | "hermite";
 
 export interface ProjectDocument {
-  schemaVersion: "1.0.0";
+  schemaVersion: "1.1.0";
   project: {
     id: string; name: string; description?: string; createdAt: string; updatedAt: string;
     units: ProjectUnits; coordinateSystem: CoordinateSystem;
