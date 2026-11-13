@@ -23,7 +23,8 @@ Build a reusable AI-assisted production system for accurate, visually compelling
 - [x] Add a Remotion composition and initial motion-graphics scenes.
 - [ ] Install dependencies and verify the studio starts.
 - [ ] Render a 1920×1080, 30 FPS MP4.
-- [ ] Inspect rendered frames for layout, clipping, and timing.
+- [ ] Inspect rendered frames for layout, clipping, and timing on the Chinese episode.
+- [ ] Add a configurable Mandarin TTS adapter and mix narration with the subtitle timeline.
 - [ ] Add voice-over, captions, and audio mixing.
 - [ ] Produce the first complete 2–3 minute CPU cache explainer.
 
