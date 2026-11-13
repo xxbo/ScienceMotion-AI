@@ -323,3 +323,8 @@ These implementations extend the P1.0 domain foundation. They do not yet provide
 - Project validation now rejects animation keyframes beyond the longest sequence duration.
 
 The project model now has a more complete lifecycle for node-linked animation, constraints, dependencies, and revisions. P1.0 acceptance still requires the full end-to-end validation run and a final consistency audit of the CPU-cache project fixture.
+
+
+### CI correction — prefab animation track count
+
+The first CI run for prefab animation remapping failed in the new test because the CPU-cache fixture already has an animation track targeting a descendant included in the prefab subtree. The implementation correctly cloned both the newly-added test track and the pre-existing data-path animation track. Updated the test to expect both cloned tracks and verify the existing descendant track's remapped target. This was a fixture expectation correction, not a runtime defect.
