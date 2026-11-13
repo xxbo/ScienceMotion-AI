@@ -49,17 +49,37 @@ export class FileSystemArtifactReferenceStore implements ArtifactReferenceStore 
 }
 
 export class LocalArtifactLifecycleManager implements ArtifactLifecycleManager {
+  private readonly locks = new Map<string, Promise<void>>();
   constructor(private readonly artifacts: ArtifactStore, private readonly referencesStore: ArtifactReferenceStore) {}
 
-  async attach(input: Omit<ArtifactReference, "id" | "createdAt">): Promise<ArtifactReference> {
-    const artifact = await this.artifacts.get(input.artifactId);
-    if (!artifact) throw new Error("Cannot reference an artifact that does not exist: " + input.artifactId);
-    const reference: ArtifactReference = { ...input, id: referenceId(input), createdAt: new Date().toISOString() };
-    await this.referencesStore.attach(reference);
-    return (await this.referencesStore.list({ artifactId: input.artifactId })).find((item) => item.id === reference.id) ?? reference;
+  private async withArtifactLock<T>(artifactId: string, operation: () => Promise<T>): Promise<T> {
+    const previous = this.locks.get(artifactId) ?? Promise.resolve();
+    let release!: () => void;
+    const current = new Promise<void>((resolve) => { release = resolve; });
+    this.locks.set(artifactId, current);
+    await previous;
+    try { return await operation(); }
+    finally {
+      release();
+      if (this.locks.get(artifactId) === current) this.locks.delete(artifactId);
+    }
   }
 
-  async detach(referenceIdValue: string): Promise<boolean> { return this.referencesStore.detach(referenceIdValue); }
+  async attach(input: Omit<ArtifactReference, "id" | "createdAt">): Promise<ArtifactReference> {
+    return this.withArtifactLock(input.artifactId, async () => {
+      const artifact = await this.artifacts.get(input.artifactId);
+      if (!artifact) throw new Error("Cannot reference an artifact that does not exist: " + input.artifactId);
+      const reference: ArtifactReference = { ...input, id: referenceId(input), createdAt: new Date().toISOString() };
+      await this.referencesStore.attach(reference);
+      return (await this.referencesStore.list({ artifactId: input.artifactId })).find((item) => item.id === reference.id) ?? reference;
+    });
+  }
+
+  async detach(referenceIdValue: string): Promise<boolean> {
+    const reference = (await this.referencesStore.list()).find((item) => item.id === referenceIdValue);
+    if (!reference) return false;
+    return this.withArtifactLock(reference.artifactId, () => this.referencesStore.detach(referenceIdValue));
+  }
   async references(artifactId: string): Promise<ArtifactReference[]> { return this.referencesStore.list({ artifactId }); }
 
   async attachToProject(project: ProjectDocument, artifactId: string, metadata: { assetId: string; kind: Extract<ArtifactKind, "image" | "video" | "audio" | "model" | "texture" | "data" | "other">; role: string }): Promise<ProjectDocument> {
@@ -80,12 +100,15 @@ export class LocalArtifactLifecycleManager implements ArtifactLifecycleManager {
     const result: ArtifactGarbageCollectionResult = { scanned: candidates.length, retained: 0, deleted: [], errors: [] };
     for (const artifact of candidates) {
       try {
-        if (now.getTime() - Date.parse(artifact.createdAt) < olderThanMs || await this.referencesStore.count(artifact.id) > 0) {
-          result.retained++;
-          continue;
-        }
-        const deleted = await this.artifacts.delete(artifact.id);
-        if (deleted) result.deleted.push(artifact.id);
+        await this.withArtifactLock(artifact.id, async () => {
+          const ageMs = now.getTime() - Date.parse(artifact.createdAt);
+          if (!Number.isFinite(ageMs) || ageMs < olderThanMs || await this.referencesStore.count(artifact.id) > 0) {
+            result.retained++;
+            return;
+          }
+          const deleted = await this.artifacts.delete(artifact.id);
+          if (deleted) result.deleted.push(artifact.id);
+        });
       } catch (error) {
         result.errors.push({ artifactId: artifact.id, message: error instanceof Error ? error.message : String(error) });
       }
