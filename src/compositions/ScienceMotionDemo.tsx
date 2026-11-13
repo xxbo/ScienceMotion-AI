@@ -285,7 +285,7 @@ const Outro: React.FC<{ frame: number }> = ({ frame }) => (
   </Slide>
 );
 
-const episodeData = episode as EpisodePackage;
+const episodeData = episode as unknown as EpisodePackage;
 
 const sceneRegistry: Record<string, React.FC<{ frame: number }>> = {
   "cpu-memory-gap": Intro,
