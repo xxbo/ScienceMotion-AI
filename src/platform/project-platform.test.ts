@@ -224,3 +224,31 @@ test("animation sampling interpolates vector arrays and loops deterministically"
   assert.deepEqual(sampleAnimationTrack(track, 10)?.value, [10, 5, 0]);
   assert.deepEqual(sampleAnimationTrack(track, 25)?.value, [5, 2.5, 0]);
 });
+
+
+test("patch batches are atomic when a later operation fails", () => {
+  const source = structuredClone(project);
+  const before = hashProject(source);
+  const patch: ProjectPatchDocument = {
+    schemaVersion: "1.1.0",
+    projectId: source.project.id,
+    baseRevisionId: "revision-initial",
+    patches: [
+      { op: "add-node", sceneId: "scene-intro", node: node("node-would-have-been-added") },
+      { op: "remove-node", nodeId: "node-does-not-exist" },
+    ],
+  };
+  assert.throws(() => applyProjectPatch(source, patch, options), /Node not found/);
+  assert.equal(hashProject(source), before);
+  assert.ok(!source.nodes.some((item) => item.id === "node-would-have-been-added"));
+});
+
+test("animation track schema rejects references to missing nodes", () => {
+  const source = structuredClone(project);
+  source.animationTracks.push({
+    id: "broken-track", targetNodeId: "missing-node", targetProperty: "opacity",
+    keyframes: [{ frame: 0, value: 0 }],
+  });
+  assert.ok(source.animationTracks.some((track) => track.targetNodeId === "missing-node"));
+  assert.ok(validateAnimationTrack(source.animationTracks[0]).length === 0);
+});
