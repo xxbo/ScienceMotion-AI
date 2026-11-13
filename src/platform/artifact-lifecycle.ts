@@ -32,8 +32,9 @@ export class InMemoryArtifactReferenceStore implements ArtifactReferenceStore {
 export class FileSystemArtifactReferenceStore implements ArtifactReferenceStore {
   constructor(private readonly rootDirectory: string) {}
   async attach(reference: ArtifactReference): Promise<boolean> {
+    const referenceHash = assertReferenceId(reference.id);
     await mkdir(this.rootDirectory, { recursive: true });
-    const path = join(this.rootDirectory, reference.id.replace("ref:", "") + ".json");
+    const path = join(this.rootDirectory, referenceHash + ".json");
     try { await readFile(path); return false; } catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
     const temp = path + "." + process.pid + ".tmp";
     await writeFile(temp, JSON.stringify(reference), { flag: "wx" });
