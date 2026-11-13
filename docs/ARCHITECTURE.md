@@ -131,3 +131,67 @@ Visuals must not silently imply measured or universal values. Label illustrative
 - Assert that rendering does not mutate the package (content hash and semantic fields unchanged).
 - Test schema-version compatibility and explicit failure for unsupported versions/features.
 - Run AI-director unit tests in an environment without Remotion, Chromium, or FFmpeg.
+
+
+## Platform architecture: agent-first creative tooling
+
+ScienceMotion is an AI-agent-facing creative platform. The agent should be able to discover and invoke many small composable tools, not merely submit a prompt to a fixed template generator.
+
+### Tool system layers
+
+1. **Tool catalog:** manifests describing tool ID/version, purpose, examples, input/output JSON Schemas, categories, capabilities, engine requirements, and execution metadata.
+2. **Discovery service:** search tools by intent, capability, category, engine, or cost; retrieve full schema and examples before invocation.
+3. **Tool gateway:** validates inputs/outputs, checks permissions and budgets, handles cancellation/timeouts, records execution traces, and persists artifacts.
+4. **Tool implementations:** focused operations for scene graph, graphics, animation, assets, simulation, audio, editing, preview, and rendering.
+5. **Engine adapters:** map portable tool semantics to Remotion, Three.js, Blender, Manim, FFmpeg, or future engines.
+
+### Tool call lifecycle
+
+```text
+Creative goal
+  -> Agent discovers relevant tools
+  -> Reads tool schemas and examples
+  -> Plans and invokes composable tools
+  -> Receives structured results / diagnostics / artifacts
+  -> Previews and inspects output
+  -> Patches selected objects or shots
+  -> Re-renders affected output
+```
+
+### Tool design rules
+
+- Prefer narrow composable tools with clear inputs and outputs over a monolithic generate-video call.
+- Offer both high-level creative helpers and low-level controls; the former must be buildable on the latter.
+- Tool IDs and versions are stable; breaking changes require a new version.
+- Tool manifests declare determinism, statefulness, cost, permissions, timeouts, engine dependencies, and produced artifacts.
+- Discovery is dynamic. The agent must not need hard-coded knowledge of every available tool.
+- Tool execution is logged with project/run/call IDs and structured diagnostics.
+- Expensive or destructive operations require explicit permission policy and budget checks.
+- Advanced code/shader execution runs in a restricted sandbox with resource and filesystem/network boundaries.
+- Tool outputs return artifact references and content hashes, not unbounded inline binary payloads.
+
+### Project model
+
+The long-term canonical project contains:
+- Editorial layer: research, claims, sources, narration, captions, creative brief.
+- Sequence/timeline layer: sequences, shots, tracks, transitions, time ranges.
+- Scene graph layer: nodes, parent-child relationships, transforms, geometry, materials, lights, cameras, animation tracks, constraints, simulation parameters.
+- Asset layer: imported/generated/procedural assets, provenance, licenses, versions, hashes.
+- Tool execution layer: manifests, tool calls, dependencies, outputs, diagnostics, artifacts.
+- Render layer: engine, capability requirements, render settings, output profiles, quality reports.
+- Revision layer: stable IDs, patches, snapshots, approvals, and rollback metadata.
+
+### Creative freedom and engine portability
+
+The agent may create novel scenes by composing primitives and tools. It is not restricted to a list of pre-authored scene templates. Templates and high-level tools are convenience layers.
+
+Portable scene intent remains engine-neutral. Engine-specific features may be exposed as namespaced extensions (for example `three.camera.dof` or `blender.geometry.nodes`) with declared engine capabilities. The agent can choose the appropriate specialist engine per shot, while the project keeps a stable semantic structure.
+
+### Iterative quality loop
+
+Preview and inspection are part of the creative toolset:
+- Render thumbnails, keyframes, shot proxies, or full drafts.
+- Inspect images and metadata; report clipping, overlap, missing assets, unreadable text, frame discontinuities, audio clipping, and timing mismatch.
+- Compare a revision against a prior render.
+- Patch only affected scene nodes/shots and re-render dependencies.
+- Preserve render manifests and tool traces for reproducibility.
