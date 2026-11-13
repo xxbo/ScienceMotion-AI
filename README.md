@@ -1,56 +1,46 @@
 # ScienceMotion AI
 
-AI-assisted, code-driven science explainer video production.
+**An extensible creative toolkit and execution framework for AI agents that create professional videos.**
 
-ScienceMotion AI turns a topic into a researched script, storyboard, deterministic motion-graphics scenes, narration, captions, and a rendered video. The first milestone is a reliable, reusable video engine—not a one-off generated clip.
+ScienceMotion AI is not limited to one-click generation or fixed templates. It gives AI agents a growing catalog of composable creative tools for building scenes, animation, 2D/3D graphics, simulations, cinematography, audio, compositing, rendering, and iterative visual QA.
 
-## Project principles
+The agent acts as a creative director: it discovers tools, plans a production, composes tool calls, inspects previews, revises the project, and renders final outputs. Templates are optional accelerators—not the creative ceiling.
 
-- **Code-first visuals:** use deterministic 2D/3D graphics for diagrams, labels, equations, and mechanisms.
-- **Scientific correctness:** keep claims, assumptions, units, and sources traceable.
-- **Reusable scenes:** build composable scene primitives and templates.
-- **Human review:** generated scripts and storyboards are reviewable before rendering.
-- **Reproducible output:** fixed frame timing and explicit render settings.
+## Core architecture
 
-## Stack
+- **Renderer-neutral project data:** versioned project/episode packages keep editorial meaning and scene intent independent of any rendering engine.
+- **Agent tool system:** discoverable typed tools with schemas, capabilities, permissions, execution limits, structured results, and artifacts.
+- **Specialist engine adapters:** Remotion, Three.js, Blender, Manim, and future engines can implement capabilities behind stable interfaces.
+- **Visual feedback loop:** preview, inspect, diagnose, patch, and re-render.
+- **Provider independence:** LLM, research, TTS, asset, and renderer providers can be swapped independently.
 
-- TypeScript + React
-- Remotion for composition and frame-accurate rendering
-- SVG / CSS for 2D motion graphics
-- Three.js for later 3D scenes
-- Manim as an optional specialist renderer for mathematical scenes
-- FFmpeg through the rendering pipeline for media processing
+## Planned tool domains
 
-## Quick start
+Project/scene graph · 2D motion design · 3D geometry/materials/cameras · animation/keyframes · physics/scientific simulation · charts/equations · asset discovery/generation · audio/TTS/captions · compositing/color · preview/render/inspection/QA · sandboxed custom code and shaders.
 
-Requirements: Node.js 20.19+ (or a compatible current LTS) and npm.
+## Current implementation
+
+- Remotion-based 1080p video render pipeline.
+- Chinese CPU-cache reference episode.
+- Versioned episode JSON schema and TypeScript contract.
+- Remotion episode-package consumer.
+- Independent SVG storyboard renderer.
+- Initial renderer adapter interface.
+- Agent tool manifest schema and registry/gateway contracts.
+
+The registry runtime, broad creative toolset, project scene graph, and iterative agent workflow are planned next. See [Platform Vision](docs/PLATFORM_VISION.md), [Development Plan](docs/PLAN.md), and [Architecture](docs/ARCHITECTURE.md).
+
+## Quick start (current prototype)
+
+Requirements: Node.js 20.19+ and Python 3.10+.
 
 ```bash
 npm install
 python3 -m venv .venv
 .venv/bin/pip install -r requirements-voice.txt
+npm run validate:episode
+npm run render:storyboard
 npm run studio
 ```
 
-The first run generates Mandarin narration using the configured Edge TTS voice. It requires network access.
-
-Render the episode:
-
-```bash
-npm run render
-```
-
-The output is written to `out/science-motion-demo.mp4`. The generated narration MP3 is stored locally under `public/episodes/cpu-cache/` and is ignored by Git.
-
-## Current milestone
-
-**P0 — Video engine validation**
-
-- [x] Establish project architecture and engineering plan
-- [x] Add a Remotion composition with a timed multi-scene demo
-- [ ] Install dependencies and verify local studio startup
-- [ ] Render and inspect a 1080p MP4
-- [ ] Add narration, subtitles, and audio mixing
-- [ ] Build the first CPU cache explainer
-
-See [docs/PLAN.md](docs/PLAN.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+The current Remotion prototype generates Mandarin narration through the configured Edge TTS adapter. The platform's general-purpose agent tool gateway and creative tool catalog are still under development.
