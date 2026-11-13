@@ -39,6 +39,9 @@ jobs:
       - name: Validate canonical project graph
         run: npm run validate:project
 
+      - name: Validate project patch schema
+        run: npm run validate:project-patch
+
       - name: Render independent SVG storyboard
         run: npm run render:storyboard
 
