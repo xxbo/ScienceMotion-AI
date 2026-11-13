@@ -54,7 +54,7 @@ Templates are optional accelerators. They must never define the creative ceiling
 
 The exit goal is an extensible platform foundation that can host hundreds of tools without turning the agent, registry, or renderer into a monolith.
 
-#### P1.0 — Canonical project model and scene graph
+#### P1.0 — Canonical project model and scene graph <badge>Complete</badge>
 - [x] Define versioned Project, Sequence, Shot, Scene, Node, Track, Transform, Component, Asset, Clip, and Revision models in Project Schema v1.0.0.
 - [x] Support stable IDs, parent/child relationships, scene roots, sequence-to-shot references, and component data.
 - [x] Define coordinate-system, units, timebase, color-space, and asset URI fields.
@@ -84,7 +84,7 @@ The exit goal is an extensible platform foundation that can host hundreds of too
 - [x] Verify repository patch → revision update → filesystem snapshot → restore as one end-to-end lifecycle.
 - [x] Strengthen final graph validation for shot/sequence membership and duration bounds, clip ranges, prefab roots, constraint scene boundaries/parameters, and self-referencing dependency edges.
 - [x] Add tests for cross-scene constraint rejection, current-schema migration idempotence, unknown schema rejection, and repository read isolation.
-- [ ] Complete the final P1.0 acceptance run across schema, migration, project validation, patch operations, animation, constraints, prefab, repository concurrency, snapshots, and CPU-cache fixture.
+- [x] Complete final P1.0 acceptance: schema, migration, project validation, patch operations, animation, constraints, prefab, repository concurrency, filesystem snapshots, and CPU-cache fixture all pass the full CI workflow.
 - [Deferred to P1.2/P4] Add database/object-storage snapshot adapter when durable multi-worker deployment is introduced.
 
 #### P1.1 — Tool platform and extensibility
