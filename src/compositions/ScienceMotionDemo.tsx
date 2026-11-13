@@ -7,6 +7,8 @@ import {
   Audio,
   staticFile,
 } from "remotion";
+import episode from "../../episodes/cpu-cache/episode.json";
+import type { EpisodePackage } from "../contracts/episode";
 
 const C = {
   bg: "#07111f",
@@ -283,36 +285,45 @@ const Outro: React.FC<{ frame: number }> = ({ frame }) => (
   </Slide>
 );
 
-const shots = [
-  { start: 0, end: 240, Component: Intro },
-  { start: 240, end: 480, Component: WaitScene },
-  { start: 480, end: 780, Component: Hierarchy },
-  { start: 780, end: 1080, Component: HitScene },
-  { start: 1080, end: 1380, Component: MissScene },
-  { start: 1380, end: 1620, Component: LocalityScene },
-  { start: 1620, end: 1800, Component: Outro },
-];
+const episodeData = episode as EpisodePackage;
 
-const subtitles = [
-  { start: 0, end: 120, text: "CPU 很快，内存为什么跟不上？处理器需要数据，等待数据却可能浪费大量计算时间。" },
-  { start: 120, end: 240, text: "当数据供应跟不上执行速度，处理器就可能停下来等待。" },
-  { start: 240, end: 390, text: "缓存分为多个层级：L1、L2、L3，以及更远的主存。越靠近核心通常越快、容量越小。" },
-  { start: 390, end: 540, text: "如果数据已经在缓存中，这次访问就是缓存命中，数据可以沿较短路径返回。" },
-  { start: 540, end: 690, text: "如果缓存没有目标数据，就会发生未命中，需要继续向更低层级查找，必要时访问主存。" },
-  { start: 690, end: 810, text: "缓存有效，还因为程序具有局部性：会重复访问近期数据，也常访问相邻数据。" },
-  { start: 810, end: 900, text: "缓存通过分层存储和利用局部性，让数据更靠近计算单元，减少等待。" },
-];
+const sceneRegistry: Record<string, React.FC<{ frame: number }>> = {
+  "cpu-memory-gap": Intro,
+  "execution-stall": WaitScene,
+  "cache-hierarchy": Hierarchy,
+  "cache-hit": HitScene,
+  "cache-miss": MissScene,
+  "memory-locality": LocalityScene,
+  takeaway: Outro,
+};
+
+const shots = episodeData.shots.map((shot) => {
+  const Component = sceneRegistry[shot.sceneType];
+  if (!Component) {
+    throw new Error(`Unsupported scene type in Remotion adapter: ${shot.sceneType}`);
+  }
+  return { ...shot, Component };
+});
+
+const subtitles = episodeData.captions;
+
 
 export const ScienceMotionDemo: React.FC = () => {
   const frame = useCurrentFrame();
-  const shot = shots.find((item) => frame >= item.start && frame < item.end) ?? shots[shots.length - 1];
+  const shot = shots.reduce((current, item) => {
+    const itemStart = shots.slice(0, shots.indexOf(item)).reduce((sum, prior) => sum + prior.durationFrames, 0);
+    return frame >= itemStart ? { ...item, startFrame: itemStart } : current;
+  }, { ...shots[0], startFrame: 0 });
   const Scene = shot.Component;
-  const subtitle = subtitles.find((item) => frame >= item.start && frame < item.end)?.text ?? "";
+  const subtitle = subtitles.find((item) => frame >= (item.startFrame ?? 0) && frame < (item.endFrame ?? episodeData.episode.durationFrames))?.text ?? "";
 
   return (
     <AbsoluteFill>
-      <Scene frame={frame - shot.start} />
-      <Audio src={staticFile("episodes/cpu-cache/narration.mp3")} volume={0.92} />
+      <Scene frame={frame - shot.startFrame} />
+      {episodeData.audioCues.filter((cue) => cue.type === "narration").map((cue) => {
+        const asset = episodeData.assets.find((item) => item.id === cue.assetId);
+        return asset ? <Audio key={cue.id} src={staticFile(asset.uri)} startFrom={0} volume={cue.gain} /> : null;
+      })}
       <div style={{ position: "absolute", left: 210, right: 210, bottom: 145, minHeight: 56, padding: "12px 26px", boxSizing: "border-box", borderRadius: 14, background: "rgba(4, 12, 23, .88)", border: "1px solid #29445c", color: "#f4f7fb", fontFamily: FONT, fontSize: 23, lineHeight: 1.5, textAlign: "center" }}>
         {subtitle}
       </div>
