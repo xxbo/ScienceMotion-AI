@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import type { AgentTool, AgentToolManifest, ToolCallContext, ToolResult } from "../contracts/agent-tool";
 import { InMemoryAgentToolRegistry, LocalAgentToolGateway } from "./tool-registry";
 import { InMemoryToolExecutionStore } from "./tool-execution-store";
+import { InMemoryArtifactStore } from "./artifact-store";
 
 const context: ToolCallContext = { projectId: "project-test", runId: "run-test", callId: "call-test" };
 
@@ -215,4 +216,36 @@ test("gateway records failed executions and does not retry non-idempotent tools"
   assert.equal(result.ok, false);
   assert.equal(attempts, 1);
   assert.equal((await store.list(context.projectId))[0].status, "failed");
+});
+
+
+test("gateway validates artifact references returned by tools", async () => {
+  const artifacts = new InMemoryArtifactStore();
+  const stored = await artifacts.put({
+    bytes: new TextEncoder().encode("generated image"),
+    kind: "image",
+    mediaType: "image/png",
+    provenance: { projectId: context.projectId, toolId: "geometry.primitive.create" },
+  });
+  const registry = new InMemoryAgentToolRegistry();
+  registry.register(makeTool({}, async () => ({
+    ok: true,
+    output: { kind: "box" },
+    diagnostics: [],
+    artifacts: [{ id: stored.id, uri: stored.uri, mediaType: stored.mediaType, contentHash: stored.contentHash }],
+  })));
+  const gateway = new LocalAgentToolGateway(registry, { artifactStore: artifacts });
+  assert.equal((await gateway.invoke("geometry.primitive.create", { kind: "box" }, context)).ok, true);
+
+  const badRegistry = new InMemoryAgentToolRegistry();
+  badRegistry.register(makeTool({}, async () => ({
+    ok: true,
+    output: { kind: "box" },
+    diagnostics: [],
+    artifacts: [{ id: "sha256:" + "0".repeat(64), uri: "artifact://missing", mediaType: "image/png" }],
+  })));
+  const badGateway = new LocalAgentToolGateway(badRegistry, { artifactStore: artifacts });
+  const rejected = await badGateway.invoke("geometry.primitive.create", { kind: "box" }, { ...context, callId: "artifact-bad" });
+  assert.equal(rejected.ok, false);
+  assert.equal(rejected.diagnostics[0].code, "TOOL_EXECUTION_FAILED");
 });
