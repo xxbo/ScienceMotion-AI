@@ -13,6 +13,7 @@ import { hashProject, InMemorySnapshotStore } from "./project-snapshots";
 import { FileSystemSnapshotStore } from "./filesystem-snapshot-store";
 import { instantiatePrefab } from "./prefabs";
 import { sampleAnimationTrack, validateAnimationTrack } from "./animation";
+import { InMemoryProjectRepository } from "./project-repository";
 
 const project = structuredClone(fixture) as unknown as ProjectDocument;
 const options = { currentRevisionId: "revision-initial", newRevisionId: "revision-test", createdAt: "2026-11-13T12:00:00.000Z", message: "unit test patch" };
@@ -243,3 +244,55 @@ test("patch batches are atomic when a later operation fails", () => {
   assert.ok(!source.nodes.some((item) => item.id === "node-would-have-been-added"));
 });
 
+
+
+test("prefab instantiation remaps internal constraints and node dependencies", () => {
+  const source = structuredClone(project);
+  source.nodes.find((item) => item.id === "node-cpu")!.childIds = ["node-memory"];
+  source.nodes.find((item) => item.id === "node-memory")!.parentId = "node-cpu";
+  source.prefabs.push({ id: "prefab-pair", name: "CPU Memory Pair", rootNodeIds: ["node-cpu"] });
+  source.constraints.push({
+    id: "constraint-pair", type: "look-at", sourceNodeId: "node-cpu",
+    targetNodeId: "node-memory", enabled: true, parameters: {},
+  });
+  source.dependencies.push({
+    id: "dependency-pair", fromType: "node", fromId: "node-cpu",
+    toType: "node", toId: "node-memory", relation: "references",
+  });
+  const before = hashProject(source);
+  const result = instantiatePrefab(source, "prefab-pair", "scene-hit", { instanceIdPrefix: "pair-copy" });
+  assert.equal(hashProject(source), before);
+  assert.equal(result.createdConstraintIds.length, 1);
+  assert.equal(result.createdDependencyIds.length, 1);
+  const constraint = result.project.constraints.find((item) => item.id === "pair-copy__constraint-pair")!;
+  assert.equal(constraint.sourceNodeId, "pair-copy__node-cpu");
+  assert.equal(constraint.targetNodeId, "pair-copy__node-memory");
+  const dependency = result.project.dependencies.find((item) => item.id === "pair-copy__dependency-pair")!;
+  assert.equal(dependency.fromId, "pair-copy__node-cpu");
+  assert.equal(dependency.toId, "pair-copy__node-memory");
+});
+
+test("project repository compare-and-swap allows only one concurrent patch", async () => {
+  const repository = new InMemoryProjectRepository();
+  await repository.create(project);
+  const makePatch = (nodeId: string): ProjectPatchDocument => ({
+    schemaVersion: "1.1.0",
+    projectId: project.project.id,
+    baseRevisionId: "revision-initial",
+    patches: [{ op: "add-node", sceneId: "scene-intro", node: node(nodeId) }],
+  });
+  const outcomes = await Promise.allSettled([
+    repository.applyPatch(project.project.id, makePatch("concurrent-a"), {
+      newRevisionId: "revision-concurrent-a", createdAt: options.createdAt, message: "concurrent A",
+    }),
+    repository.applyPatch(project.project.id, makePatch("concurrent-b"), {
+      newRevisionId: "revision-concurrent-b", createdAt: options.createdAt, message: "concurrent B",
+    }),
+  ]);
+  assert.equal(outcomes.filter((item) => item.status === "fulfilled").length, 1);
+  assert.equal(outcomes.filter((item) => item.status === "rejected").length, 1);
+  const latest = await repository.get(project.project.id);
+  assert.ok(latest);
+  assert.equal(latest!.revisions.at(-1)?.id.startsWith("revision-concurrent-"), true);
+  assert.equal(latest!.nodes.filter((item) => ["concurrent-a", "concurrent-b"].includes(item.id)).length, 1);
+});
