@@ -96,3 +96,13 @@ Apply least-privilege permissions to tools and workers. Enforce CPU, memory, GPU
 - Keep project model, registry, gateway, plugins, workers, providers, and renderer adapters behind explicit boundaries.
 - Prefer composable tools with structured results over a monolithic generate-video endpoint.
 - Mark capabilities complete only after automated tests and representative CI evidence.
+
+
+## P1.1 execution governance — local implementation
+
+- Added `ToolExecutionStore` and `InMemoryToolExecutionStore` for started/succeeded/failed invocation records, input SHA-256 hashes, results, diagnostics, timestamps, and duration.
+- Gateway idempotency keys are scoped by project, tool ID, and tool version. Reusing a key with a different input hash returns a conflict; successful calls replay the stored result; failed keys are consumed rather than silently re-executed.
+- Bounded retries (maximum five attempts) are available only for tools declaring idempotency and returning an explicitly retryable result.
+- Per-tool `maxConcurrency` is enforced in the local process before asynchronous execution begins.
+- Execution store is injected through an interface. The supplied in-memory implementation is suitable for tests and local development; durable shared storage and cross-process guarantees remain later platform work.
+- Gateway cancellation is cooperative: tool implementations must observe the supplied AbortSignal. A caller cancellation test waits until the tool has started before aborting, so it verifies in-flight propagation rather than pre-start cancellation.
