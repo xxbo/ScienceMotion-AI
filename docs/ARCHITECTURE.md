@@ -80,6 +80,8 @@ The first implementation may render multiple scene types inside one Remotion ada
 - `apps/studio`: authoring and review UI. It should edit episode packages, not embed generation or rendering logic.
 - `schemas/episode.schema.json` and `src/contracts/episode.ts`: versioned JSON Schema and TypeScript contract.
 - `src/contracts/renderer.ts`: renderer adapter and capability contract.
+- `src/contracts/agent-tool.ts`: agent-facing tool manifest, registry, gateway, and result contracts.
+- `src/platform/tool-registry.ts`: initial in-memory registry and schema-validating local invocation gateway.
 - `episodes/`: renderer-neutral episode packages.
 - `scripts/render-storyboard-svg.mjs`: first independent non-Remotion output adapter (SVG storyboard).
 - `packages/ai-director`: provider-independent research/script/storyboard orchestration. It depends on episode-schema, not on renderers.
@@ -195,3 +197,16 @@ Preview and inspection are part of the creative toolset:
 - Compare a revision against a prior render.
 - Patch only affected scene nodes/shots and re-render dependencies.
 - Preserve render manifests and tool traces for reproducibility.
+
+
+## Initial tool runtime implementation
+
+The first runtime slice lives in `src/platform/tool-registry.ts`:
+- In-memory registration, removal, search, category filtering, and version lookup.
+- Invocation through a gateway rather than direct agent access to implementations.
+- AJV validation of tool inputs and outputs against manifest schemas.
+- Optional permission allow-list checks.
+- Per-tool timeout and structured started/completed/failed events.
+- Structured diagnostics returned to the agent.
+
+This is an initial local runtime, not yet the production execution service. Cancellation propagation, persistent traces, artifact storage, quotas, sandbox isolation, remote workers, and third-party plugin loading remain future work.
