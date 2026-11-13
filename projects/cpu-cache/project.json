@@ -5,7 +5,7 @@
     "name": "CPU 为什么需要缓存？",
     "description": "ScienceMotion AI 第一份 renderer-neutral 项目图参考工程。",
     "createdAt": "2026-11-13T00:00:00.000Z",
-    "updatedAt": "2026-11-13T00:00:00.000Z",
+    "updatedAt": "2026-11-13T14:20:00.000Z",
     "units": "unitless",
     "coordinateSystem": "screen-y-down",
     "timebase": {
@@ -32,9 +32,12 @@
       "height": 1080,
       "shotIds": [
         "shot-intro",
+        "shot-wait",
         "shot-hierarchy",
         "shot-hit",
-        "shot-miss"
+        "shot-miss",
+        "shot-locality",
+        "shot-outro"
       ]
     }
   ],
@@ -71,6 +74,30 @@
       "durationFrames": 300,
       "rootNodeIds": [
         "node-miss-flow"
+      ]
+    },
+    {
+      "id": "scene-wait",
+      "name": "Execution Stall",
+      "durationFrames": 240,
+      "rootNodeIds": [
+        "node-wait-bars"
+      ]
+    },
+    {
+      "id": "scene-locality",
+      "name": "Memory Locality",
+      "durationFrames": 240,
+      "rootNodeIds": [
+        "node-array-cells"
+      ]
+    },
+    {
+      "id": "scene-outro",
+      "name": "Takeaway",
+      "durationFrames": 180,
+      "rootNodeIds": [
+        "node-takeaway"
       ]
     }
   ],
@@ -322,6 +349,101 @@
           }
         }
       ]
+    },
+    {
+      "id": "node-wait-bars",
+      "name": "Execution and Wait Bars",
+      "type": "group",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": [
+        {
+          "kind": "renderer-extension",
+          "engine": "remotion",
+          "data": {
+            "sceneType": "execution-stall",
+            "illustrative": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "node-array-cells",
+      "name": "Array Locality",
+      "type": "group",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": [
+        {
+          "kind": "renderer-extension",
+          "engine": "remotion",
+          "data": {
+            "sceneType": "memory-locality",
+            "illustrative": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "node-takeaway",
+      "name": "Cache Takeaway",
+      "type": "group",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": [
+        {
+          "kind": "renderer-extension",
+          "engine": "remotion",
+          "data": {
+            "sceneType": "takeaway"
+          }
+        }
+      ]
     }
   ],
   "tracks": [
@@ -341,7 +463,9 @@
       "id": "track-audio",
       "name": "Narration and Music",
       "kind": "audio",
-      "clipIds": []
+      "clipIds": [
+        "clip-narration"
+      ]
     }
   ],
   "shots": [
@@ -354,12 +478,18 @@
       "transitionIn": "fade"
     },
     {
+      "id": "shot-wait",
+      "name": "Execution Stall",
+      "sceneId": "scene-wait",
+      "startFrame": 240,
+      "durationFrames": 240
+    },
+    {
       "id": "shot-hierarchy",
       "name": "Cache Hierarchy",
       "sceneId": "scene-hierarchy",
       "startFrame": 480,
-      "durationFrames": 300,
-      "transitionIn": "fade"
+      "durationFrames": 300
     },
     {
       "id": "shot-hit",
@@ -374,9 +504,32 @@
       "sceneId": "scene-miss",
       "startFrame": 1080,
       "durationFrames": 300
+    },
+    {
+      "id": "shot-locality",
+      "name": "Memory Locality",
+      "sceneId": "scene-locality",
+      "startFrame": 1380,
+      "durationFrames": 240
+    },
+    {
+      "id": "shot-outro",
+      "name": "Takeaway",
+      "sceneId": "scene-outro",
+      "startFrame": 1620,
+      "durationFrames": 180,
+      "transitionOut": "fade"
     }
   ],
-  "clips": [],
+  "clips": [
+    {
+      "id": "clip-narration",
+      "assetId": "asset-episode-narration",
+      "startFrame": 0,
+      "durationFrames": 1800,
+      "gain": 0.92
+    }
+  ],
   "assets": [
     {
       "id": "asset-episode-narration",
@@ -393,7 +546,54 @@
       "author": "ScienceMotion"
     }
   ],
-  "prefabs": [],
+  "prefabs": [
+    {
+      "id": "prefab-memory-module",
+      "name": "Memory Module",
+      "rootNodeIds": [
+        "node-memory"
+      ],
+      "parameterSchema": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "accentColor": {
+            "type": "string"
+          }
+        }
+      },
+      "metadata": {
+        "description": "Reusable memory block visual; renderer extension data can be parameterized by tools."
+      }
+    }
+  ],
   "constraints": [],
-  "dependencies": []
+  "dependencies": [
+    {
+      "id": "dep-cpu-data-path",
+      "fromType": "node",
+      "fromId": "node-cpu",
+      "toType": "node",
+      "toId": "node-data-path",
+      "relation": "uses"
+    },
+    {
+      "id": "dep-cache-stack-scene",
+      "fromType": "scene",
+      "fromId": "scene-hierarchy",
+      "toType": "node",
+      "toId": "node-cache-stack",
+      "relation": "uses"
+    },
+    {
+      "id": "dep-audio-asset",
+      "fromType": "clip",
+      "fromId": "clip-narration",
+      "toType": "asset",
+      "toId": "asset-episode-narration",
+      "relation": "uses"
+    }
+  ]
 }
