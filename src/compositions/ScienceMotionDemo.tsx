@@ -297,12 +297,15 @@ const sceneRegistry: Record<string, React.FC<{ frame: number }>> = {
   takeaway: Outro,
 };
 
+let frameCursor = 0;
 const shots = episodeData.shots.map((shot) => {
   const Component = sceneRegistry[shot.sceneType];
   if (!Component) {
     throw new Error(`Unsupported scene type in Remotion adapter: ${shot.sceneType}`);
   }
-  return { ...shot, Component };
+  const startFrame = frameCursor;
+  frameCursor += shot.durationFrames;
+  return { ...shot, Component, startFrame };
 });
 
 const subtitles = episodeData.captions;
@@ -310,10 +313,7 @@ const subtitles = episodeData.captions;
 
 export const ScienceMotionDemo: React.FC = () => {
   const frame = useCurrentFrame();
-  const shot = shots.reduce((current, item) => {
-    const itemStart = shots.slice(0, shots.indexOf(item)).reduce((sum, prior) => sum + prior.durationFrames, 0);
-    return frame >= itemStart ? { ...item, startFrame: itemStart } : current;
-  }, { ...shots[0], startFrame: 0 });
+  const shot = shots.find((item) => frame >= item.startFrame && frame < item.startFrame + item.durationFrames) ?? shots[shots.length - 1];
   const Scene = shot.Component;
   const subtitle = subtitles.find((item) => frame >= (item.startFrame ?? 0) && frame < (item.endFrame ?? episodeData.episode.durationFrames))?.text ?? "";
 
