@@ -4,7 +4,6 @@ import type { ProjectDocument } from "../contracts/project";
 import {
   hashProject,
   type ProjectSnapshot,
-  type SnapshotStore,
 } from "./project-snapshots";
 
 function assertSafeId(id: string): void {
@@ -18,7 +17,14 @@ function assertSafeId(id: string): void {
  * rename so readers never observe a partially written JSON document.
  * Production object storage/database adapters can implement SnapshotStore.
  */
-export class FileSystemSnapshotStore implements SnapshotStore {
+export interface PersistentSnapshotStore {
+  save(document: ProjectDocument, metadata: { id: string; createdAt: string }): Promise<ProjectSnapshot>;
+  get(snapshotId: string): Promise<ProjectSnapshot | undefined>;
+  list(projectId: string): Promise<ProjectSnapshot[]>;
+  restore(snapshotId: string): Promise<ProjectDocument>;
+}
+
+export class FileSystemSnapshotStore implements PersistentSnapshotStore {
   constructor(private readonly rootDirectory: string) {}
 
   async save(
