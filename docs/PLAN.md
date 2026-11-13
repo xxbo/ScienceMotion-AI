@@ -66,7 +66,11 @@ The exit goal is an extensible platform foundation that can host hundreds of too
 - [x] Add explicit v1.0.0 → v1.1.0 project migration.
 - [x] Add canonical JSON hashing and an in-memory immutable snapshot store with integrity verification and restore.
 - [x] Add unit tests for add, reparent, recursive remove, stale revisions, cycle rejection, migration, and snapshot restore.
-- [ ] Add persistent snapshot backend and full property-based patch operation coverage.
+- [x] Add a durable filesystem snapshot backend with atomic temp-file/rename writes, listing, restore, and SHA-256 tamper detection.
+- [x] Add property-based patch immutability checks (100 generated transform cases per test run).
+- [x] Enforce scene ownership when adding/reparenting child nodes.
+- [x] Strengthen project validation for unique scene roots and reciprocal parent/child references.
+- [ ] Add database/object-storage snapshot adapter and broader property-based hierarchy operation coverage.
 
 #### P1.1 — Tool platform and extensibility
 - [x] Define tool manifest schema and typed tool/registry/gateway contracts.
