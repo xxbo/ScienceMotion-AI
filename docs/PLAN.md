@@ -60,8 +60,10 @@ The exit goal is an extensible platform foundation that can host hundreds of too
 - [x] Define coordinate-system, units, timebase, color-space, and asset URI fields.
 - [x] Separate editorial reference, sequences, scenes, nodes, tracks, shots, assets, and revisions in the canonical project document.
 - [x] Add schema validation and semantic reference/hierarchy validation for the CPU-cache project fixture.
-- [ ] Add non-destructive patch execution with optimistic concurrency/version checks.
-- [ ] Add schema migrations, immutable snapshots, and compatibility tests.
+- [x] Define versioned patch document schema and typed add/update/remove/reparent operations.
+- [x] Implement atomic in-memory patch application with immutable source input, explicit recursive deletion, hierarchy checks, and base-revision conflict detection.
+- [x] Add patch schema validation to CI.
+- [ ] Add schema migrations, persistent immutable snapshots, and full patch operation test coverage.
 
 #### P1.1 — Tool platform and extensibility
 - [x] Define tool manifest schema and typed tool/registry/gateway contracts.
