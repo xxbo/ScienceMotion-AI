@@ -7,7 +7,7 @@ import { applyProjectPatch } from "../platform/project-patches";
 import { migrateProject } from "../platform/project-migrations";
 import { hashProject, InMemorySnapshotStore } from "../platform/project-snapshots";
 
-const project = structuredClone(fixture) as ProjectDocument;
+const project = structuredClone(fixture) as unknown as ProjectDocument;
 const options = {
   currentRevisionId: "revision-initial",
   newRevisionId: "revision-test",
