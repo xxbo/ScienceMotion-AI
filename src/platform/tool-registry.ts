@@ -1,6 +1,7 @@
 import Ajv, { type ValidateFunction } from "ajv";
 import { InMemoryToolExecutionStore, hashToolInput } from "./tool-execution-store";
 import type { ToolExecutionRecord, ToolExecutionStore } from "../contracts/agent-tool";
+import type { ArtifactStore } from "../contracts/artifact";
 import type {
   AgentTool,
   AgentToolGateway,
@@ -27,6 +28,7 @@ export interface ToolGatewayOptions {
   onEvent?: (event: ToolExecutionEvent) => void;
   executionStore?: import("../contracts/agent-tool").ToolExecutionStore;
   maxAttempts?: number;
+  artifactStore?: ArtifactStore;
 }
 
 type RegisteredTool = AgentTool<unknown, unknown>;
@@ -252,6 +254,16 @@ export class LocalAgentToolGateway implements AgentToolGateway {
           const validateOutput = this.compile(manifest.outputSchema);
           if (result.ok && result.output !== undefined && !validateOutput(result.output)) {
             throw new Error(`Tool output does not match its declared schema: ${this.formatErrors(validateOutput)}`);
+          }
+          if (result.ok && result.artifacts?.length && this.options.artifactStore) {
+            for (const artifact of result.artifacts) {
+              const stored = await this.options.artifactStore.get(artifact.id);
+              if (!stored || stored.uri !== artifact.uri ||
+                  stored.mediaType !== artifact.mediaType ||
+                  (artifact.contentHash && stored.contentHash !== artifact.contentHash)) {
+                throw new Error(`Tool returned an unknown or inconsistent artifact reference: ${artifact.id}`);
+              }
+            }
           }
           finalResult = {
             ...result,
