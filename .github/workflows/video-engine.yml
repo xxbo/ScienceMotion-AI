@@ -1,5 +1,9 @@
 name: Video Engine CI
 
+concurrency:
+  group: video-engine-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main]
