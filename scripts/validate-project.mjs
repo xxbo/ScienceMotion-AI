@@ -34,14 +34,32 @@ const prefabs = unique(project.prefabs ?? [], "prefabs");
 unique(project.constraints ?? [], "constraints");
 unique(project.dependencies ?? [], "dependencies");
 
+const rootOwners = new Map();
 for (const scene of project.scenes) {
   for (const id of scene.rootNodeIds) {
     if (!nodes.has(id)) errors.push(`scene ${scene.id} references missing root node ${id}`);
+    const count = (rootOwners.get(id) ?? 0) + 1;
+    rootOwners.set(id, count);
+    if (count > 1) errors.push(`node ${id} is a root in more than one scene`);
+    const rootNode = project.nodes.find((node) => node.id === id);
+    if (rootNode?.parentId) errors.push(`scene root node ${id} must not have a parent`);
   }
 }
 for (const node of project.nodes) {
   if (node.parentId && !nodes.has(node.parentId)) errors.push(`node ${node.id} references missing parent ${node.parentId}`);
-  for (const id of node.childIds ?? []) if (!nodes.has(id)) errors.push(`node ${node.id} references missing child ${id}`);
+  if (node.parentId) {
+    const parent = project.nodes.find((item) => item.id === node.parentId);
+    if (parent && !(parent.childIds ?? []).includes(node.id)) errors.push(`parent/child mismatch: ${node.parentId} does not list child ${node.id}`);
+  } else if (rootOwners.get(node.id) !== 1) {
+    errors.push(`root node ${node.id} must belong to exactly one scene`);
+  }
+  const childSet = new Set(node.childIds ?? []);
+  if (childSet.size !== (node.childIds ?? []).length) errors.push(`node ${node.id} contains duplicate child IDs`);
+  for (const id of node.childIds ?? []) {
+    if (!nodes.has(id)) errors.push(`node ${node.id} references missing child ${id}`);
+    const child = project.nodes.find((item) => item.id === id);
+    if (child && child.parentId !== node.id) errors.push(`parent/child mismatch: ${node.id} lists ${id} but child points to ${child.parentId ?? "no parent"}`);
+  }
 }
 for (const shot of project.shots ?? []) {
   if (!scenes.has(shot.sceneId)) errors.push(`shot ${shot.id} references missing scene ${shot.sceneId}`);
