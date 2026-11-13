@@ -73,12 +73,15 @@ Candidate adapters:
 - Three.js adapter: spatial and 3D scenes.
 - Manim adapter: equations, plots, and mathematical derivations.
 
-The first implementation may render multiple scene types inside one Remotion adapter. The contract must remain renderer-neutral.
+The first implementation may render multiple scene types inside one Remotion adapter. The contract must remain renderer-neutral. The SVG storyboard script is an independent package consumer used to verify that episode content can produce a second visual artifact without loading Remotion; it is not yet a second MP4 renderer.
 
 ## Initial repository boundaries
 
 - `apps/studio`: authoring and review UI. It should edit episode packages, not embed generation or rendering logic.
-- `packages/episode-schema`: JSON Schema, TypeScript types, validators, and migrations.
+- `schemas/episode.schema.json` and `src/contracts/episode.ts`: versioned JSON Schema and TypeScript contract.
+- `src/contracts/renderer.ts`: renderer adapter and capability contract.
+- `episodes/`: renderer-neutral episode packages.
+- `scripts/render-storyboard-svg.mjs`: first independent non-Remotion output adapter (SVG storyboard).
 - `packages/ai-director`: provider-independent research/script/storyboard orchestration. It depends on episode-schema, not on renderers.
 - `packages/renderer-core`: adapter interface, capability model, render manifest, and shared validation.
 - `packages/renderer-remotion`: Remotion implementation and 2D scene components.
