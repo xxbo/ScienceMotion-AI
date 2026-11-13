@@ -49,6 +49,9 @@ jobs:
       - name: Render demo video
         run: npm run render
 
+      - name: Validate MP4 metadata and audio
+        run: npm run validate:video
+
       - name: Upload rendered video
         if: success()
         uses: actions/upload-artifact@v4
