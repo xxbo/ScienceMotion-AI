@@ -26,6 +26,20 @@ function assertNoHierarchyCycles(nodes: SceneNode[]): void {
   for (const node of nodes) if (!visited.has(node.id)) visit(node.id);
 }
 
+function belongsToScene(project: ProjectDocument, nodeId: string, sceneId: string): boolean {
+  const scene = project.scenes.find((item) => item.id === sceneId);
+  if (!scene) return false;
+  const byId = new Map(project.nodes.map((node) => [node.id, node]));
+  const visited = new Set<string>();
+  const contains = (id: string): boolean => {
+    if (visited.has(id)) return false;
+    visited.add(id);
+    if (id === nodeId) return true;
+    return (byId.get(id)?.childIds ?? []).some(contains);
+  };
+  return scene.rootNodeIds.some(contains);
+}
+
 function detachFromParent(nodes: SceneNode[], node: SceneNode): void {
   if (!node.parentId) return;
   const parent = nodes.find((item) => item.id === node.parentId);
@@ -50,6 +64,9 @@ export function applyProjectPatch(
       const scene = project.scenes.find((item) => item.id === operation.sceneId);
       if (!scene) throw new Error(`Scene not found: ${operation.sceneId}`);
       if (operation.node.parentId && !project.nodes.some((node) => node.id === operation.node.parentId)) throw new Error("Parent node not found");
+      if (operation.node.parentId && !belongsToScene(project, operation.node.parentId, operation.sceneId)) {
+        throw new Error("Parent node does not belong to the target scene");
+      }
       project.nodes.push(clone(operation.node));
       if (operation.node.parentId) {
         const parent = project.nodes.find((node) => node.id === operation.node.parentId)!;
@@ -97,6 +114,9 @@ export function applyProjectPatch(
       if (!scene) throw new Error(`Scene not found: ${operation.sceneId}`);
       if (operation.newParentId === node.id) throw new Error("A node cannot parent itself");
       if (operation.newParentId && !project.nodes.some((item) => item.id === operation.newParentId)) throw new Error("New parent not found");
+      if (operation.newParentId && !belongsToScene(project, operation.newParentId, operation.sceneId)) {
+        throw new Error("New parent does not belong to the target scene");
+      }
       detachFromParent(project.nodes, node);
       for (const item of project.scenes) item.rootNodeIds = item.rootNodeIds.filter((id) => id !== node.id);
       node.parentId = operation.newParentId;
