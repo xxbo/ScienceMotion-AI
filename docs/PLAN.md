@@ -106,7 +106,11 @@ P1.0 scope is the local renderer-neutral project foundation. It does not claim a
 - [x] Define tool namespaces, categories, tags, capability requirements, engine bindings, project-schema compatibility, lifecycle, and semantic version policy in the manifest contract.
 - [x] Implement dynamic registry discovery/search with namespace/category/tag/capability/engine/schema filters, pagination, deprecation filtering, and manifest retrieval.
 - [x] Implement cooperative caller cancellation and timeout signaling in the local gateway; retain input/output validation, permission checks, and structured errors.
-- [ ] Add idempotency keys, retry policy, per-tool concurrency limits, and durable execution records.
+- [x] Add idempotency keys with input-hash conflict detection and successful-result replay.
+- [x] Add bounded retries for explicitly retryable results from tools declaring idempotency.
+- [x] Enforce per-tool concurrency limits in the local gateway.
+- [x] Persist structured execution records through an injectable ToolExecutionStore (in-memory implementation supplied).
+- [ ] Add durable execution-record backend, cross-process idempotency, and resource budgets.
 - [x] Add in-process plugin installation, enable/disable/uninstall, dependency/version checks, health checks, and rollback on failed registration or health validation.
 - [x] Define plugin manifest schema, built-in geometry plugin manifest, and CI catalogue validation.
 - [ ] Add plugin version pinning/upgrades, plugin compatibility checks, and dependency graph diagnostics.
