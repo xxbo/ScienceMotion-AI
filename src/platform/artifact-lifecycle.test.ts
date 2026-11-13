@@ -134,3 +134,31 @@ test("reference reconciliation reports project assets whose blobs are missing", 
   assert.deepEqual(result.missingArtifacts, ["asset-missing-blob"]);
   assert.deepEqual(result.attached, []);
 });
+
+
+test("concurrent attach and garbage collection cannot delete a newly referenced artifact", async () => {
+  const artifacts = new InMemoryArtifactStore();
+  const refs = new InMemoryArtifactReferenceStore();
+  const manager = new LocalArtifactLifecycleManager(artifacts, refs);
+  const artifact = await artifacts.put({ bytes, kind: "data", mediaType: "application/octet-stream" });
+  const attachPromise = manager.attach({
+    artifactId: artifact.id, ownerType: "project", ownerId: "race-project", role: "asset:race",
+  });
+  const gcPromise = manager.collectGarbage({ olderThanMs: 0, now: new Date("2035-01-01T00:00:00.000Z") });
+  await Promise.all([attachPromise, gcPromise]);
+  assert.ok(await artifacts.get(artifact.id));
+  assert.equal(await refs.count(artifact.id), 1);
+});
+
+test("filesystem reference store rejects malformed reference IDs", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "sciencemotion-reference-path-"));
+  try {
+    const store = new FileSystemArtifactReferenceStore(directory);
+    await assert.rejects(() => store.attach({
+      id: "../escape", artifactId: "sha256:" + "0".repeat(64),
+      ownerType: "project", ownerId: "p", role: "asset:x", createdAt: new Date().toISOString(),
+    }), /Invalid artifact reference ID/);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
