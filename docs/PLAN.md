@@ -124,7 +124,11 @@ P1.0 scope is the local renderer-neutral project foundation. It does not claim a
 - [x] Add project asset-graph linking that writes canonical Artifact URI, content hash, media type, size, license, and attribution into ProjectAsset.
 - [x] Add retention-aware garbage collection that preserves referenced artifacts and only deletes unreferenced artifacts older than the configured grace period.
 - [x] Automatically attach successful Tool Gateway output artifacts to their originating tool-run lifecycle reference.
-- [ ] Add transactional cross-process reference updates, project-asset unlink integration, and configurable retention/GC scheduling.
+- [x] Add project asset unlinking that removes only the matching project/asset reference while preserving shared references.
+- [x] Add project-reference reconciliation to repair missing links and remove stale asset references; report missing blobs.
+- [x] Validate filesystem reference IDs on both write and delete paths.
+- [x] Add tests for concurrent local attach/GC serialization, project unlink, reconciliation, missing blobs, and reference path safety.
+- [ ] Add transactional cross-process reference updates and configurable retention/GC scheduling.
 
 #### P1.2 — Execution and worker architecture
 - [ ] Keep the control plane responsible for project state, tool discovery, planning, authorization, and job orchestration.
