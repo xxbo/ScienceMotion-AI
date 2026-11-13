@@ -1,0 +1,52 @@
+{
+  "schemaVersion": "1.0.0",
+  "episode": {
+    "id": "cpu-cache-intro-zh",
+    "title": "CPU 为什么需要缓存？",
+    "language": "zh-CN",
+    "audience": "对计算机硬件感兴趣的普通观众",
+    "durationFrames": 1800,
+    "fps": 30,
+    "outputProfile": { "width": 1920, "height": 1080, "aspectRatio": "16:9" }
+  },
+  "sources": [],
+  "claims": [
+    { "id": "claim-memory-latency", "statement": "处理器访问主存通常比访问片上缓存需要更高的延迟。", "sourceIds": [], "confidence": "high", "caveats": ["具体差异取决于处理器微架构、内存配置和运行状态。"] },
+    { "id": "claim-cache-levels", "statement": "现代处理器通常采用多级缓存层次，以平衡访问延迟、容量和成本。", "sourceIds": [], "confidence": "high", "caveats": ["缓存层级、容量及共享方式因处理器设计而异。"] },
+    { "id": "claim-locality", "statement": "时间局部性和空间局部性是缓存有效性的关键原因。", "sourceIds": [], "confidence": "high", "caveats": ["具体工作负载的局部性特征并不相同。"] },
+    { "id": "claim-hit-miss", "statement": "缓存命中可从相应缓存层级返回数据；未命中可能触发更低层级访问。", "sourceIds": [], "confidence": "high", "caveats": ["真实处理器可能存在并行查找、预取及复杂一致性机制。"] }
+  ],
+  "narration": [
+    { "id": "narration-problem", "text": "CPU 很快，内存为什么跟不上？处理器需要数据，等待数据却可能浪费大量计算时间。", "claimIds": ["claim-memory-latency"], "voiceDirection": "自然、好奇、开场有吸引力", "timing": { "startFrame": 0, "endFrame": 240 } },
+    { "id": "narration-wait", "text": "当数据供应跟不上执行速度，处理器就可能停下来等待。算得再快，也要等数据送到。", "claimIds": ["claim-memory-latency"], "voiceDirection": "解释性、稍有强调", "timing": { "startFrame": 240, "endFrame": 480 } },
+    { "id": "narration-hierarchy", "text": "缓存分为多个层级：L1、L2、L3，以及更远的主存。越靠近核心通常越快、容量越小；越往下，容量越大。", "claimIds": ["claim-cache-levels"], "voiceDirection": "清晰、节奏平稳", "timing": { "startFrame": 480, "endFrame": 780 } },
+    { "id": "narration-hit", "text": "如果数据已经在缓存中，这次访问就是缓存命中，数据可以沿较短路径返回。", "claimIds": ["claim-hit-miss"], "voiceDirection": "简洁、正向", "timing": { "startFrame": 780, "endFrame": 1080 } },
+    { "id": "narration-miss", "text": "如果缓存没有目标数据，就会发生未命中，需要继续向更低层级查找，必要时访问主存。", "claimIds": ["claim-hit-miss"], "voiceDirection": "解释性、强调路径变长", "timing": { "startFrame": 1080, "endFrame": 1380 } },
+    { "id": "narration-locality", "text": "缓存有效，还因为程序具有局部性：会重复访问近期数据，也常访问相邻数据。", "claimIds": ["claim-locality"], "voiceDirection": "清楚、稍放慢", "timing": { "startFrame": 1380, "endFrame": 1620 } },
+    { "id": "narration-outro", "text": "缓存通过分层存储和利用局部性，让数据更靠近计算单元，减少等待。", "claimIds": ["claim-cache-levels", "claim-locality"], "voiceDirection": "总结、收束", "timing": { "startFrame": 1620, "endFrame": 1800 } }
+  ],
+  "shots": [
+    { "id": "shot-problem", "sceneType": "cpu-memory-gap", "durationFrames": 240, "narrationIds": ["narration-problem"], "sceneIntent": { "summary": "展示 CPU 请求主存数据以及两者之间的数据传输路径。", "data": { "illustrative": true } }, "transition": "fade" },
+    { "id": "shot-wait", "sceneType": "execution-stall", "durationFrames": 240, "narrationIds": ["narration-wait"], "sceneIntent": { "summary": "用执行活动和等待空档表现数据供应瓶颈。", "data": { "illustrative": true } }, "transition": "cut" },
+    { "id": "shot-hierarchy", "sceneType": "cache-hierarchy", "durationFrames": 300, "narrationIds": ["narration-hierarchy"], "sceneIntent": { "summary": "展示 L1、L2、L3 与 DRAM 的概念层级。", "data": { "levels": ["L1", "L2", "L3", "DRAM"] } }, "transition": "fade" },
+    { "id": "shot-hit", "sceneType": "cache-hit", "durationFrames": 300, "narrationIds": ["narration-hit"], "sceneIntent": { "summary": "展示请求在缓存层级中命中并返回。", "data": { "illustrative": true } }, "transition": "cut" },
+    { "id": "shot-miss", "sceneType": "cache-miss", "durationFrames": 300, "narrationIds": ["narration-miss"], "sceneIntent": { "summary": "展示缓存未命中后继续向更低层级查找。", "data": { "illustrative": true } }, "transition": "cut" },
+    { "id": "shot-locality", "sceneType": "memory-locality", "durationFrames": 240, "narrationIds": ["narration-locality"], "sceneIntent": { "summary": "展示数组相邻元素访问以说明空间局部性。", "data": { "illustrative": true } }, "transition": "fade" },
+    { "id": "shot-outro", "sceneType": "takeaway", "durationFrames": 180, "narrationIds": ["narration-outro"], "sceneIntent": { "summary": "总结缓存的距离、层级和局部性三个概念。", "data": {} }, "transition": "fade" }
+  ],
+  "assets": [
+    { "id": "asset-narration", "mediaType": "audio", "uri": "episodes/cpu-cache/narration.mp3", "license": "Generated for this episode" }
+  ],
+  "audioCues": [
+    { "id": "audio-main-narration", "type": "narration", "assetId": "asset-narration", "startFrame": 0, "durationFrames": 1800, "gain": 0.92, "ducking": false }
+  ],
+  "captions": [
+    { "id": "caption-problem", "narrationId": "narration-problem", "text": "CPU 很快，内存为什么跟不上？处理器需要数据，等待数据却可能浪费大量计算时间。", "startFrame": 0, "endFrame": 240 },
+    { "id": "caption-wait", "narrationId": "narration-wait", "text": "当数据供应跟不上执行速度，处理器就可能停下来等待。算得再快，也要等数据送到。", "startFrame": 240, "endFrame": 480 },
+    { "id": "caption-hierarchy", "narrationId": "narration-hierarchy", "text": "缓存分为多个层级：L1、L2、L3，以及更远的主存。越靠近核心通常越快、容量越小；越往下，容量越大。", "startFrame": 480, "endFrame": 780 },
+    { "id": "caption-hit", "narrationId": "narration-hit", "text": "如果数据已经在缓存中，这次访问就是缓存命中，数据可以沿较短路径返回。", "startFrame": 780, "endFrame": 1080 },
+    { "id": "caption-miss", "narrationId": "narration-miss", "text": "如果缓存没有目标数据，就会发生未命中，需要继续向更低层级查找，必要时访问主存。", "startFrame": 1080, "endFrame": 1380 },
+    { "id": "caption-locality", "narrationId": "narration-locality", "text": "缓存有效，还因为程序具有局部性：会重复访问近期数据，也常访问相邻数据。", "startFrame": 1380, "endFrame": 1620 },
+    { "id": "caption-outro", "narrationId": "narration-outro", "text": "缓存通过分层存储和利用局部性，让数据更靠近计算单元，减少等待。", "startFrame": 1620, "endFrame": 1800 }
+  ]
+}
