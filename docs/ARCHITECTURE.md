@@ -342,7 +342,7 @@ Added integration coverage in `src/platform/project-platform.test.ts`:
 - Prefab cloning boundary: internal node-to-node references are remapped, while external asset dependencies remain attached to the original source object and are not incorrectly cloned into the prefab instance.
 - End-to-end project lifecycle: create repository → apply revisioned patch → persist filesystem snapshot → restore snapshot → compare canonical hashes and latest revision.
 
-Database/object-storage snapshot adapters are explicitly deferred until the platform introduces multi-worker or remote persistence requirements. The filesystem backend is sufficient for the P1.0 local project foundation. P1.0 completion now depends on the final full CI run and a consistency audit of the CPU-cache fixture, not on adding premature infrastructure.
+Database/object-storage snapshot adapters are explicitly deferred until the platform introduces multi-worker or remote persistence requirements. The filesystem backend is sufficient for the P1.0 local project foundation. P1.0 completion is based on the successful full CI run and project fixture validation recorded below; remote persistence is intentionally deferred.
 
 
 ## P1.0 final consistency audit
