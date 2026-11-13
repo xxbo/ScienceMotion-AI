@@ -70,6 +70,10 @@ The exit goal is an extensible platform foundation that can host hundreds of too
 - [x] Add property-based patch immutability checks (100 generated transform cases per test run).
 - [x] Enforce scene ownership when adding/reparenting child nodes.
 - [x] Strengthen project validation for unique scene roots and reciprocal parent/child references.
+- [x] Add filesystem snapshot persistence with integrity checks; retain a persistence interface for future database/object-storage adapters.
+- [x] Add reusable prefab subtree instantiation with stable ID remapping and source immutability.
+- [x] Migrate CPU-cache reference project to all seven scenes/shots, audio clip/track linkage, a reusable memory prefab, and explicit dependency edges.
+- [x] Add tests for cross-scene parenting rejection, prefab instantiation, prefab reference cleanup, and changed-parent reporting.
 - [ ] Add database/object-storage snapshot adapter and broader property-based hierarchy operation coverage.
 
 #### P1.1 — Tool platform and extensibility
