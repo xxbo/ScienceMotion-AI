@@ -13,7 +13,8 @@
     "validate:video": "node scripts/validate-video.mjs out/science-motion-demo.mp4",
     "validate:episode": "node scripts/validate-episode.mjs",
     "render:storyboard": "node scripts/render-storyboard-svg.mjs",
-    "validate:project": "node scripts/validate-project.mjs"
+    "validate:project": "node scripts/validate-project.mjs",
+    "validate:project-patch": "node scripts/validate-project-patch.mjs"
   },
   "dependencies": {
     "@remotion/cli": "^4.0.0",
