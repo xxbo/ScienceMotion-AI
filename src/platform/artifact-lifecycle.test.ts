@@ -41,17 +41,15 @@ test("garbage collection respects references and retention grace period", async 
   const artifacts = new InMemoryArtifactStore();
   const refs = new InMemoryArtifactReferenceStore();
   const manager = new LocalArtifactLifecycleManager(artifacts, refs);
-  const old = new Date("2020-01-01T00:00:00.000Z");
   const kept = await artifacts.put({ bytes, kind: "data", mediaType: "application/octet-stream" });
   const unreferenced = await artifacts.put({ bytes: new TextEncoder().encode("orphan"), kind: "data", mediaType: "application/octet-stream" });
   await manager.attach({ artifactId: kept.id, ownerType: "project", ownerId: "project-kept", role: "dataset" });
-  const result = await manager.collectGarbage({ olderThanMs: 1000, now: new Date("2026-11-13T00:00:00.000Z") });
+  const result = await manager.collectGarbage({ olderThanMs: 0, now: new Date("2035-01-01T00:00:00.000Z") });
   assert.ok(await artifacts.get(kept.id));
   assert.equal(await artifacts.get(unreferenced.id), undefined);
   assert.equal(result.deleted.includes(unreferenced.id), true);
   assert.equal(result.retained >= 1, true);
   assert.equal(result.scanned, 2);
-  void old;
 });
 
 test("filesystem reference store survives manager restart and supports owner lookup", async () => {
