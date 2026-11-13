@@ -74,7 +74,13 @@ The exit goal is an extensible platform foundation that can host hundreds of too
 - [x] Add reusable prefab subtree instantiation with stable ID remapping and source immutability.
 - [x] Migrate CPU-cache reference project to all seven scenes/shots, audio clip/track linkage, a reusable memory prefab, and explicit dependency edges.
 - [x] Add tests for cross-scene parenting rejection, prefab instantiation, prefab reference cleanup, and changed-parent reporting.
-- [x] Add database/object-storage snapshot adapter and broader property-based hierarchy operation coverage. (Filesystem backend is the current durable local implementation; remote adapter remains deferred.)
+- [x] Clone prefab-internal animation tracks and remap their target node IDs.
+- [x] Remove animation tracks when their target nodes are deleted.
+- [x] Reject duplicate revision IDs and verify repository state matches the declared base revision.
+- [x] Test prefab constraint/dependency/animation remapping, malformed prefab roots, ID collisions, and duplicate revision rejection.
+- [x] Test project repository compare-and-swap conflicts and failed commit immutability.
+- [ ] Add database/object-storage snapshot adapter (filesystem backend is the current durable local implementation).
+- [ ] Expand property-based testing to arbitrary hierarchy edits and cross-entity references.
 
 #### P1.1 — Tool platform and extensibility
 - [x] Define tool manifest schema and typed tool/registry/gateway contracts.
