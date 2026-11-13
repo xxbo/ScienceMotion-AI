@@ -328,3 +328,8 @@ The project model now has a more complete lifecycle for node-linked animation, c
 ### CI correction — prefab animation track count
 
 The first CI run for prefab animation remapping failed in the new test because the CPU-cache fixture already has an animation track targeting a descendant included in the prefab subtree. The implementation correctly cloned both the newly-added test track and the pre-existing data-path animation track. Updated the test to expect both cloned tracks and verify the existing descendant track's remapped target. This was a fixture expectation correction, not a runtime defect.
+
+
+### CI correction — prefab animation assertion targeted the wrong fixture track
+
+CI #43388480573 passed type checking and project validation, with 21/22 platform tests passing. The failing assertion expected the prefab rooted at `node-cpu` to clone `animation-data-packet`, which targets the sibling `node-data-path` and is not inside that prefab subtree. The implementation correctly cloned the CPU root's existing `animation-cpu-pulse` track plus the test-created track. Corrected the assertion to verify `pair-copy__animation-cpu-pulse` targets `pair-copy__node-cpu`. No runtime code change was needed.
