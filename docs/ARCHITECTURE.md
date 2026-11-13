@@ -270,3 +270,14 @@ P1.0 follow-up implementation (2026-11-13):
 - Strengthened patch operations to reject parenting across scene boundaries.
 - Strengthened project semantic validation: every root belongs to exactly one scene, roots cannot have parents, and parent/child links must be reciprocal with no duplicate child references.
 - Added filesystem snapshot tests for persistence, listing, restoration, path traversal rejection, and tamper detection.
+
+
+## P1.0 follow-up: prefab instances and reference project migration
+
+- `src/platform/prefabs.ts` implements deterministic prefab subtree cloning with instance-prefixed IDs, remapped parent/child references, optional naming suffix, and root position offset. It clones the project before mutation and returns created node IDs.
+- Node deletion now removes prefab root references as well as constraints and dependency edges.
+- Reparent operations report both old and new parent nodes as changed.
+- The CPU-cache project fixture now contains all seven episode scenes and shots, a narration clip linked to its audio track, a reusable memory-module prefab, and explicit dependency edges.
+- Unit tests cover prefab instance immutability, hierarchy remapping, cross-scene parenting rejection, prefab cleanup, and changed-node reporting.
+
+The filesystem snapshot backend is the first durable local adapter. Database/object-storage implementations should follow the same asynchronous persistence contract without changing project or snapshot semantics.
