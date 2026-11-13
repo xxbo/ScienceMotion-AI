@@ -1,0 +1,52 @@
+{
+  "id": "geometry.primitive.create",
+  "version": "1.0.0",
+  "namespace": "geometry",
+  "name": "Create Primitive",
+  "description": "Create a renderer-neutral primitive geometry node in a target scene.",
+  "category": "geometry",
+  "tags": ["3d", "geometry", "scene-graph", "create"],
+  "examples": [
+    {
+      "input": { "sceneId": "scene-main", "kind": "box", "name": "CPU Package" },
+      "description": "Create a box-shaped geometry node."
+    }
+  ],
+  "inputSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["sceneId", "kind", "name"],
+    "properties": {
+      "sceneId": { "type": "string", "minLength": 1 },
+      "kind": { "enum": ["box", "sphere", "cylinder", "cone", "plane", "torus"] },
+      "name": { "type": "string", "minLength": 1 },
+      "position": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 }
+    }
+  },
+  "outputSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["nodeId", "sceneId"],
+    "properties": {
+      "nodeId": { "type": "string" },
+      "sceneId": { "type": "string" }
+    }
+  },
+  "capabilities": ["project.write", "geometry.primitive"],
+  "engines": ["renderer-neutral"],
+  "projectSchemaVersions": ["1.1.0"],
+  "lifecycle": "beta",
+  "pluginId": "builtin.geometry",
+  "execution": {
+    "deterministic": true,
+    "stateful": true,
+    "destructive": false,
+    "cost": "low",
+    "timeoutMs": 5000,
+    "permissions": ["project.write"],
+    "supportsCancellation": true,
+    "idempotent": false,
+    "maxConcurrency": 8
+  },
+  "artifacts": []
+}
