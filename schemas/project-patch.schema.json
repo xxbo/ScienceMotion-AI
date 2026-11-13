@@ -94,13 +94,28 @@
                     ],
                     "properties": {
                       "position": {
-                        "$ref": "project.schema.json#/definitions/vector3"
+                        "type": "array",
+                        "items": {
+                          "type": "number"
+                        },
+                        "minItems": 3,
+                        "maxItems": 3
                       },
                       "rotation": {
-                        "$ref": "project.schema.json#/definitions/vector3"
+                        "type": "array",
+                        "items": {
+                          "type": "number"
+                        },
+                        "minItems": 3,
+                        "maxItems": 3
                       },
                       "scale": {
-                        "$ref": "project.schema.json#/definitions/vector3"
+                        "type": "array",
+                        "items": {
+                          "type": "number"
+                        },
+                        "minItems": 3,
+                        "maxItems": 3
                       }
                     }
                   },
