@@ -27,16 +27,20 @@ Requirements: Node.js 20.19+ (or a compatible current LTS) and npm.
 
 ```bash
 npm install
+python3 -m venv .venv
+.venv/bin/pip install -r requirements-voice.txt
 npm run studio
 ```
 
-Render the starter composition:
+The first run generates Mandarin narration using the configured Edge TTS voice. It requires network access.
+
+Render the episode:
 
 ```bash
 npm run render
 ```
 
-The output is written to `out/science-motion-demo.mp4`.
+The output is written to `out/science-motion-demo.mp4`. The generated narration MP3 is stored locally under `public/episodes/cpu-cache/` and is ignored by Git.
 
 ## Current milestone
 
