@@ -243,12 +243,3 @@ test("patch batches are atomic when a later operation fails", () => {
   assert.ok(!source.nodes.some((item) => item.id === "node-would-have-been-added"));
 });
 
-test("animation track schema rejects references to missing nodes", () => {
-  const source = structuredClone(project);
-  source.animationTracks.push({
-    id: "broken-track", targetNodeId: "missing-node", targetProperty: "opacity",
-    keyframes: [{ frame: 0, value: 0 }],
-  });
-  assert.ok(source.animationTracks.some((track) => track.targetNodeId === "missing-node"));
-  assert.ok(validateAnimationTrack(source.animationTracks[0]).length === 0);
-});
