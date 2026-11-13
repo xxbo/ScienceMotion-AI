@@ -333,3 +333,13 @@ The first CI run for prefab animation remapping failed in the new test because t
 ### CI correction — prefab animation assertion targeted the wrong fixture track
 
 CI #43388480573 passed type checking and project validation, with 21/22 platform tests passing. The failing assertion expected the prefab rooted at `node-cpu` to clone `animation-data-packet`, which targets the sibling `node-data-path` and is not inside that prefab subtree. The implementation correctly cloned the CPU root's existing `animation-cpu-pulse` track plus the test-created track. Corrected the assertion to verify `pair-copy__animation-cpu-pulse` targets `pair-copy__node-cpu`. No runtime code change was needed.
+
+
+## P1.0 acceptance hardening — generated graph edits and full project lifecycle
+
+Added integration coverage in `src/platform/project-platform.test.ts`:
+- Property-generated root-node additions across multiple sequential revisions, checking unique scene-root ownership and graph consistency.
+- Prefab cloning boundary: internal node-to-node references are remapped, while external asset dependencies remain attached to the original source object and are not incorrectly cloned into the prefab instance.
+- End-to-end project lifecycle: create repository → apply revisioned patch → persist filesystem snapshot → restore snapshot → compare canonical hashes and latest revision.
+
+Database/object-storage snapshot adapters are explicitly deferred until the platform introduces multi-worker or remote persistence requirements. The filesystem backend is sufficient for the P1.0 local project foundation. P1.0 completion now depends on the final full CI run and a consistency audit of the CPU-cache fixture, not on adding premature infrastructure.
