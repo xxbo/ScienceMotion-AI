@@ -1,6 +1,6 @@
 import type { ProjectDocument } from "../contracts/project";
 
-export interface LegacyProjectV1_0_0 extends Omit<ProjectDocument, "schemaVersion" | "prefabs" | "constraints" | "dependencies"> {
+export interface LegacyProjectV1_0_0 extends Omit<ProjectDocument, "schemaVersion" | "prefabs" | "constraints" | "dependencies" | "animationTracks"> {
   schemaVersion: "1.0.0";
 }
 
