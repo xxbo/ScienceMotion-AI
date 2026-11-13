@@ -11,6 +11,7 @@ import { applyProjectPatch } from "./project-patches";
 import { migrateProject } from "./project-migrations";
 import { hashProject, InMemorySnapshotStore } from "./project-snapshots";
 import { FileSystemSnapshotStore } from "./filesystem-snapshot-store";
+import { instantiatePrefab } from "./prefabs";
 
 const project = structuredClone(fixture) as unknown as ProjectDocument;
 const options = { currentRevisionId: "revision-initial", newRevisionId: "revision-test", createdAt: "2026-11-13T12:00:00.000Z", message: "unit test patch" };
@@ -121,4 +122,26 @@ test("property: arbitrary node transforms preserve source immutability", () => {
       assert.equal(hashProject(source), before);
     }
   ), { numRuns: 100 });
+});
+
+
+test("prefab instantiation clones a subtree with remapped IDs without mutating source", () => {
+  const source = structuredClone(project);
+  source.nodes.find((item) => item.id === "node-cpu")!.childIds = ["node-memory"];
+  source.nodes.find((item) => item.id === "node-memory")!.parentId = "node-cpu";
+  source.prefabs.push({ id: "prefab-cpu-memory", name: "CPU Memory Pair", rootNodeIds: ["node-cpu"] });
+  const before = hashProject(source);
+  const result = instantiatePrefab(source, "prefab-cpu-memory", "scene-hit", {
+    instanceIdPrefix: "instance-01",
+    nameSuffix: "Instance 01",
+    position: [100, 20, 0],
+  });
+  assert.equal(hashProject(source), before);
+  assert.deepEqual(result.createdNodeIds.sort(), ["instance-01__node-cpu", "instance-01__node-memory"]);
+  const clonedRoot = result.project.nodes.find((item) => item.id === "instance-01__node-cpu")!;
+  const clonedChild = result.project.nodes.find((item) => item.id === "instance-01__node-memory")!;
+  assert.equal(clonedChild.parentId, clonedRoot.id);
+  assert.deepEqual(clonedRoot.childIds, [clonedChild.id]);
+  assert.ok(result.project.scenes.find((item) => item.id === "scene-hit")!.rootNodeIds.includes(clonedRoot.id));
+  assert.equal(clonedRoot.transform.position[0], source.nodes.find((item) => item.id === "node-cpu")!.transform.position[0] + 100);
 });
