@@ -369,3 +369,85 @@ test("prefab instantiation rejects malformed roots and generated ID collisions",
   collision.nodes.push(node("copy__node-cpu"));
   assert.throws(() => instantiatePrefab(collision, "prefab-cpu", "scene-hit", { instanceIdPrefix: "copy" }), /already exists/);
 });
+
+
+test("property: random root-node additions preserve scene graph invariants", () => {
+  fc.assert(fc.property(
+    fc.array(fc.stringMatching(/^node-[a-z0-9]{1,8}$/), { minLength: 1, maxLength: 12 }),
+    (ids) => {
+      const uniqueIds = [...new Set(ids)].filter((id) => !project.nodes.some((item) => item.id === id));
+      if (uniqueIds.length === 0) return;
+      const source = structuredClone(project);
+      let currentRevision = "revision-initial";
+      uniqueIds.forEach((id, index) => {
+        const patch: ProjectPatchDocument = {
+          schemaVersion: "1.1.0",
+          projectId: source.project.id,
+          baseRevisionId: currentRevision,
+          patches: [{ op: "add-node", sceneId: "scene-intro", node: node(id) }],
+        };
+        const result = applyProjectPatch(source, patch, {
+          currentRevisionId: currentRevision,
+          newRevisionId: `property-revision-${index}`,
+          createdAt: options.createdAt,
+          message: "property generated root",
+        });
+        source.nodes = result.project.nodes;
+        source.scenes = result.project.scenes;
+        source.revisions = result.project.revisions;
+        currentRevision = result.revisionId;
+      });
+      const sceneRoots = source.scenes.flatMap((scene) => scene.rootNodeIds);
+      assert.equal(new Set(sceneRoots).size, sceneRoots.length);
+      for (const id of uniqueIds) {
+        assert.ok(source.nodes.some((item) => item.id === id));
+        assert.equal(sceneRoots.filter((rootId) => rootId === id).length, 1);
+      }
+    }
+  ), { numRuns: 50 });
+});
+
+test("prefab cloning remaps only internal references and preserves external dependencies", () => {
+  const source = structuredClone(project);
+  source.nodes.find((item) => item.id === "node-cpu")!.childIds = ["node-memory"];
+  source.nodes.find((item) => item.id === "node-memory")!.parentId = "node-cpu";
+  source.prefabs.push({ id: "prefab-cpu-memory", name: "CPU Memory", rootNodeIds: ["node-cpu"] });
+  source.dependencies.push(
+    { id: "internal-edge", fromType: "node", fromId: "node-cpu", toType: "node", toId: "node-memory", relation: "references" },
+    { id: "external-edge", fromType: "node", fromId: "node-cpu", toType: "asset", toId: "asset-episode-narration", relation: "uses" }
+  );
+  const result = instantiatePrefab(source, "prefab-cpu-memory", "scene-hit", { instanceIdPrefix: "isolated-copy" });
+  assert.ok(result.project.dependencies.some((item) => item.id === "isolated-copy__internal-edge" && item.fromId === "isolated-copy__node-cpu" && item.toId === "isolated-copy__node-memory"));
+  assert.ok(result.project.dependencies.some((item) => item.id === "external-edge" && item.fromId === "node-cpu" && item.toId === "asset-episode-narration"));
+  assert.equal(result.createdDependencyIds.length, 1);
+});
+
+test("repository patch and filesystem snapshot form a recoverable project lifecycle", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "sciencemotion-project-lifecycle-"));
+  try {
+    const repository = new InMemoryProjectRepository();
+    const snapshots = new FileSystemSnapshotStore(directory);
+    await repository.create(project);
+    const patch: ProjectPatchDocument = {
+      schemaVersion: "1.1.0",
+      projectId: project.project.id,
+      baseRevisionId: "revision-initial",
+      patches: [{ op: "add-node", sceneId: "scene-intro", node: node("lifecycle-node") }],
+    };
+    const committed = await repository.applyPatch(project.project.id, patch, {
+      newRevisionId: "revision-lifecycle-1",
+      createdAt: options.createdAt,
+      message: "lifecycle integration test",
+    });
+    const snapshot = await snapshots.save(committed.project, {
+      id: "lifecycle-snapshot",
+      createdAt: options.createdAt,
+    });
+    const restored = await snapshots.restore(snapshot.id);
+    assert.equal(hashProject(restored), hashProject(committed.project));
+    assert.equal(restored.revisions.at(-1)?.id, "revision-lifecycle-1");
+    assert.ok(restored.nodes.some((item) => item.id === "lifecycle-node"));
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
