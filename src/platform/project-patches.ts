@@ -80,6 +80,13 @@ export function applyProjectPatch(
       for (const scene of project.scenes) scene.rootNodeIds = scene.rootNodeIds.filter((id) => !removeIds.has(id));
       project.nodes = project.nodes.filter((item) => !removeIds.has(item.id));
       for (const item of project.nodes) item.childIds = (item.childIds ?? []).filter((id) => !removeIds.has(id));
+      project.constraints = project.constraints.filter((constraint) =>
+        !removeIds.has(constraint.sourceNodeId) && !removeIds.has(constraint.targetNodeId)
+      );
+      project.dependencies = project.dependencies.filter((dependency) =>
+        !(dependency.fromType === "node" && removeIds.has(dependency.fromId)) &&
+        !(dependency.toType === "node" && removeIds.has(dependency.toId))
+      );
       removeIds.forEach((id) => changed.add(id));
     } else if (operation.op === "reparent-node") {
       const node = project.nodes.find((item) => item.id === operation.nodeId);
