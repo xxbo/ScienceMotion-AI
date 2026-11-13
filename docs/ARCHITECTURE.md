@@ -222,3 +222,8 @@ Use the CPU-cache episode as the first project fixture:
 ### P1.1 CI correction — numeric namespace segments
 
 The first P1.1 CI run (#43394303468) passed typecheck and P1.0 project validation, then failed one registry test because the namespace validator rejected `graphics.2d`. The namespace grammar incorrectly required every dotted segment to begin with a letter. Updated both runtime validation and the manifest JSON Schema to allow numeric-leading segments after the first segment (for example `graphics.2d`), while keeping the root namespace alphabetic. The existing discovery test now exercises this valid namespace.
+
+
+### CI correction — manifest JSON Schema regex escaping
+
+CI #43394890631 passed all 36 platform tests, but failed `validate:tool-manifests`. The namespace runtime validator was fixed, while the JSON Schema regex patterns for `namespace` and `projectSchemaVersions` were over-escaped. The manifest validator therefore interpreted literal backslashes and rejected valid semver values such as `1.1.0`; the over-escaped namespace pattern would also reject dotted namespaces such as `graphics.2d`. Corrected both patterns and added explicit schema-regex smoke checks for representative namespaces and versions in `scripts/validate-tool-manifests.mjs`.
