@@ -235,3 +235,25 @@ This is the first project graph contract, not yet the complete final model. Cons
 - A failed patch throws before returning a new project; the source project object is not mutated.
 
 This first patch engine is an in-memory domain primitive. Persistent snapshots, full project-wide optimistic concurrency, operation-level schema validation at the gateway, and comprehensive automated unit tests remain outstanding.
+
+
+## Project Schema v1.1.0, migrations, snapshots, and patch tests
+
+The project contract has been versioned to v1.1.0. It adds:
+- Prefab definitions and node prefab references.
+- Scene constraints with typed constraint kinds and source/target node references.
+- Project dependency edges between nodes, scenes, shots, assets, prefabs, and clips.
+- Additional component kinds for physics, rigs, environments, post-processing, and custom extensions.
+- JSON Schema definitions for keyframes, animation tracks, simulation settings, and physics body parameters.
+
+Migration and snapshot utilities:
+- `src/platform/project-migrations.ts` performs an additive v1.0.0 → v1.1.0 migration without mutating the input.
+- `src/platform/project-snapshots.ts` provides canonical JSON serialization, SHA-256 content hashes, an in-memory snapshot store, integrity verification, and restore.
+- Snapshots are currently in-memory reference implementations; durable storage is a later worker/platform concern.
+
+Patch and test improvements:
+- Node removal now cleans constraints and node-related dependency edges.
+- `src/platform/project-platform.test.ts` covers add, reparent, recursive removal, stale revision rejection, cycle rejection, migration, and snapshot restoration.
+- CI runs the project platform unit tests and validates project, patch, and episode documents.
+
+Remaining P1.0 work includes durable snapshot persistence, optimistic concurrency at a persistent repository boundary, more complete scene/sequence membership rules, and broader property-based tests. The current snapshot store is not yet a production persistence layer.
