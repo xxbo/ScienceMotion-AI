@@ -51,9 +51,12 @@ This is a foundational requirement, not a later refactor.
 ### P1 — Renderer-neutral episode contract and AI director
 
 **P1.0 — Define the boundary before expanding AI generation**
-- [ ] Define a versioned episode package schema and JSON Schema validation.
-- [ ] Model metadata, source records, factual claims, narration segments, shot list, scene intents, asset references, caption timing, and audio cues.
-- [ ] Give every claim, narration segment, shot, scene, and asset a stable ID.
+- [x] Define a versioned episode package schema and JSON Schema validation (schema v1.0.0).
+- [x] Model metadata, source records, factual claims, narration segments, shot list, scene intents, asset references, caption timing, and audio cues.
+- [x] Give every claim, narration segment, shot, scene, and asset a stable ID.
+- [x] Create the CPU-cache episode as a renderer-neutral JSON package.
+- [x] Refactor the Remotion composition to select scene adapters from package scene types and read captions/audio cues from package data.
+- [x] Add schema and semantic cross-reference validation to CI.
 - [ ] Define renderer-neutral scene primitives (text, shape, arrow, chart, timeline, equation, diagram, 3D asset reference) and explicit units/coordinate systems.
 - [ ] Define renderer adapter interfaces, capability negotiation, unsupported-feature handling, and deterministic fallback behavior.
 - [ ] Add golden fixture episodes and schema compatibility tests.
@@ -72,7 +75,7 @@ This is a foundational requirement, not a later refactor.
 - [ ] Compare package hashes/semantic fields before and after rendering to prove the content package is unchanged.
 - [ ] Keep AI director tests runnable without browser or video-renderer dependencies.
 
-**Exit criteria:** one approved, versioned episode package can be generated and reviewed without loading rendering libraries, then rendered by multiple adapters without changing its content, narration, citations, or shot order.
+**Exit criteria:** one approved, versioned episode package can be generated and reviewed without loading rendering libraries, then rendered by multiple adapters without changing its content, narration, citations, or shot order. Initial schema, sample package, validator, and first Remotion consumer are in place; the second renderer and content-only dependency isolation remain outstanding.
 
 ### P2 — Scientific visual toolkit
 
