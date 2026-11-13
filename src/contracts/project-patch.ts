@@ -1,7 +1,7 @@
 import type { SceneNode } from "./project";
 
 export interface ProjectPatchDocument {
-  schemaVersion: "1.0.0";
+  schemaVersion: "1.1.0";
   projectId: string;
   baseRevisionId: string;
   patches: ProjectPatchOperation[];
