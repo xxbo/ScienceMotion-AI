@@ -14,7 +14,8 @@
     "validate:episode": "node scripts/validate-episode.mjs",
     "render:storyboard": "node scripts/render-storyboard-svg.mjs",
     "validate:project": "node scripts/validate-project.mjs",
-    "validate:project-patch": "node scripts/validate-project-patch.mjs"
+    "validate:project-patch": "node scripts/validate-project-patch.mjs",
+    "test": "tsx --test src/**/*.test.ts"
   },
   "dependencies": {
     "@remotion/cli": "^4.0.0",
@@ -26,6 +27,8 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "typescript": "^5.7.0",
-    "ajv": "^8.17.1"
+    "ajv": "^8.17.1",
+    "tsx": "^4.19.2",
+    "@types/node": "^22.0.0"
   }
 }
