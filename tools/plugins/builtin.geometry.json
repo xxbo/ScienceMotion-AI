@@ -1,0 +1,10 @@
+{
+  "id": "builtin.geometry",
+  "version": "1.0.0",
+  "name": "Built-in Geometry Tools",
+  "description": "Initial built-in geometry tool collection for renderer-neutral scene creation.",
+  "author": "ScienceMotion AI",
+  "toolIds": ["geometry.primitive.create"],
+  "permissions": ["project.write"],
+  "lifecycle": "beta"
+}
