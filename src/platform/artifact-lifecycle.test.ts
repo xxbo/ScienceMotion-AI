@@ -78,3 +78,59 @@ test("lifecycle rejects missing artifacts and conflicting project asset IDs", as
   conflicting.assets.push({ id: "asset-conflict", kind: "image", uri: "artifact://other", contentHash: "other" });
   await assert.rejects(() => manager.attachToProject(conflicting, artifact.id, { assetId: "asset-conflict", kind: "image", role: "cover" }), /different content/);
 });
+
+
+test("project asset removal detaches only its own reference", async () => {
+  const artifacts = new InMemoryArtifactStore();
+  const refs = new InMemoryArtifactReferenceStore();
+  const manager = new LocalArtifactLifecycleManager(artifacts, refs);
+  const artifact = await artifacts.put({ bytes, kind: "image", mediaType: "image/png" });
+  const linked = await manager.attachToProject(project, artifact.id, {
+    assetId: "asset-to-remove", kind: "image", role: "cover",
+  });
+  await manager.attach({ artifactId: artifact.id, ownerType: "project", ownerId: "another-project", role: "asset:shared" });
+  const updated = await manager.detachProjectAsset(linked, "asset-to-remove");
+  assert.equal(updated.assets.some((asset) => asset.id === "asset-to-remove"), false);
+  assert.equal(project.assets.some((asset) => asset.id === "asset-to-remove"), false);
+  const remaining = await manager.references(artifact.id);
+  assert.equal(remaining.length, 1);
+  assert.equal(remaining[0].ownerId, "another-project");
+  assert.ok(await artifacts.get(artifact.id));
+});
+
+test("reference reconciliation repairs missing and stale project asset references", async () => {
+  const artifacts = new InMemoryArtifactStore();
+  const refs = new InMemoryArtifactReferenceStore();
+  const manager = new LocalArtifactLifecycleManager(artifacts, refs);
+  const artifact = await artifacts.put({ bytes, kind: "image", mediaType: "image/png" });
+  const source = structuredClone(project);
+  source.assets.push({
+    id: "asset-needs-reference", kind: "image", uri: artifact.uri,
+    contentHash: artifact.contentHash,
+  });
+  await manager.attach({
+    artifactId: artifact.id, ownerType: "project", ownerId: source.project.id,
+    role: "asset:asset-no-longer-in-project",
+  });
+  const result = await manager.reconcileProjectReferences(source);
+  assert.deepEqual(result.attached, ["asset-needs-reference"]);
+  assert.deepEqual(result.detached, ["asset-no-longer-in-project"]);
+  assert.deepEqual(result.missingArtifacts, []);
+  const refsAfter = await manager.references(artifact.id);
+  assert.equal(refsAfter.length, 1);
+  assert.equal(refsAfter[0].role, "asset:asset-needs-reference");
+});
+
+test("reference reconciliation reports project assets whose blobs are missing", async () => {
+  const artifacts = new InMemoryArtifactStore();
+  const manager = new LocalArtifactLifecycleManager(artifacts, new InMemoryArtifactReferenceStore());
+  const source = structuredClone(project);
+  source.assets.push({
+    id: "asset-missing-blob", kind: "image",
+    uri: "artifact://sha256/" + "a".repeat(64),
+    contentHash: "a".repeat(64),
+  });
+  const result = await manager.reconcileProjectReferences(source);
+  assert.deepEqual(result.missingArtifacts, ["asset-missing-blob"]);
+  assert.deepEqual(result.attached, []);
+});
