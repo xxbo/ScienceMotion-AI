@@ -145,3 +145,40 @@ test("prefab instantiation clones a subtree with remapped IDs without mutating s
   assert.ok(result.project.scenes.find((item) => item.id === "scene-hit")!.rootNodeIds.includes(clonedRoot.id));
   assert.equal(clonedRoot.transform.position[0], source.nodes.find((item) => item.id === "node-cpu")!.transform.position[0] + 100);
 });
+
+
+test("rejects cross-scene parenting and leaves the source untouched", () => {
+  const source = structuredClone(project);
+  const before = hashProject(source);
+  const patch: ProjectPatchDocument = {
+    schemaVersion: "1.1.0", projectId: source.project.id, baseRevisionId: "revision-initial",
+    patches: [{ op: "add-node", sceneId: "scene-intro", node: node("node-cross-scene-child", "node-cache-stack") }],
+  };
+  assert.throws(() => applyProjectPatch(source, patch, options), /does not belong to the target scene/);
+  assert.equal(hashProject(source), before);
+});
+
+test("recursive removal cleans prefab roots and reports changed old parent", () => {
+  const source = structuredClone(project);
+  source.nodes.push(node("node-child", "node-cpu"));
+  source.nodes.find((item) => item.id === "node-cpu")!.childIds = ["node-child"];
+  source.prefabs.push({ id: "prefab-child", name: "Child Prefab", rootNodeIds: ["node-child"] });
+  const remove: ProjectPatchDocument = {
+    schemaVersion: "1.1.0", projectId: source.project.id, baseRevisionId: "revision-initial",
+    patches: [{ op: "remove-node", nodeId: "node-cpu", recursive: true }],
+  };
+  const removed = applyProjectPatch(source, remove, options);
+  assert.deepEqual(removed.project.prefabs.find((item) => item.id === "prefab-child")?.rootNodeIds, []);
+
+  const reparentSource = structuredClone(project);
+  reparentSource.nodes.push(node("node-parent"), node("node-child", "node-parent"));
+  reparentSource.scenes.find((item) => item.id === "scene-hit")!.rootNodeIds.push("node-parent");
+  reparentSource.nodes.find((item) => item.id === "node-parent")!.childIds = ["node-child"];
+  const move: ProjectPatchDocument = {
+    schemaVersion: "1.1.0", projectId: reparentSource.project.id, baseRevisionId: "revision-initial",
+    patches: [{ op: "reparent-node", nodeId: "node-child", sceneId: "scene-hierarchy", newParentId: "node-cache-stack" }],
+  };
+  const moved = applyProjectPatch(reparentSource, move, options);
+  assert.ok(moved.changedNodeIds.includes("node-parent"));
+  assert.ok(moved.changedNodeIds.includes("node-cache-stack"));
+});
