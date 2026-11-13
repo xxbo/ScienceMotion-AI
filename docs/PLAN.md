@@ -82,6 +82,8 @@ The exit goal is an extensible platform foundation that can host hundreds of too
 - [x] Add property-based coverage for generated scene-root additions and hierarchy invariants.
 - [x] Verify prefab cloning remaps internal node references while preserving external asset dependencies.
 - [x] Verify repository patch → revision update → filesystem snapshot → restore as one end-to-end lifecycle.
+- [x] Strengthen final graph validation for shot/sequence membership and duration bounds, clip ranges, prefab roots, constraint scene boundaries/parameters, and self-referencing dependency edges.
+- [x] Add tests for cross-scene constraint rejection, current-schema migration idempotence, unknown schema rejection, and repository read isolation.
 - [ ] Complete the final P1.0 acceptance run across schema, migration, project validation, patch operations, animation, constraints, prefab, repository concurrency, snapshots, and CPU-cache fixture.
 - [Deferred to P1.2/P4] Add database/object-storage snapshot adapter when durable multi-worker deployment is introduced.
 
