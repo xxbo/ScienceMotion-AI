@@ -48,6 +48,9 @@ jobs:
       - name: Validate agent tool manifests
         run: npm run validate:tool-manifests
 
+      - name: Validate plugin manifests
+        run: npm run validate:plugin-manifests
+
       - name: Render independent SVG storyboard
         run: npm run render:storyboard
 
