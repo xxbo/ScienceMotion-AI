@@ -40,6 +40,10 @@ function belongsToScene(project: ProjectDocument, nodeId: string, sceneId: strin
   return scene.rootNodeIds.some(contains);
 }
 
+function projectRevisionExists(project: ProjectDocument, revisionId: string): boolean {
+  return project.revisions.some((revision) => revision.id === revisionId);
+}
+
 function detachFromParent(nodes: SceneNode[], node: SceneNode): void {
   if (!node.parentId) return;
   const parent = nodes.find((item) => item.id === node.parentId);
@@ -54,6 +58,7 @@ export function applyProjectPatch(
   if (patch.schemaVersion !== source.schemaVersion) throw new Error("Patch schema version does not match project schema");
   if (patch.projectId !== source.project.id) throw new Error("Patch targets a different project");
   if (patch.baseRevisionId !== options.currentRevisionId) throw new Error("Revision conflict: project has changed since patch was created");
+  if (projectRevisionExists(source, options.newRevisionId)) throw new Error(`Revision already exists: ${options.newRevisionId}`);
 
   const project = clone(source);
   const changed = new Set<string>();
@@ -103,6 +108,7 @@ export function applyProjectPatch(
       project.constraints = project.constraints.filter((constraint) =>
         !removeIds.has(constraint.sourceNodeId) && !removeIds.has(constraint.targetNodeId)
       );
+      project.animationTracks = project.animationTracks.filter((track) => !removeIds.has(track.targetNodeId));
       project.dependencies = project.dependencies.filter((dependency) =>
         !(dependency.fromType === "node" && removeIds.has(dependency.fromId)) &&
         !(dependency.toType === "node" && removeIds.has(dependency.toId))
