@@ -5,10 +5,11 @@
   "description": "AI-assisted code-driven science explainer video production",
   "type": "module",
   "scripts": {
-    "studio": "remotion studio src/index.ts",
-    "render": "remotion render src/index.ts ScienceMotionDemo out/science-motion-demo.mp4",
-    "render:still": "remotion still src/index.ts ScienceMotionDemo out/preview.png --frame=45",
-    "typecheck": "tsc --noEmit"
+    "studio": "npm run voice:generate && remotion studio src/index.ts",
+    "render": "npm run voice:generate && remotion render src/index.ts ScienceMotionDemo out/science-motion-demo.mp4",
+    "render:still": "npm run voice:generate && remotion still src/index.ts ScienceMotionDemo out/preview.png --frame=45",
+    "typecheck": "tsc --noEmit",
+    "voice:generate": "node scripts/voice/run-voice.mjs"
   },
   "dependencies": {
     "@remotion/cli": "^4.0.0",
