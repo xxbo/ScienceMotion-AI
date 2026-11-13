@@ -342,3 +342,29 @@ test("project patch rejects duplicate revision IDs", () => {
     ...options, newRevisionId: "revision-initial",
   }), /Revision already exists/);
 });
+
+
+test("project repository rejects duplicate revision IDs without changing project", async () => {
+  const repository = new InMemoryProjectRepository();
+  await repository.create(project);
+  const patch: ProjectPatchDocument = {
+    schemaVersion: "1.1.0", projectId: project.project.id, baseRevisionId: "revision-initial",
+    patches: [{ op: "add-node", sceneId: "scene-intro", node: node("duplicate-revision-node") }],
+  };
+  await assert.rejects(() => repository.applyPatch(project.project.id, patch, {
+    newRevisionId: "revision-initial", createdAt: options.createdAt, message: "duplicate revision",
+  }), /Revision already exists/);
+  const unchanged = await repository.get(project.project.id);
+  assert.equal(hashProject(unchanged!), hashProject(project));
+});
+
+test("prefab instantiation rejects malformed roots and generated ID collisions", () => {
+  const missingRoot = structuredClone(project);
+  missingRoot.prefabs.push({ id: "prefab-missing", name: "Missing", rootNodeIds: ["absent-node"] });
+  assert.throws(() => instantiatePrefab(missingRoot, "prefab-missing", "scene-hit", { instanceIdPrefix: "missing" }), /missing root node/);
+
+  const collision = structuredClone(project);
+  collision.prefabs.push({ id: "prefab-cpu", name: "CPU", rootNodeIds: ["node-cpu"] });
+  collision.nodes.push(node("copy__node-cpu"));
+  assert.throws(() => instantiatePrefab(collision, "prefab-cpu", "scene-hit", { instanceIdPrefix: "copy" }), /already exists/);
+});
