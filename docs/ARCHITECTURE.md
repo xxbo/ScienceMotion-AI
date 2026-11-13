@@ -312,3 +312,14 @@ The current animation evaluator is renderer-neutral and deliberately does not pe
 - Tests cover prefab constraint/dependency remapping, concurrent revision conflicts, and constraint validation.
 
 These implementations extend the P1.0 domain foundation. They do not yet provide a physical constraint solver or distributed database concurrency.
+
+
+## P1.0 final hardening — animation lifecycle and revision integrity
+
+- Prefab instantiation now clones animation tracks targeting nodes inside the prefab subtree and remaps their target node IDs and track IDs.
+- Recursive node removal removes animation tracks targeting removed nodes, preventing dangling animation references.
+- Patch application verifies that the declared current revision matches the latest revision stored in the project and rejects duplicate new revision IDs.
+- Tests cover prefab animation remapping, malformed prefab roots, generated ID collisions, animation cleanup on node deletion, duplicate revision IDs, and repository immutability after rejected commits.
+- Project validation now rejects animation keyframes beyond the longest sequence duration.
+
+The project model now has a more complete lifecycle for node-linked animation, constraints, dependencies, and revisions. P1.0 acceptance still requires the full end-to-end validation run and a final consistency audit of the CPU-cache project fixture.
