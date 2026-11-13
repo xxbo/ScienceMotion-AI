@@ -44,6 +44,7 @@ export interface ToolCallContext {
   runId: string;
   callId: string;
   signal?: AbortSignal;
+  idempotencyKey?: string;
 }
 
 export interface ToolDiagnostic {
@@ -70,6 +71,8 @@ export interface ToolResult<TOutput = unknown> {
     toolVersion?: string;
     durationMs?: number;
     retryable?: boolean;
+    attempt?: number;
+    idempotencyKey?: string;
   };
 }
 
@@ -109,4 +112,29 @@ export interface AgentToolGateway {
     input: TInput,
     context: ToolCallContext
   ): Promise<ToolResult<TOutput>>;
+}
+
+
+export interface ToolExecutionRecord {
+  id: string;
+  toolId: string;
+  toolVersion: string;
+  projectId: string;
+  runId: string;
+  callId: string;
+  idempotencyKey?: string;
+  status: "started" | "succeeded" | "failed";
+  startedAt: string;
+  completedAt?: string;
+  durationMs?: number;
+  inputHash: string;
+  result?: ToolResult;
+  errorCode?: string;
+}
+
+export interface ToolExecutionStore {
+  getByIdempotencyKey(key: string): Promise<ToolExecutionRecord | undefined>;
+  save(record: ToolExecutionRecord): Promise<void>;
+  update(record: ToolExecutionRecord): Promise<void>;
+  list(projectId?: string): Promise<ToolExecutionRecord[]>;
 }
