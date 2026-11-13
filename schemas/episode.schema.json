@@ -1,0 +1,166 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://xxbo.github.io/ScienceMotion-AI/schemas/episode.schema.json",
+  "title": "ScienceMotion Episode Package",
+  "description": "Renderer-neutral, versioned content contract for a science explainer episode.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "episode", "sources", "claims", "narration", "shots", "assets", "audioCues", "captions"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "episode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "language", "audience", "durationFrames", "fps", "outputProfile"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "language": { "type": "string", "minLength": 2 },
+        "audience": { "type": "string", "minLength": 1 },
+        "durationFrames": { "type": "integer", "minimum": 1 },
+        "fps": { "type": "integer", "minimum": 1, "maximum": 120 },
+        "outputProfile": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["width", "height"],
+          "properties": {
+            "width": { "type": "integer", "minimum": 1 },
+            "height": { "type": "integer", "minimum": 1 },
+            "aspectRatio": { "type": "string" }
+          }
+        }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "title", "publisher", "url", "retrievedAt"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "title": { "type": "string", "minLength": 1 },
+          "publisher": { "type": "string", "minLength": 1 },
+          "url": { "type": "string", "minLength": 1 },
+          "publishedAt": { "type": "string" },
+          "retrievedAt": { "type": "string", "minLength": 1 },
+          "license": { "type": "string" }
+        }
+      }
+    },
+    "claims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "statement", "sourceIds", "confidence", "caveats"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "statement": { "type": "string", "minLength": 1 },
+          "sourceIds": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+          "confidence": { "enum": ["high", "medium", "low", "illustrative"] },
+          "caveats": { "type": "array", "items": { "type": "string" } },
+          "value": { "type": "number" },
+          "unit": { "type": "string" }
+        }
+      }
+    },
+    "narration": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "text", "claimIds", "timing"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "text": { "type": "string", "minLength": 1 },
+          "claimIds": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+          "voiceDirection": { "type": "string" },
+          "timing": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["startFrame", "endFrame"],
+            "properties": {
+              "startFrame": { "type": "integer", "minimum": 0 },
+              "endFrame": { "type": "integer", "minimum": 1 }
+            }
+          }
+        }
+      }
+    },
+    "shots": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "sceneType", "durationFrames", "narrationIds", "sceneIntent", "transition"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "sceneType": { "type": "string", "minLength": 1 },
+          "durationFrames": { "type": "integer", "minimum": 1 },
+          "narrationIds": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+          "sceneIntent": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["summary"],
+            "properties": {
+              "summary": { "type": "string", "minLength": 1 },
+              "data": { "type": "object" }
+            }
+          },
+          "transition": { "type": "string" }
+        }
+      }
+    },
+    "assets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "mediaType", "uri"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "mediaType": { "enum": ["image", "audio", "video", "model", "font", "other"] },
+          "uri": { "type": "string", "minLength": 1 },
+          "contentHash": { "type": "string" },
+          "license": { "type": "string" },
+          "attribution": { "type": "string" }
+        }
+      }
+    },
+    "audioCues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "type", "startFrame", "gain"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "type": { "enum": ["narration", "music", "sfx"] },
+          "assetId": { "type": "string" },
+          "narrationId": { "type": "string" },
+          "startFrame": { "type": "integer", "minimum": 0 },
+          "durationFrames": { "type": "integer", "minimum": 1 },
+          "gain": { "type": "number", "minimum": 0, "maximum": 2 },
+          "ducking": { "type": "boolean" }
+        }
+      }
+    },
+    "captions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "narrationId", "text"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "narrationId": { "type": "string", "minLength": 1 },
+          "text": { "type": "string", "minLength": 1 },
+          "startFrame": { "type": "integer", "minimum": 0 },
+          "endFrame": { "type": "integer", "minimum": 1 }
+        }
+      }
+    }
+  }
+}
