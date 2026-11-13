@@ -24,6 +24,7 @@ const unique = (items, label) => {
   return new Set(ids);
 };
 const sequences = unique(project.sequences, "sequences");
+const sequenceMembership = new Map();
 const scenes = unique(project.scenes, "scenes");
 const nodes = unique(project.nodes, "nodes");
 const assets = unique(project.assets, "assets");
@@ -66,16 +67,40 @@ for (const shot of project.shots ?? []) {
   if (!scenes.has(shot.sceneId)) errors.push(`shot ${shot.id} references missing scene ${shot.sceneId}`);
 }
 for (const sequence of project.sequences) {
-  for (const id of sequence.shotIds) if (!shots.has(id)) errors.push(`sequence ${sequence.id} references missing shot ${id}`);
+  const localShots = new Set();
+  for (const id of sequence.shotIds) {
+    if (!shots.has(id)) errors.push(`sequence ${sequence.id} references missing shot ${id}`);
+    if (localShots.has(id)) errors.push(`sequence ${sequence.id} contains duplicate shot ${id}`);
+    localShots.add(id);
+    const count = (sequenceMembership.get(id) ?? 0) + 1;
+    sequenceMembership.set(id, count);
+    if (count > 1) errors.push(`shot ${id} belongs to more than one sequence`);
+    const shot = project.shots.find((item) => item.id === id);
+    if (shot && shot.startFrame + shot.durationFrames > sequence.durationFrames) {
+      errors.push(`shot ${id} exceeds sequence ${sequence.id} duration`);
+    }
+  }
+}
+for (const shot of project.shots ?? []) {
+  if (!sequenceMembership.has(shot.id)) errors.push(`shot ${shot.id} is not assigned to any sequence`);
 }
 for (const track of project.tracks ?? []) {
   for (const id of track.clipIds) if (!clips.has(id)) errors.push(`track ${track.id} references missing clip ${id}`);
 }
 for (const clip of project.clips ?? []) {
   if (!assets.has(clip.assetId)) errors.push(`clip ${clip.id} references missing asset ${clip.assetId}`);
+  if (!Number.isInteger(clip.startFrame) || clip.startFrame < 0) errors.push(`clip ${clip.id} has invalid start frame`);
+  if (!Number.isInteger(clip.durationFrames) || clip.durationFrames < 1) errors.push(`clip ${clip.id} has invalid duration`);
+  if (clip.inFrame !== undefined && (!Number.isInteger(clip.inFrame) || clip.inFrame < 0)) errors.push(`clip ${clip.id} has invalid source in-frame`);
 }
 for (const prefab of project.prefabs ?? []) {
-  for (const id of prefab.rootNodeIds) if (!nodes.has(id)) errors.push(`prefab ${prefab.id} references missing root node ${id}`);
+  if (prefab.rootNodeIds.length === 0) errors.push(`prefab ${prefab.id} has no root nodes`);
+  const localRoots = new Set();
+  for (const id of prefab.rootNodeIds) {
+    if (!nodes.has(id)) errors.push(`prefab ${prefab.id} references missing root node ${id}`);
+    if (localRoots.has(id)) errors.push(`prefab ${prefab.id} contains duplicate root node ${id}`);
+    localRoots.add(id);
+  }
 }
 for (const track of project.animationTracks ?? []) {
   if (!nodes.has(track.targetNodeId)) errors.push(`animation track ${track.id} references missing node ${track.targetNodeId}`);
@@ -90,15 +115,37 @@ for (const track of project.animationTracks ?? []) {
     if (frame > maxDuration) errors.push(`animation track ${track.id} exceeds all sequence durations`);
   }
 }
+const sceneByNode = new Map();
+for (const scene of project.scenes) {
+  const pending = [...scene.rootNodeIds];
+  const seen = new Set();
+  while (pending.length) {
+    const id = pending.pop();
+    if (seen.has(id)) continue;
+    seen.add(id);
+    sceneByNode.set(id, scene.id);
+    pending.push(...(project.nodes.find((node) => node.id === id)?.childIds ?? []));
+  }
+}
 for (const constraint of project.constraints ?? []) {
   if (!nodes.has(constraint.sourceNodeId)) errors.push(`constraint ${constraint.id} references missing source node ${constraint.sourceNodeId}`);
   if (!nodes.has(constraint.targetNodeId)) errors.push(`constraint ${constraint.id} references missing target node ${constraint.targetNodeId}`);
   if (constraint.sourceNodeId === constraint.targetNodeId && constraint.type !== "custom") errors.push(`constraint ${constraint.id} cannot target its own source node`);
+  if (constraint.enabled && sceneByNode.has(constraint.sourceNodeId) && sceneByNode.has(constraint.targetNodeId) && sceneByNode.get(constraint.sourceNodeId) !== sceneByNode.get(constraint.targetNodeId)) {
+    errors.push(`constraint ${constraint.id} crosses scene boundaries`);
+  }
+  if (constraint.type === "distance" && (typeof constraint.parameters.distance !== "number" || !Number.isFinite(constraint.parameters.distance) || constraint.parameters.distance < 0)) {
+    errors.push(`constraint ${constraint.id} requires a non-negative distance`);
+  }
+  if (constraint.type === "follow-path" && (typeof constraint.parameters.pathNodeId !== "string" || !nodes.has(constraint.parameters.pathNodeId))) {
+    errors.push(`constraint ${constraint.id} requires an existing pathNodeId`);
+  }
 }
 const entityExists = (type, id) => ({ node: nodes, scene: scenes, shot: shots, asset: assets, prefab: prefabs, clip: clips }[type]?.has(id) ?? false);
 for (const dependency of project.dependencies ?? []) {
   if (!entityExists(dependency.fromType, dependency.fromId)) errors.push(`dependency ${dependency.id} references missing source ${dependency.fromType}:${dependency.fromId}`);
   if (!entityExists(dependency.toType, dependency.toId)) errors.push(`dependency ${dependency.id} references missing target ${dependency.toType}:${dependency.toId}`);
+  if (dependency.fromType === dependency.toType && dependency.fromId === dependency.toId) errors.push(`dependency ${dependency.id} cannot reference itself`);
 }
 for (const revision of project.revisions) {
   if (revision.parentRevisionId && !revisions.has(revision.parentRevisionId)) errors.push(`revision ${revision.id} references missing parent revision`);
