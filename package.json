@@ -16,7 +16,8 @@
     "validate:project": "node scripts/validate-project.mjs",
     "validate:project-patch": "node scripts/validate-project-patch.mjs",
     "test": "tsx --test src/platform/*.test.ts",
-    "validate:tool-manifests": "node scripts/validate-tool-manifests.mjs"
+    "validate:tool-manifests": "node scripts/validate-tool-manifests.mjs",
+    "validate:plugin-manifests": "node scripts/validate-plugin-manifests.mjs"
   },
   "dependencies": {
     "@remotion/cli": "^4.0.0",
