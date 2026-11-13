@@ -44,6 +44,8 @@ test("reparent-node updates both sides of hierarchy", () => {
 
 test("recursive removal cleans constraints and dependency edges", () => {
   const source = structuredClone(project);
+  const originalConstraintCount = source.constraints.length;
+  const originalDependencyCount = source.dependencies.length;
   source.nodes.push(node("node-child", "node-cpu"));
   source.nodes.find((item) => item.id === "node-cpu")!.childIds = ["node-child"];
   source.constraints.push({ id: "constraint-test", type: "look-at", sourceNodeId: "node-child", targetNodeId: "node-memory", enabled: true, parameters: {} });
@@ -51,8 +53,9 @@ test("recursive removal cleans constraints and dependency edges", () => {
   const patch: ProjectPatchDocument = { schemaVersion: "1.1.0", projectId: source.project.id, baseRevisionId: "revision-initial", patches: [{ op: "remove-node", nodeId: "node-cpu", recursive: true }] };
   const result = applyProjectPatch(source, patch, options);
   assert.ok(!result.project.nodes.some((item) => ["node-cpu", "node-child"].includes(item.id)));
-  assert.equal(result.project.constraints.length, 0);
-  assert.equal(result.project.dependencies.length, 0);
+  assert.equal(result.project.constraints.length, originalConstraintCount);
+  assert.equal(result.project.dependencies.length, originalDependencyCount);
+  assert.ok(!result.project.dependencies.some((item) => item.id === "dep-test"));
 });
 
 test("rejects stale revisions and hierarchy cycles atomically", () => {
