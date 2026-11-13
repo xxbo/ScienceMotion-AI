@@ -106,3 +106,14 @@ Apply least-privilege permissions to tools and workers. Enforce CPU, memory, GPU
 - Per-tool `maxConcurrency` is enforced in the local process before asynchronous execution begins.
 - Execution store is injected through an interface. The supplied in-memory implementation is suitable for tests and local development; durable shared storage and cross-process guarantees remain later platform work.
 - Gateway cancellation is cooperative: tool implementations must observe the supplied AbortSignal. A caller cancellation test waits until the tool has started before aborting, so it verifies in-flight propagation rather than pre-start cancellation.
+
+
+## P1.1-C artifact system — initial implementation
+
+- Added renderer-neutral `ArtifactRecord` and `ArtifactStore` contracts for image, video, audio, model, texture, document, data, and other outputs.
+- Artifact IDs use `sha256:<hex>`; URIs use `artifact://sha256/<hex>`. Records include media type, byte size, creation time, provenance (project/run/call/tool/plugin/source artifacts), metadata, license, and attribution.
+- Added in-memory and filesystem content-addressed stores. The filesystem backend stores blobs by SHA-256 and metadata separately, stages writes before rename, deduplicates identical bytes, verifies hashes on read, and rejects malformed artifact IDs.
+- Tool Gateway can receive an ArtifactStore and validates every returned artifact reference against stored ID, URI, media type, and optional content hash before accepting the result.
+- Tests cover deterministic hashing, duplicate-byte deduplication, metadata/provenance lookup, byte isolation, filesystem persistence, deletion, path/ID validation, tamper detection, and gateway artifact-reference validation.
+
+Current scope is local storage. Project asset-graph attachment, reference counting/garbage collection, remote object storage, signed URLs, and cross-worker artifact transfer are later integration work.
