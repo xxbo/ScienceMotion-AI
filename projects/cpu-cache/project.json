@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.0.0",
+  "schemaVersion": "1.1.0",
   "project": {
     "id": "project-cpu-cache",
     "name": "CPU 为什么需要缓存？",
@@ -8,47 +8,392 @@
     "updatedAt": "2026-11-13T00:00:00.000Z",
     "units": "unitless",
     "coordinateSystem": "screen-y-down",
-    "timebase": { "fps": 30, "ticksPerFrame": 1 },
+    "timebase": {
+      "fps": 30,
+      "ticksPerFrame": 1
+    },
     "colorSpace": "srgb",
-    "metadata": { "referenceEpisode": "cpu-cache-intro-zh", "status": "foundation-fixture" }
+    "metadata": {
+      "referenceEpisode": "cpu-cache-intro-zh",
+      "status": "foundation-fixture"
+    }
   },
   "editorial": {
     "episodeId": "cpu-cache-intro-zh",
     "creativeBrief": "以深色科技纪录片风格解释 CPU 缓存层级、命中/未命中和程序局部性。"
   },
   "sequences": [
-    { "id": "sequence-main", "name": "Main Sequence", "durationFrames": 1800, "fps": 30, "width": 1920, "height": 1080, "shotIds": ["shot-intro", "shot-hierarchy", "shot-hit", "shot-miss"] }
+    {
+      "id": "sequence-main",
+      "name": "Main Sequence",
+      "durationFrames": 1800,
+      "fps": 30,
+      "width": 1920,
+      "height": 1080,
+      "shotIds": [
+        "shot-intro",
+        "shot-hierarchy",
+        "shot-hit",
+        "shot-miss"
+      ]
+    }
   ],
   "scenes": [
-    { "id": "scene-intro", "name": "CPU and Memory", "durationFrames": 240, "rootNodeIds": ["node-cpu", "node-memory", "node-data-path"] },
-    { "id": "scene-hierarchy", "name": "Cache Hierarchy", "durationFrames": 300, "rootNodeIds": ["node-cache-stack"] },
-    { "id": "scene-hit", "name": "Cache Hit", "durationFrames": 300, "rootNodeIds": ["node-hit-flow"] },
-    { "id": "scene-miss", "name": "Cache Miss", "durationFrames": 300, "rootNodeIds": ["node-miss-flow"] }
+    {
+      "id": "scene-intro",
+      "name": "CPU and Memory",
+      "durationFrames": 240,
+      "rootNodeIds": [
+        "node-cpu",
+        "node-memory",
+        "node-data-path"
+      ]
+    },
+    {
+      "id": "scene-hierarchy",
+      "name": "Cache Hierarchy",
+      "durationFrames": 300,
+      "rootNodeIds": [
+        "node-cache-stack"
+      ]
+    },
+    {
+      "id": "scene-hit",
+      "name": "Cache Hit",
+      "durationFrames": 300,
+      "rootNodeIds": [
+        "node-hit-flow"
+      ]
+    },
+    {
+      "id": "scene-miss",
+      "name": "Cache Miss",
+      "durationFrames": 300,
+      "rootNodeIds": [
+        "node-miss-flow"
+      ]
+    }
   ],
   "nodes": [
-    { "id": "node-cpu", "name": "CPU", "type": "shape", "transform": { "position": [170, 420, 0], "rotation": [0, 0, 0], "scale": [1, 1, 1] }, "components": [{ "kind": "geometry", "data": { "primitive": "rounded-rectangle", "width": 500, "height": 280, "radius": 28 } }, { "kind": "material", "data": { "fill": "#102238", "stroke": "#55d6e8" } }, { "kind": "text", "data": { "text": "CPU", "fontSize": 34, "align": "center" } }] },
-    { "id": "node-memory", "name": "Main Memory", "type": "shape", "transform": { "position": [930, 480, 0], "rotation": [0, 0, 0], "scale": [1, 1, 1] }, "components": [{ "kind": "geometry", "data": { "primitive": "rounded-rectangle", "width": 760, "height": 150 } }, { "kind": "material", "data": { "fill": "#102238", "stroke": "#7296ff" } }, { "kind": "text", "data": { "text": "主存（DRAM）", "fontSize": 34, "align": "center" } }] },
-    { "id": "node-data-path", "name": "Data Path", "type": "path", "transform": { "position": [0, 0, 0], "rotation": [0, 0, 0], "scale": [1, 1, 1] }, "components": [{ "kind": "geometry", "data": { "points": [[670, 550, 0], [930, 550, 0]], "strokeWidth": 4 } }, { "kind": "animation", "data": { "property": "path.progress", "keyframes": [{ "frame": 0, "value": 0 }, { "frame": 90, "value": 1 }], "easing": "linear" } }] },
-    { "id": "node-cache-stack", "name": "Cache Hierarchy Stack", "type": "group", "transform": { "position": [0, 0, 0], "rotation": [0, 0, 0], "scale": [1, 1, 1] }, "components": [{ "kind": "renderer-extension", "engine": "remotion", "data": { "sceneType": "cache-hierarchy", "portableFallback": "layered-label-stack" } }] },
-    { "id": "node-hit-flow", "name": "Cache Hit Flow", "type": "group", "transform": { "position": [0, 0, 0], "rotation": [0, 0, 0], "scale": [1, 1, 1] }, "components": [{ "kind": "renderer-extension", "engine": "remotion", "data": { "sceneType": "cache-hit" } }] },
-    { "id": "node-miss-flow", "name": "Cache Miss Flow", "type": "group", "transform": { "position": [0, 0, 0], "rotation": [0, 0, 0], "scale": [1, 1, 1] }, "components": [{ "kind": "renderer-extension", "engine": "remotion", "data": { "sceneType": "cache-miss" } }] }
+    {
+      "id": "node-cpu",
+      "name": "CPU",
+      "type": "shape",
+      "transform": {
+        "position": [
+          170,
+          420,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": [
+        {
+          "kind": "geometry",
+          "data": {
+            "primitive": "rounded-rectangle",
+            "width": 500,
+            "height": 280,
+            "radius": 28
+          }
+        },
+        {
+          "kind": "material",
+          "data": {
+            "fill": "#102238",
+            "stroke": "#55d6e8"
+          }
+        },
+        {
+          "kind": "text",
+          "data": {
+            "text": "CPU",
+            "fontSize": 34,
+            "align": "center"
+          }
+        }
+      ]
+    },
+    {
+      "id": "node-memory",
+      "name": "Main Memory",
+      "type": "shape",
+      "transform": {
+        "position": [
+          930,
+          480,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": [
+        {
+          "kind": "geometry",
+          "data": {
+            "primitive": "rounded-rectangle",
+            "width": 760,
+            "height": 150
+          }
+        },
+        {
+          "kind": "material",
+          "data": {
+            "fill": "#102238",
+            "stroke": "#7296ff"
+          }
+        },
+        {
+          "kind": "text",
+          "data": {
+            "text": "主存（DRAM）",
+            "fontSize": 34,
+            "align": "center"
+          }
+        }
+      ]
+    },
+    {
+      "id": "node-data-path",
+      "name": "Data Path",
+      "type": "path",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": [
+        {
+          "kind": "geometry",
+          "data": {
+            "points": [
+              [
+                670,
+                550,
+                0
+              ],
+              [
+                930,
+                550,
+                0
+              ]
+            ],
+            "strokeWidth": 4
+          }
+        },
+        {
+          "kind": "animation",
+          "data": {
+            "property": "path.progress",
+            "keyframes": [
+              {
+                "frame": 0,
+                "value": 0
+              },
+              {
+                "frame": 90,
+                "value": 1
+              }
+            ],
+            "easing": "linear"
+          }
+        }
+      ]
+    },
+    {
+      "id": "node-cache-stack",
+      "name": "Cache Hierarchy Stack",
+      "type": "group",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": [
+        {
+          "kind": "renderer-extension",
+          "engine": "remotion",
+          "data": {
+            "sceneType": "cache-hierarchy",
+            "portableFallback": "layered-label-stack"
+          }
+        }
+      ]
+    },
+    {
+      "id": "node-hit-flow",
+      "name": "Cache Hit Flow",
+      "type": "group",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": [
+        {
+          "kind": "renderer-extension",
+          "engine": "remotion",
+          "data": {
+            "sceneType": "cache-hit"
+          }
+        }
+      ]
+    },
+    {
+      "id": "node-miss-flow",
+      "name": "Cache Miss Flow",
+      "type": "group",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "components": [
+        {
+          "kind": "renderer-extension",
+          "engine": "remotion",
+          "data": {
+            "sceneType": "cache-miss"
+          }
+        }
+      ]
+    }
   ],
   "tracks": [
-    { "id": "track-main-video", "name": "Main Video", "kind": "video", "clipIds": [] },
-    { "id": "track-motion", "name": "Motion", "kind": "animation", "clipIds": [] },
-    { "id": "track-audio", "name": "Narration and Music", "kind": "audio", "clipIds": [] }
+    {
+      "id": "track-main-video",
+      "name": "Main Video",
+      "kind": "video",
+      "clipIds": []
+    },
+    {
+      "id": "track-motion",
+      "name": "Motion",
+      "kind": "animation",
+      "clipIds": []
+    },
+    {
+      "id": "track-audio",
+      "name": "Narration and Music",
+      "kind": "audio",
+      "clipIds": []
+    }
   ],
   "shots": [
-    { "id": "shot-intro", "name": "CPU and Memory", "sceneId": "scene-intro", "startFrame": 0, "durationFrames": 240, "transitionIn": "fade" },
-    { "id": "shot-hierarchy", "name": "Cache Hierarchy", "sceneId": "scene-hierarchy", "startFrame": 480, "durationFrames": 300, "transitionIn": "fade" },
-    { "id": "shot-hit", "name": "Cache Hit", "sceneId": "scene-hit", "startFrame": 780, "durationFrames": 300 },
-    { "id": "shot-miss", "name": "Cache Miss", "sceneId": "scene-miss", "startFrame": 1080, "durationFrames": 300 }
+    {
+      "id": "shot-intro",
+      "name": "CPU and Memory",
+      "sceneId": "scene-intro",
+      "startFrame": 0,
+      "durationFrames": 240,
+      "transitionIn": "fade"
+    },
+    {
+      "id": "shot-hierarchy",
+      "name": "Cache Hierarchy",
+      "sceneId": "scene-hierarchy",
+      "startFrame": 480,
+      "durationFrames": 300,
+      "transitionIn": "fade"
+    },
+    {
+      "id": "shot-hit",
+      "name": "Cache Hit",
+      "sceneId": "scene-hit",
+      "startFrame": 780,
+      "durationFrames": 300
+    },
+    {
+      "id": "shot-miss",
+      "name": "Cache Miss",
+      "sceneId": "scene-miss",
+      "startFrame": 1080,
+      "durationFrames": 300
+    }
   ],
   "clips": [],
   "assets": [
-    { "id": "asset-episode-narration", "kind": "audio", "uri": "episodes/cpu-cache/narration.mp3", "license": "Generated for this episode" }
+    {
+      "id": "asset-episode-narration",
+      "kind": "audio",
+      "uri": "episodes/cpu-cache/narration.mp3",
+      "license": "Generated for this episode"
+    }
   ],
   "revisions": [
-    { "id": "revision-initial", "createdAt": "2026-11-13T00:00:00.000Z", "message": "Initial project graph fixture", "author": "ScienceMotion" }
-  ]
+    {
+      "id": "revision-initial",
+      "createdAt": "2026-11-13T00:00:00.000Z",
+      "message": "Initial project graph fixture",
+      "author": "ScienceMotion"
+    }
+  ],
+  "prefabs": [],
+  "constraints": [],
+  "dependencies": []
 }
