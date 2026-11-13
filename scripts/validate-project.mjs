@@ -84,7 +84,11 @@ for (const track of project.animationTracks ?? []) {
   for (let index = 1; index < frames.length; index++) {
     if (frames[index] <= frames[index - 1]) errors.push(`animation track ${track.id} keyframes must be sorted by ascending frame`);
   }
-  for (const frame of frames) if (frame < 0) errors.push(`animation track ${track.id} has a negative frame`);
+  for (const frame of frames) {
+    if (frame < 0) errors.push(`animation track ${track.id} has a negative frame`);
+    const maxDuration = Math.max(...project.sequences.map((sequence) => sequence.durationFrames));
+    if (frame > maxDuration) errors.push(`animation track ${track.id} exceeds all sequence durations`);
+  }
 }
 for (const constraint of project.constraints ?? []) {
   if (!nodes.has(constraint.sourceNodeId)) errors.push(`constraint ${constraint.id} references missing source node ${constraint.sourceNodeId}`);
