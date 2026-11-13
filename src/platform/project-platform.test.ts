@@ -31,9 +31,10 @@ test("add-node creates root and preserves source immutability", () => {
 test("reparent-node updates both sides of hierarchy", () => {
   const source = structuredClone(project);
   source.nodes.push(node("node-parent"), node("node-child"));
+  source.scenes.find((item) => item.id === "scene-hierarchy")!.rootNodeIds.push("node-parent");
   source.nodes.find((item) => item.id === "node-parent")!.childIds = ["node-child"];
   source.nodes.find((item) => item.id === "node-child")!.parentId = "node-parent";
-  const patch: ProjectPatchDocument = { schemaVersion: "1.1.0", projectId: source.project.id, baseRevisionId: "revision-initial", patches: [{ op: "reparent-node", nodeId: "node-child", sceneId: "scene-intro", newParentId: "node-cache-stack" }] };
+  const patch: ProjectPatchDocument = { schemaVersion: "1.1.0", projectId: source.project.id, baseRevisionId: "revision-initial", patches: [{ op: "reparent-node", nodeId: "node-child", sceneId: "scene-hierarchy", newParentId: "node-cache-stack" }] };
   const result = applyProjectPatch(source, patch, options);
   assert.equal(result.project.nodes.find((item) => item.id === "node-child")?.parentId, "node-cache-stack");
   assert.ok(result.project.nodes.find((item) => item.id === "node-cache-stack")?.childIds?.includes("node-child"));
