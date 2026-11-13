@@ -36,6 +36,9 @@ jobs:
       - name: Validate renderer-neutral episode package
         run: npm run validate:episode
 
+      - name: Render independent SVG storyboard
+        run: npm run render:storyboard
+
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -60,5 +63,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sciencemotion-demo
-          path: out/science-motion-demo.mp4
+          path: |
+            out/science-motion-demo.mp4
+            out/cpu-cache-storyboard.svg
           if-no-files-found: error
