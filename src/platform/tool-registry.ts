@@ -219,7 +219,7 @@ export class LocalAgentToolGateway implements AgentToolGateway {
     const startedAt = new Date().toISOString();
     const started = Date.now();
     const record: ToolExecutionRecord = {
-      id: context.callId, toolId: manifest.id, toolVersion: manifest.version,
+      id: `${context.projectId}:${context.runId}:${context.callId}`, toolId: manifest.id, toolVersion: manifest.version,
       projectId: context.projectId, runId: context.runId, callId: context.callId,
       idempotencyKey, status: "started", startedAt, inputHash,
     };
