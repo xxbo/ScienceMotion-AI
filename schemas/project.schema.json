@@ -1,0 +1,190 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://xxbo.github.io/ScienceMotion-AI/schemas/project.schema.json",
+  "title": "ScienceMotion Project",
+  "description": "Versioned renderer-neutral project, sequence, scene graph, asset, and revision contract.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "project", "editorial", "sequences", "scenes", "nodes", "assets", "revisions"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "project": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "name", "createdAt", "updatedAt", "units", "coordinateSystem", "timebase", "colorSpace"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "createdAt": { "type": "string", "minLength": 1 },
+        "updatedAt": { "type": "string", "minLength": 1 },
+        "units": { "enum": ["metric", "imperial", "unitless", "custom"] },
+        "coordinateSystem": { "enum": ["right-handed-y-up", "right-handed-z-up", "left-handed-y-up", "screen-y-down"] },
+        "timebase": {
+          "type": "object", "additionalProperties": false, "required": ["fps", "ticksPerFrame"],
+          "properties": {
+            "fps": { "type": "integer", "minimum": 1, "maximum": 240 },
+            "ticksPerFrame": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "colorSpace": { "enum": ["srgb", "linear-srgb", "display-p3", "rec2020", "acescg"] },
+        "metadata": { "type": "object" }
+      }
+    },
+    "editorial": {
+      "type": "object", "additionalProperties": false,
+      "required": ["episodeId"],
+      "properties": {
+        "episodeId": { "type": "string", "minLength": 1 },
+        "creativeBrief": { "type": "string" },
+        "styleReferences": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "sequences": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "name", "durationFrames", "fps", "width", "height", "shotIds"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "durationFrames": { "type": "integer", "minimum": 1 },
+          "fps": { "type": "integer", "minimum": 1, "maximum": 240 },
+          "width": { "type": "integer", "minimum": 1 },
+          "height": { "type": "integer", "minimum": 1 },
+          "shotIds": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "scenes": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "name", "durationFrames", "rootNodeIds"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "durationFrames": { "type": "integer", "minimum": 1 },
+          "rootNodeIds": { "type": "array", "items": { "type": "string" } },
+          "metadata": { "type": "object" }
+        }
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "name", "type", "transform", "components"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "type": { "enum": ["group", "text", "shape", "path", "mesh", "image", "video", "camera", "light", "emitter", "simulation", "custom"] },
+          "parentId": { "type": "string" },
+          "childIds": { "type": "array", "items": { "type": "string" } },
+          "transform": {
+            "type": "object", "additionalProperties": false,
+            "required": ["position", "rotation", "scale"],
+            "properties": {
+              "position": { "$ref": "#/definitions/vector3" },
+              "rotation": { "$ref": "#/definitions/vector3" },
+              "scale": { "$ref": "#/definitions/vector3" },
+              "pivot": { "$ref": "#/definitions/vector3" }
+            }
+          },
+          "components": {
+            "type": "array",
+            "items": {
+              "type": "object", "additionalProperties": false,
+              "required": ["kind", "data"],
+              "properties": {
+                "kind": { "enum": ["geometry", "material", "camera", "light", "text", "image", "video", "animation", "constraint", "simulation", "renderer-extension"] },
+                "data": { "type": "object" },
+                "engine": { "type": "string" }
+              }
+            }
+          },
+          "metadata": { "type": "object" }
+        }
+      }
+    },
+    "tracks": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "name", "kind", "clipIds"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "kind": { "enum": ["video", "audio", "caption", "animation", "effect"] },
+          "clipIds": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "shots": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "name", "sceneId", "startFrame", "durationFrames"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "sceneId": { "type": "string" },
+          "startFrame": { "type": "integer", "minimum": 0 },
+          "durationFrames": { "type": "integer", "minimum": 1 },
+          "transitionIn": { "type": "string" },
+          "transitionOut": { "type": "string" }
+        }
+      }
+    },
+    "clips": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "assetId", "startFrame", "durationFrames"],
+        "properties": {
+          "id": { "type": "string" },
+          "assetId": { "type": "string" },
+          "startFrame": { "type": "integer", "minimum": 0 },
+          "durationFrames": { "type": "integer", "minimum": 1 },
+          "inFrame": { "type": "integer", "minimum": 0 },
+          "gain": { "type": "number", "minimum": 0, "maximum": 2 }
+        }
+      }
+    },
+    "assets": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "kind", "uri"],
+        "properties": {
+          "id": { "type": "string" },
+          "kind": { "enum": ["image", "video", "audio", "font", "model", "texture", "data", "other"] },
+          "uri": { "type": "string", "minLength": 1 },
+          "contentHash": { "type": "string" },
+          "license": { "type": "string" },
+          "attribution": { "type": "string" },
+          "metadata": { "type": "object" }
+        }
+      }
+    },
+    "revisions": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "createdAt", "message"],
+        "properties": {
+          "id": { "type": "string" },
+          "parentRevisionId": { "type": "string" },
+          "createdAt": { "type": "string" },
+          "message": { "type": "string" },
+          "author": { "type": "string" },
+          "snapshotHash": { "type": "string" }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "vector3": {
+      "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3
+    }
+  }
+}
