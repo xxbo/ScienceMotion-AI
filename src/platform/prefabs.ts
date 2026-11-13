@@ -58,6 +58,7 @@ export function instantiatePrefab(
 
   const project = structuredClone(source);
   project.nodes.push(...clones);
-  scene.rootNodeIds.push(...prefab.rootNodeIds.map((id) => idMap.get(id)!));
+  const targetScene = project.scenes.find((item) => item.id === sceneId)!;
+  targetScene.rootNodeIds.push(...prefab.rootNodeIds.map((id) => idMap.get(id)!));
   return { project, createdNodeIds: clones.map((node) => node.id) };
 }
