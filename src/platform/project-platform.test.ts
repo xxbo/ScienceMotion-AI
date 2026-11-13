@@ -278,7 +278,7 @@ test("prefab instantiation remaps internal constraints and node dependencies", (
   assert.equal(dependency.toId, "pair-copy__node-memory");
   const animation = result.project.animationTracks.find((item) => item.id === "pair-copy__animation-pair")!;
   assert.equal(animation.targetNodeId, "pair-copy__node-cpu");
-  assert.ok(result.project.animationTracks.some((item) => item.id === "pair-copy__animation-data-packet" && item.targetNodeId === "pair-copy__node-data-path"));
+  assert.ok(result.project.animationTracks.some((item) => item.id === "pair-copy__animation-cpu-pulse" && item.targetNodeId === "pair-copy__node-cpu"));
 });
 
 test("project repository compare-and-swap allows only one concurrent patch", async () => {
