@@ -595,5 +595,63 @@
       "toId": "asset-episode-narration",
       "relation": "uses"
     }
+  ],
+  "animationTracks": [
+    {
+      "id": "animation-data-packet",
+      "targetNodeId": "node-data-path",
+      "targetProperty": "path.progress",
+      "enabled": true,
+      "keyframes": [
+        {
+          "frame": 0,
+          "value": 0,
+          "interpolation": "linear"
+        },
+        {
+          "frame": 90,
+          "value": 1,
+          "interpolation": "linear"
+        }
+      ]
+    },
+    {
+      "id": "animation-cpu-pulse",
+      "targetNodeId": "node-cpu",
+      "targetProperty": "transform.scale",
+      "enabled": true,
+      "keyframes": [
+        {
+          "frame": 0,
+          "value": [
+            1,
+            1,
+            1
+          ],
+          "interpolation": "bezier",
+          "easing": "ease-in-out"
+        },
+        {
+          "frame": 120,
+          "value": [
+            1.04,
+            1.04,
+            1
+          ],
+          "interpolation": "bezier",
+          "easing": "ease-in-out"
+        },
+        {
+          "frame": 240,
+          "value": [
+            1,
+            1,
+            1
+          ],
+          "interpolation": "bezier",
+          "easing": "ease-in-out"
+        }
+      ]
+    }
   ]
 }
