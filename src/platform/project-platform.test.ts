@@ -75,11 +75,14 @@ test("rejects stale base revision and hierarchy cycles atomically", () => {
     patches: [{ op: "add-node", sceneId: "scene-intro", node: node("node-stale") }],
   };
   assert.throws(() => applyProjectPatch(project, stale, options), /Revision conflict/);
+  const cyclicSource = structuredClone(project);
+  cyclicSource.nodes.push(node("node-descendant", "node-cpu"));
+  cyclicSource.nodes.find((item) => item.id === "node-cpu")!.childIds = ["node-descendant"];
   const cyclic: ProjectPatchDocument = {
-    schemaVersion: "1.1.0", projectId: project.project.id, baseRevisionId: "revision-initial",
-    patches: [{ op: "reparent-node", nodeId: "node-cpu", sceneId: "scene-intro", newParentId: "node-cache-stack" }],
+    schemaVersion: "1.1.0", projectId: cyclicSource.project.id, baseRevisionId: "revision-initial",
+    patches: [{ op: "reparent-node", nodeId: "node-cpu", sceneId: "scene-intro", newParentId: "node-descendant" }],
   };
-  assert.throws(() => applyProjectPatch(project, cyclic, options), /cycle/);
+  assert.throws(() => applyProjectPatch(cyclicSource, cyclic, options), /cycle/);
   assert.ok(!project.nodes.some((item) => item.id === "node-stale"));
 });
 
