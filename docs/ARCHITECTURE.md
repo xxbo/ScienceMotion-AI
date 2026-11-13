@@ -1,212 +1,209 @@
 # Architecture
 
-## Core architectural rule: content is not a renderer
+## Product architecture
 
-ScienceMotion AI is designed around a strict boundary between **what the video says** and **how the video is drawn**.
+ScienceMotion AI is an agent-native professional video creation framework. It must be able to host hundreds of creative tools and multiple specialist engines without requiring the AI orchestration core to know each tool implementation.
 
-Content generation produces an approved, versioned, renderer-neutral episode package. Rendering consumes that package and produces frames/audio/video. Neither side imports the implementation of the other.
+The platform is organized around six concerns:
+1. **Project model:** canonical, renderer-neutral project and scene graph.
+2. **Tool platform:** discoverable manifests, registry, gateway, plugin lifecycle, and execution trace.
+3. **Agent orchestration:** planning, tool discovery, composition, approvals, and iterative feedback.
+4. **Worker execution:** isolated render, simulation, audio, asset, and code-execution workers.
+5. **Engine adapters:** Remotion, Three.js, Blender, Manim, FFmpeg, and future engines.
+6. **Asset and artifact services:** durable references, content hashes, provenance, licenses, and render outputs.
 
-### Ownership boundaries
-
-| Concern | Content generation | Rendering |
-|---|---|---|
-| Research, claims, sources | Owns | Reads references for provenance only |
-| Narration and editorial wording | Owns | Displays/plays supplied content |
-| Shot order and semantic intent | Owns | Executes supplied order |
-| Scene meaning and data | Owns typed scene intent | Maps intent to visual components |
-| Layout, animation, camera, typography | No renderer-specific decisions | Owns |
-| Frame rendering and encoding | No | Owns |
-| TTS text and voice direction | Owns text/voice intent | Audio adapter synthesizes and mixes |
-| LLM calls | Owns | Never |
-| Renderer libraries | Never | Owns |
-
-## Pipeline
+## High-level flow
 
 ```text
-Topic
-  -> Research package (claims, sources, caveats)
-  -> Script (narration + timing intent)
-  -> Storyboard (ordered shots + semantic scene intent)
-  -> Versioned Episode Package (JSON + JSON Schema)
-       |                    |                    |
-       v                    v                    v
-   Remotion 2D          Three.js 3D           Manim math
-       |                    |                    |
-       +--------------------+--------------------+
-                            v
-                 Audio/subtitle composition
-                            v
-                     MP4 + quality report
+Creative brief
+  -> Agent plans work and discovers tools
+  -> Tool registry returns manifests, schemas, examples, capabilities
+  -> Tool gateway validates, authorizes, schedules and records calls
+  -> Project/Scene Graph is updated through non-destructive patches
+  -> Worker executes the requested capability through an engine adapter
+  -> Structured result, diagnostics and artifact references return to agent
+  -> Agent previews, inspects, revises, and re-renders
+  -> Render manifest + final media
 ```
 
-The content package is the stable interface. A renderer may implement only a subset of scene primitives; it must declare capabilities and either use a documented fallback or report an explicit unsupported feature. It must not silently alter scientific meaning.
+## Architecture principles
 
-## Episode package contract (planned)
+### Content and rendering are strictly decoupled
+- Editorial meaning: research, claims, sources, narration, captions, creative brief.
+- Creative intent: storyboard, shot purpose, scene semantics, visual direction.
+- Project graph: objects, relationships, transforms, materials, cameras, lights, tracks, simulations.
+- Render configuration: engine, quality settings, output profile, and capability requirements.
 
-The contract is versioned independently from application releases. Initial format: JSON, validated by JSON Schema and mirrored by TypeScript types.
+The renderer consumes an approved, versioned project snapshot. It must not call LLMs, invent editorial content, or mutate the source project. Multiple engines can consume the same project snapshot through adapters. Engine-specific extensions must be namespaced and capability-gated.
 
-Top-level fields:
-- `schemaVersion`: explicit semantic contract version.
-- `episode`: stable ID, title, language, audience, duration intent, and output profile intent.
-- `sources`: stable source ID, URL, publisher, publication date, retrieval date, and attribution/license metadata.
-- `claims`: stable claim ID, statement, supporting source IDs, confidence, caveats, and optional numeric values with units.
-- `narration`: stable segment ID, text, voice direction, timing intent, and claim IDs.
-- `shots`: stable shot ID, narration segment IDs, duration intent, transition intent, and ordered scene intents.
-- `assets`: stable asset ID, URI or content hash, media type, license/attribution, and optional dimensions/duration.
-- `audioCues`: stable cue ID, type, asset reference or generated voice segment, start/duration intent, gain, and ducking intent.
-- `captions`: stable caption ID, narration segment reference, text, and optional measured start/end times.
+### Agent freedom with professional controls
+- Expose both high-level creative helpers and low-level primitives.
+- High-level templates are built on lower-level tools and remain optional.
+- Agents dynamically discover tools and inspect schemas/examples; do not hard-code tool catalog knowledge into the orchestration layer.
+- All operations return structured results, diagnostics, and artifact references.
+- Expensive, destructive, or code-executing operations are governed by permissions and budgets.
 
-Stable IDs allow a single shot or narration segment to be regenerated without invalidating unrelated approved work.
+### Scale through modular boundaries
+Start with a **modular monolith for the control plane and isolated worker processes** for rendering and risky workloads. Do not prematurely split every subsystem into a network service. The boundaries must permit later horizontal scaling and remote workers without changing public tool contracts.
 
-## Renderer adapter interface (planned)
+## Canonical project and scene graph
 
-A renderer adapter:
-1. Declares its ID, version, supported schema versions, and scene primitive capabilities.
-2. Validates package compatibility before rendering.
-3. Maps scene intent to renderer-specific components.
-4. Receives output settings separately from editorial content.
-5. Emits a render manifest and structured diagnostics.
-6. Never calls an LLM or edits the source episode package.
+The project model is the source of truth for creative work. It is separate from any renderer's internal scene representation.
 
-Candidate adapters:
-- Remotion adapter: 2D motion graphics, titles, diagrams, subtitles, and compositing.
-- Three.js adapter: spatial and 3D scenes.
-- Manim adapter: equations, plots, and mathematical derivations.
-
-The first implementation may render multiple scene types inside one Remotion adapter. The contract must remain renderer-neutral. The SVG storyboard script is an independent package consumer used to verify that episode content can produce a second visual artifact without loading Remotion; it is not yet a second MP4 renderer.
-
-## Initial repository boundaries
-
-- `apps/studio`: authoring and review UI. It should edit episode packages, not embed generation or rendering logic.
-- `schemas/episode.schema.json` and `src/contracts/episode.ts`: versioned JSON Schema and TypeScript contract.
-- `src/contracts/renderer.ts`: renderer adapter and capability contract.
-- `src/contracts/agent-tool.ts`: agent-facing tool manifest, registry, gateway, and result contracts.
-- `src/platform/tool-registry.ts`: initial in-memory registry and schema-validating local invocation gateway.
-- `episodes/`: renderer-neutral episode packages.
-- `scripts/render-storyboard-svg.mjs`: first independent non-Remotion output adapter (SVG storyboard).
-- `packages/ai-director`: provider-independent research/script/storyboard orchestration. It depends on episode-schema, not on renderers.
-- `packages/renderer-core`: adapter interface, capability model, render manifest, and shared validation.
-- `packages/renderer-remotion`: Remotion implementation and 2D scene components.
-- `packages/renderer-three`: Three.js implementation.
-- `packages/renderer-manim`: Manim process adapter and asset import.
-- `packages/scene-library`: reusable renderer-neutral scene intents and templates.
-- `services/voice`: replaceable TTS providers, speech metadata, and audio alignment.
-- `examples`: source episode packages and reproducible render examples.
-- `docs`: product, technical, and production decisions.
-
-Extract modules incrementally when working functionality exists. Do not create empty package shells solely to imitate the target architecture.
-
-## Dependency direction
-
-Allowed:
-- ai-director -> episode-schema
-- studio -> episode-schema, ai-director API, renderer API
-- renderer adapters -> episode-schema, renderer-core
-- voice service -> narration/episode schema
-
-Forbidden:
-- ai-director -> Remotion, React rendering internals, Three.js, Manim, FFmpeg
-- renderer adapters -> LLM providers or editorial generation
-- episode-schema -> any provider or renderer package
-- renderer adapter mutating approved source episode packages
-
-## Rendering model
-
-Remotion evaluates a React composition at a specific frame. Animation values must be derived from the current frame and composition configuration, not wall-clock time. This makes output deterministic and allows the renderer to seek directly to any frame.
-
-Default master format:
-- 1920×1080
-- 30 FPS
-- H.264 MP4
-- AAC audio when an audio track exists
-
-Vertical and other platform formats should be output profiles, not separate implementations or changes to editorial content.
-
-## Scientific correctness
-
-Visuals must not silently imply measured or universal values. Label illustrative scales and simulations. Keep units explicit. For physical simulations, document assumptions, coordinate systems, and parameter ranges. For sourced factual statements, preserve source references through claims, narration, and shot data. Rendering must preserve these references in its render manifest.
-
-## Decoupling acceptance tests
-
-- Validate an episode package without importing a rendering library or launching a browser.
-- Render the same package using two renderer adapters or two independent visual themes.
-- Assert that rendering does not mutate the package (content hash and semantic fields unchanged).
-- Test schema-version compatibility and explicit failure for unsupported versions/features.
-- Run AI-director unit tests in an environment without Remotion, Chromium, or FFmpeg.
-
-
-## Platform architecture: agent-first creative tooling
-
-ScienceMotion is an AI-agent-facing creative platform. The agent should be able to discover and invoke many small composable tools, not merely submit a prompt to a fixed template generator.
-
-### Tool system layers
-
-1. **Tool catalog:** manifests describing tool ID/version, purpose, examples, input/output JSON Schemas, categories, capabilities, engine requirements, and execution metadata.
-2. **Discovery service:** search tools by intent, capability, category, engine, or cost; retrieve full schema and examples before invocation.
-3. **Tool gateway:** validates inputs/outputs, checks permissions and budgets, handles cancellation/timeouts, records execution traces, and persists artifacts.
-4. **Tool implementations:** focused operations for scene graph, graphics, animation, assets, simulation, audio, editing, preview, and rendering.
-5. **Engine adapters:** map portable tool semantics to Remotion, Three.js, Blender, Manim, FFmpeg, or future engines.
-
-### Tool call lifecycle
+### Entity hierarchy
 
 ```text
-Creative goal
-  -> Agent discovers relevant tools
-  -> Reads tool schemas and examples
-  -> Plans and invokes composable tools
-  -> Receives structured results / diagnostics / artifacts
-  -> Previews and inspects output
-  -> Patches selected objects or shots
-  -> Re-renders affected output
+Project
+  ├─ Editorial Package
+  │   ├─ Research / Sources / Claims
+  │   ├─ Script / Narration / Captions
+  │   └─ Creative Brief / Style References
+  ├─ Sequences
+  │   ├─ Shots / Tracks / Clips / Markers
+  │   └─ Scenes
+  │       └─ Scene Graph Nodes
+  │           ├─ Geometry / Text / Image / Video
+  │           ├─ Camera / Light / Environment
+  │           ├─ Material / Texture
+  │           ├─ Animation Tracks / Constraints
+  │           └─ Simulation Components
+  ├─ Asset Graph
+  ├─ Tool Execution Graph
+  ├─ Render Profiles / Render Manifests
+  └─ Revision History / Snapshots
 ```
 
-### Tool design rules
+### Required model properties
 
-- Prefer narrow composable tools with clear inputs and outputs over a monolithic generate-video call.
-- Offer both high-level creative helpers and low-level controls; the former must be buildable on the latter.
-- Tool IDs and versions are stable; breaking changes require a new version.
-- Tool manifests declare determinism, statefulness, cost, permissions, timeouts, engine dependencies, and produced artifacts.
-- Discovery is dynamic. The agent must not need hard-coded knowledge of every available tool.
-- Tool execution is logged with project/run/call IDs and structured diagnostics.
-- Expensive or destructive operations require explicit permission policy and budget checks.
-- Advanced code/shader execution runs in a restricted sandbox with resource and filesystem/network boundaries.
-- Tool outputs return artifact references and content hashes, not unbounded inline binary payloads.
+- Stable IDs for projects, sequences, shots, scenes, nodes, components, tracks, assets, and tool calls.
+- Parent-child relationships, references, reusable prefabs/components, and dependency graph.
+- Non-destructive patch operations with optimistic concurrency/version checks.
+- Explicit units, coordinate conventions, frame/time base, color space, and asset URI semantics.
+- Schema versions and migration paths.
+- Immutable render snapshots so a render is reproducible even while a working project evolves.
+- Engine-neutral core components plus namespaced extension data for specialist features.
 
-### Project model
+## Agent tool platform
 
-The long-term canonical project contains:
-- Editorial layer: research, claims, sources, narration, captions, creative brief.
-- Sequence/timeline layer: sequences, shots, tracks, transitions, time ranges.
-- Scene graph layer: nodes, parent-child relationships, transforms, geometry, materials, lights, cameras, animation tracks, constraints, simulation parameters.
-- Asset layer: imported/generated/procedural assets, provenance, licenses, versions, hashes.
-- Tool execution layer: manifests, tool calls, dependencies, outputs, diagnostics, artifacts.
-- Render layer: engine, capability requirements, render settings, output profiles, quality reports.
-- Revision layer: stable IDs, patches, snapshots, approvals, and rollback metadata.
+### Tool manifest
 
-### Creative freedom and engine portability
+Every tool manifest declares:
+- Stable ID and semantic version.
+- Name, description, examples, category, tags, and namespace.
+- Typed input/output JSON Schemas.
+- Capabilities and engine/provider requirements.
+- Determinism, statefulness, cost, destructive behavior, timeout, cancellation support, and permissions.
+- Output artifact types and expected diagnostics.
+- Compatibility constraints and deprecation status.
 
-The agent may create novel scenes by composing primitives and tools. It is not restricted to a list of pre-authored scene templates. Templates and high-level tools are convenience layers.
+### Registry and discovery
 
-Portable scene intent remains engine-neutral. Engine-specific features may be exposed as namespaced extensions (for example `three.camera.dof` or `blender.geometry.nodes`) with declared engine capabilities. The agent can choose the appropriate specialist engine per shot, while the project keeps a stable semantic structure.
+The registry supports:
+- Search by natural-language intent, tags, category, namespace, capability, and engine.
+- Manifest and schema retrieval before invocation.
+- Version pinning, compatibility filtering, and deprecation notices.
+- Plugin registration, health, enable/disable, dependency resolution, and unload.
+- Pagination and compact tool descriptions so hundreds of tools do not overwhelm the agent context.
 
-### Iterative quality loop
+### Tool gateway
 
-Preview and inspection are part of the creative toolset:
-- Render thumbnails, keyframes, shot proxies, or full drafts.
-- Inspect images and metadata; report clipping, overlap, missing assets, unreadable text, frame discontinuities, audio clipping, and timing mismatch.
-- Compare a revision against a prior render.
-- Patch only affected scene nodes/shots and re-render dependencies.
-- Preserve render manifests and tool traces for reproducibility.
+The gateway is the only supported execution path for agent-invoked tools. It owns:
+- Input/output schema validation.
+- Authentication, permissions, approval policy, quotas, and resource budgets.
+- Timeout, cancellation, idempotency, retries, and concurrency control.
+- Structured errors and diagnostics.
+- Tool-call traces, metrics, and artifact persistence.
+- Project revision checks and non-destructive state updates.
 
+Tool implementations do not receive unrestricted access to project storage or the host environment.
 
-## Initial tool runtime implementation
+### Tool namespaces
 
-The first runtime slice lives in `src/platform/tool-registry.ts`:
-- In-memory registration, removal, search, category filtering, and version lookup.
-- Invocation through a gateway rather than direct agent access to implementations.
-- AJV validation of tool inputs and outputs against manifest schemas.
-- Optional permission allow-list checks.
-- Per-tool timeout and structured started/completed/failed events.
-- Structured diagnostics returned to the agent.
+Initial namespaces:
+- `project.*`: project, sequence, shot, scene, node, layer, track, timeline.
+- `graphics.2d.*`: text, shape, path, SVG, mask, gradient, chart, diagram.
+- `geometry.*`: primitive, mesh, transform, group, parenting, coordinate conversion.
+- `animation.*`: keyframe, easing, path, interpolation, transition, constraint.
+- `camera.*`, `lighting.*`, `materials.*`: cinematography and look development.
+- `simulation.*`: particles, forces, springs, waves, rigid bodies, trajectories.
+- `assets.*`: search, import, inspect, transform, provenance, licensing.
+- `audio.*`: TTS, narration, captions, music, SFX, mixing, ducking.
+- `compositing.*`: layers, blends, masks, keys, grading, effects.
+- `render.*`: preview, still, proxy, final, cancel, status, manifest.
+- `inspect.*`: frame, metadata, visual QA, audio QA, compare, diagnostics.
+- `engine.<provider>.*`: explicit engine-specific advanced features.
 
-This is an initial local runtime, not yet the production execution service. Cancellation propagation, persistent traces, artifact storage, quotas, sandbox isolation, remote workers, and third-party plugin loading remain future work.
+The goal is a coherent catalogue that can grow to hundreds of tools, not a fixed hard-coded list.
+
+## Execution and worker model
+
+### Control plane
+Owns project state, tool discovery, agent orchestration, authorization, job scheduling, execution metadata, and revision history.
+
+### Worker classes
+- **Render workers:** Remotion, Blender, Manim, Three.js/headless browser, FFmpeg.
+- **Simulation workers:** numerical and physical simulation workloads.
+- **Asset workers:** media import, transformation, thumbnails, model conversion, metadata.
+- **Audio workers:** TTS, speech alignment, mixing, loudness and audio QA.
+- **Sandbox workers:** custom scripts, shaders, procedural generation, and user/agent code.
+
+Workers communicate through versioned job envelopes and artifact references. They are isolated so a crash or resource spike does not terminate the control plane. Jobs support progress, cancellation, retries where safe, and resumable execution.
+
+### Scaling strategy
+1. Local development: in-process registry/gateway plus child-process workers.
+2. Single-host production: durable job queue and isolated worker pools.
+3. Distributed production: remote workers, object storage, scheduling, quotas, and horizontal scaling.
+
+Keep public tool and project contracts stable across all three stages.
+
+## Engine adapter layer
+
+Adapters translate portable project components and tool semantics into engine-specific operations.
+
+- **Remotion:** 2D motion graphics, typography, diagrams, compositing, and video timelines.
+- **Three.js:** interactive and procedural 3D scenes, camera, materials, lighting, and shader-driven effects.
+- **Blender:** high-quality offline 3D, procedural geometry, rigging, animation, rendering, and compositing.
+- **Manim:** equations, plots, geometry, and mathematical derivations.
+- **FFmpeg:** media encoding, muxing, audio/video filters, and delivery formats.
+
+Adapters declare capabilities and supported schema versions. Unsupported features must trigger an explicit diagnostic or documented fallback, never silent semantic loss.
+
+## Asset and artifact model
+
+- Store large binaries outside project JSON; project files reference stable artifact IDs/URIs.
+- Use content hashes for deduplication, cache keys, and reproducibility.
+- Track source, provider, license, attribution, creation parameters, and transformations.
+- Return structured artifact references from tools rather than large inline binary payloads.
+- Preserve render manifests, thumbnails, logs, and QA reports as addressable artifacts.
+
+## Safety, reliability, and observability
+
+- Apply least-privilege permissions to tools and workers.
+- Enforce CPU, memory, GPU, disk, network, and wall-time budgets.
+- Require explicit approval for destructive changes, external publishing, or expensive jobs according to policy.
+- Treat tool inputs, assets, scripts, and model outputs as untrusted data.
+- Log project/run/call IDs, tool versions, timings, retries, diagnostics, and artifact hashes.
+- Use snapshots, rollback, and optimistic concurrency for project mutations.
+
+## Current implementation and migration
+
+Existing assets remain useful:
+- Remotion is the first proven video renderer.
+- React/TypeScript is the platform/control-plane language.
+- Episode JSON and its schema are the first editorial interchange format.
+- The initial renderer contract and tool manifest/gateway prototype are starting points.
+- Edge TTS is a replaceable voice adapter.
+- SVG storyboard rendering is a lightweight independent output.
+- The CPU-cache episode is a reference fixture.
+
+These are foundations, not the final architecture. Incrementally evolve the episode format into the canonical project model; do not discard working renderers or force every subsystem into one package.
+
+## Implementation stages
+
+1. Project/scene graph schemas and patch model.
+2. Tool manifest, discovery, gateway, plugin lifecycle, and execution records.
+3. Worker/job envelope and isolated process execution.
+4. Initial composable project, geometry, graphics, animation, timeline, asset, audio, preview, and inspection tools.
+5. Agent iteration loop with preview/inspect/patch/re-render.
+6. Specialist engine adapters and professional tool depth.
+7. Distributed execution and production operations when justified.
