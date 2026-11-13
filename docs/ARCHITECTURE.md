@@ -130,3 +130,8 @@ Current scope is local storage. Project asset-graph attachment, reference counti
 - Tests cover idempotent references, shared artifacts across projects, project asset linking, persistent reference lookup after manager restart, grace-period collection, missing artifact rejection, conflicting project asset IDs, and automatic tool-output retention.
 
 The current lifecycle guarantees are local-process guarantees. Cross-process transactions, project asset unlink orchestration, reference repair/reconciliation, and scheduled retention policies are deferred to the durable worker/storage phase.
+
+
+### P1.1-D CI correction — missing tmpdir import
+
+CI run #43403296447 stopped at TypeScript type checking because `artifact-lifecycle.test.ts` used `tmpdir()` without importing it from `node:os`. Added the missing import. This was a test compilation issue; artifact lifecycle runtime code was not reached by that run.
