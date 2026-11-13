@@ -291,3 +291,14 @@ The latest P1.0 CI run passed TypeScript, episode validation, project validation
 ### CI correction — dependency edge count in recursive deletion test
 
 The next CI run exposed a second, more precise fixture assumption: the CPU-cache fixture already has a dependency edge from `node-cpu` to `node-data-path`. Deleting `node-cpu` must remove that pre-existing edge as well as the test-created edge. The correct expected count is therefore the original dependency count minus one, while unrelated edges must remain. Updated the test to assert no remaining dependency references either deleted node. Implementation behavior is correct; the test expectation now reflects the real dependency graph.
+
+
+## P1.0 animation and transaction semantics
+
+- Project Schema v1.1.0 now exposes first-class `animationTracks`, each with a stable ID, target node/property, ordered keyframes, interpolation metadata, and optional looping/enabled state.
+- `src/platform/animation.ts` validates track/keyframe structure and samples numeric/scalar or numeric-vector values deterministically. Step interpolation is supported; unsupported value shapes use step semantics rather than guessed interpolation.
+- The CPU-cache project fixture now contains explicit animation tracks for the data-path progress and CPU pulse.
+- Patch batches are atomic at the domain-function boundary: operations apply to a cloned project, and if any later operation fails, no partially modified project is returned and the source remains unchanged. A dedicated test verifies this rollback behavior.
+- Project validation checks animation-track target references, duplicate keyframes, frame ordering, and non-negative frame positions.
+
+The current animation evaluator is renderer-neutral and deliberately does not perform easing-curve evaluation or mutate node transforms. Renderers consume sampled values or implement richer interpolation through declared capabilities. Constraint solving remains a separate future runtime capability; P1.0 currently defines and validates constraint relationships.
