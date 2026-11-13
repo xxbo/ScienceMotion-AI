@@ -117,3 +117,16 @@ Apply least-privilege permissions to tools and workers. Enforce CPU, memory, GPU
 - Tests cover deterministic hashing, duplicate-byte deduplication, metadata/provenance lookup, byte isolation, filesystem persistence, deletion, path/ID validation, tamper detection, and gateway artifact-reference validation.
 
 Current scope is local storage. Project asset-graph attachment, reference counting/garbage collection, remote object storage, signed URLs, and cross-worker artifact transfer are later integration work.
+
+
+## P1.1-D artifact lifecycle — local implementation
+
+- Added `ArtifactReference` and `ArtifactReferenceStore` contracts. References are stable/idempotent for the tuple (artifact ID, owner type, owner ID, role), allowing multiple projects or tool runs to share the same content-addressed blob.
+- Added in-memory and filesystem reference stores. The filesystem implementation persists each reference as a separate atomic JSON record and validates reference IDs before resolving paths.
+- Added `LocalArtifactLifecycleManager` for attach, detach, reverse lookup, project linking, and garbage collection.
+- Project linking creates a normal P1.0 `ProjectAsset` entry containing Artifact URI, content hash, media type, size, license, and attribution, while keeping binary bytes outside Project JSON. The lifecycle reference is recorded against the project ID.
+- Garbage collection preserves any artifact with one or more references and applies a configurable age grace period to unreferenced artifacts. Invalid timestamps are retained rather than collected. Local per-artifact operation serialization prevents attach/detach and GC from racing within one process.
+- Tool Gateway can optionally receive the lifecycle manager and automatically attach successful output artifacts to the originating tool-run reference.
+- Tests cover idempotent references, shared artifacts across projects, project asset linking, persistent reference lookup after manager restart, grace-period collection, missing artifact rejection, conflicting project asset IDs, and automatic tool-output retention.
+
+The current lifecycle guarantees are local-process guarantees. Cross-process transactions, project asset unlink orchestration, reference repair/reconciliation, and scheduled retention policies are deferred to the durable worker/storage phase.
