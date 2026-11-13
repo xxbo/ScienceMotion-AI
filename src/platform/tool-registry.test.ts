@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import type { AgentTool, AgentToolManifest, ToolCallContext, ToolResult } from "../contracts/agent-tool";
 import { InMemoryAgentToolRegistry, LocalAgentToolGateway } from "./tool-registry";
+import { InMemoryToolExecutionStore } from "./tool-execution-store";
 
 const context: ToolCallContext = { projectId: "project-test", runId: "run-test", callId: "call-test" };
 
@@ -131,4 +132,86 @@ test("gateway timeout aborts cooperative execution", async () => {
   const result = await gateway.invoke("geometry.primitive.create", { kind: "box" }, context);
   assert.equal(observedAbort, true);
   assert.equal(result.diagnostics[0].code, "TOOL_CANCELLED");
+});
+
+
+test("gateway replays successful idempotent calls and rejects key reuse with different input", async () => {
+  const registry = new InMemoryAgentToolRegistry();
+  const store = new InMemoryToolExecutionStore();
+  let executions = 0;
+  registry.register(makeTool({
+    execution: { deterministic: true, stateful: true, destructive: false, cost: "low", idempotent: true },
+  }, async (input) => {
+    executions++;
+    return { ok: true, output: input, diagnostics: [] };
+  }));
+  const gateway = new LocalAgentToolGateway(registry, { executionStore: store });
+  const callContext = { ...context, idempotencyKey: "create-once" };
+  const first = await gateway.invoke("geometry.primitive.create", { kind: "box" }, callContext);
+  const replay = await gateway.invoke("geometry.primitive.create", { kind: "box" }, { ...callContext, callId: "call-replay" });
+  const conflict = await gateway.invoke("geometry.primitive.create", { kind: "sphere" }, callContext);
+  assert.equal(first.ok, true);
+  assert.deepEqual(replay.output, first.output);
+  assert.equal(conflict.diagnostics[0].code, "IDEMPOTENCY_CONFLICT");
+  assert.equal(executions, 1);
+  const records = await store.list(context.projectId);
+  assert.equal(records.length, 1);
+  assert.equal(records[0].status, "succeeded");
+});
+
+test("gateway enforces per-tool concurrency limits", async () => {
+  const registry = new InMemoryAgentToolRegistry();
+  let release: (() => void) | undefined;
+  registry.register(makeTool({
+    execution: { deterministic: true, stateful: false, destructive: false, cost: "low", maxConcurrency: 1 },
+  }, async () => new Promise((resolve) => {
+    release = () => resolve({ ok: true, output: { kind: "box" }, diagnostics: [] });
+  })));
+  const gateway = new LocalAgentToolGateway(registry);
+  const first = gateway.invoke("geometry.primitive.create", { kind: "box" }, context);
+  await Promise.resolve();
+  const second = await gateway.invoke("geometry.primitive.create", { kind: "box" }, { ...context, callId: "call-2" });
+  assert.equal(second.diagnostics[0].code, "TOOL_CONCURRENCY_LIMIT");
+  release?.();
+  assert.equal((await first).ok, true);
+});
+
+test("gateway retries only explicitly retryable idempotent results and persists attempts", async () => {
+  const registry = new InMemoryAgentToolRegistry();
+  const store = new InMemoryToolExecutionStore();
+  let attempts = 0;
+  registry.register(makeTool({
+    execution: { deterministic: true, stateful: false, destructive: false, cost: "low", idempotent: true },
+  }, async () => {
+    attempts++;
+    if (attempts === 1) return {
+      ok: false,
+      diagnostics: [{ level: "warning", code: "TEMPORARY", message: "try again" }],
+      metadata: { retryable: true },
+    };
+    return { ok: true, output: { kind: "box" }, diagnostics: [] };
+  }));
+  const gateway = new LocalAgentToolGateway(registry, { executionStore: store, maxAttempts: 3 });
+  const result = await gateway.invoke("geometry.primitive.create", { kind: "box" }, context);
+  assert.equal(result.ok, true);
+  assert.equal(result.metadata?.attempt, 2);
+  assert.equal(attempts, 2);
+  const records = await store.list(context.projectId);
+  assert.equal(records[0].status, "succeeded");
+  assert.equal(records[0].result?.metadata?.attempt, 2);
+});
+
+test("gateway records failed executions and does not retry non-idempotent tools", async () => {
+  const registry = new InMemoryAgentToolRegistry();
+  const store = new InMemoryToolExecutionStore();
+  let attempts = 0;
+  registry.register(makeTool({}, async () => {
+    attempts++;
+    return { ok: false, diagnostics: [{ level: "error", code: "BAD", message: "permanent" }], metadata: { retryable: true } };
+  }));
+  const gateway = new LocalAgentToolGateway(registry, { executionStore: store, maxAttempts: 4 });
+  const result = await gateway.invoke("geometry.primitive.create", { kind: "box" }, context);
+  assert.equal(result.ok, false);
+  assert.equal(attempts, 1);
+  assert.equal((await store.list(context.projectId))[0].status, "failed");
 });
