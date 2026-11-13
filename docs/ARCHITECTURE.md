@@ -257,3 +257,8 @@ Patch and test improvements:
 - CI runs the project platform unit tests and validates project, patch, and episode documents.
 
 Remaining P1.0 work includes durable snapshot persistence, optimistic concurrency at a persistent repository boundary, more complete scene/sequence membership rules, and broader property-based tests. The current snapshot store is not yet a production persistence layer.
+
+
+### CI correction — Project Patch Schema v1.1.0
+
+The first CI run after the Project Schema v1.1.0 migration failed at `validate:project-patch`, not in TypeScript or the project graph tests. The validator's synthetic patch fixture still declared `schemaVersion: 1.0.0` while the patch contract had been advanced to `1.1.0`. Updated the fixture to v1.1.0 in commit `d2360869bc8c213a82906fc52eb44a80a0336c0b`. The previous run had already passed typecheck, episode validation, project validation, and all six platform tests. The corrected full pipeline is running separately; success is pending its result.
