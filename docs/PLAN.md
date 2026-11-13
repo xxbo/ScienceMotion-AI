@@ -119,7 +119,12 @@ P1.0 scope is the local renderer-neutral project foundation. It does not claim a
 - [x] Define stable Artifact ID/URI, media type, size, SHA-256, provenance, license, and attribution contracts.
 - [x] Implement in-memory and filesystem content-addressed Artifact Stores with deduplication, listing, retrieval, deletion, and integrity verification.
 - [x] Validate tool-returned artifact references through the configured Artifact Store.
-- [ ] Add durable artifact reference counting/retention policy and project asset-graph integration.
+- [x] Add artifact reference records keyed by artifact, owner, and role, with idempotent attach and owner lookup.
+- [x] Add persistent filesystem reference storage and local per-artifact serialization for attach/detach/garbage-collection operations.
+- [x] Add project asset-graph linking that writes canonical Artifact URI, content hash, media type, size, license, and attribution into ProjectAsset.
+- [x] Add retention-aware garbage collection that preserves referenced artifacts and only deletes unreferenced artifacts older than the configured grace period.
+- [x] Automatically attach successful Tool Gateway output artifacts to their originating tool-run lifecycle reference.
+- [ ] Add transactional cross-process reference updates, project-asset unlink integration, and configurable retention/GC scheduling.
 
 #### P1.2 — Execution and worker architecture
 - [ ] Keep the control plane responsible for project state, tool discovery, planning, authorization, and job orchestration.
