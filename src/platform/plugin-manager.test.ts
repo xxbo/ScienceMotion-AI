@@ -101,3 +101,15 @@ test("plugin uninstall requires disabled state and no dependents", async () => {
   manager.uninstall("science.ext");
   assert.equal(manager.uninstall("science.base").ok, true);
 });
+
+
+test("optional plugin dependencies do not block enable", async () => {
+  const registry = new InMemoryAgentToolRegistry();
+  const manager = new InMemoryPluginManager(registry);
+  manager.install(plugin("science.optional", undefined, {
+    dependencies: [{ pluginId: "science.not-installed", optional: true }],
+  }));
+  const result = await manager.enable("science.optional");
+  assert.equal(result.ok, true);
+  assert.equal(result.status.state, "enabled");
+});
