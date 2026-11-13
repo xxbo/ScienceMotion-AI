@@ -49,7 +49,7 @@ export class InMemoryAgentToolRegistry implements AgentToolRegistry {
     const { id, version, namespace } = tool.manifest;
     if (!/^[a-z][a-z0-9._-]+$/.test(id)) throw new Error(`Invalid tool ID: ${id}`);
     if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error(`Invalid semantic version: ${version}`);
-    if (!/^[a-z][a-z0-9_-]*(\.[a-z][a-z0-9_-]*)*$/.test(namespace)) {
+    if (!/^[a-z][a-z0-9_-]*(\.[a-z0-9][a-z0-9_-]*)*$/.test(namespace)) {
       throw new Error(`Invalid tool namespace: ${namespace}`);
     }
     if (!id.startsWith(`${namespace}.`)) {
