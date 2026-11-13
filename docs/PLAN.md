@@ -24,11 +24,13 @@ Build a reusable AI-assisted production system for accurate, visually compelling
 - [ ] Install dependencies and verify the studio starts.
 - [x] Render a 1920×1080, 30 FPS, 30-second Chinese MP4 sample in GitHub Actions.
 - [x] Inspect representative frames for layout, clipping, typography, and timing.
-- [ ] Add a configurable Mandarin TTS adapter and mix narration with the subtitle timeline.
-- [ ] Add voice-over, captions, and audio mixing.
+- [x] Add a configurable Mandarin TTS adapter using Edge TTS with a replaceable provider boundary.
+- [x] Mix a continuous Mandarin narration track into the Remotion composition and extend the sample to 60 seconds.
+- [ ] Align subtitle boundaries to actual speech segments and add word-level captions.
+- [ ] Add background music, sound-effect tracks, and narration ducking.
 - [ ] Produce the first complete 2–3 minute CPU cache explainer.
 
-**Exit criteria:** a reproducible command generates a complete MP4 from source with stable timing and no visual defects. The render engine is validated with a 30-second silent/captioned prototype; narration, audio mixing, and the full 2–3 minute episode remain open.
+**Exit criteria:** a reproducible command generates a complete MP4 from source with stable timing and no visual defects. The render engine is validated with a 60-second narrated prototype target; the first CI run must confirm external TTS availability. Word-level caption alignment, sound design, and the full 2–3 minute episode remain open.
 
 ### P1 — Structured AI director
 
