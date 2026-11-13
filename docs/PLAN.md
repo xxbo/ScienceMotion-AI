@@ -55,11 +55,13 @@ Templates are optional accelerators. They must never define the creative ceiling
 The exit goal is an extensible platform foundation that can host hundreds of tools without turning the agent, registry, or renderer into a monolith.
 
 #### P1.0 — Canonical project model and scene graph
-- [ ] Define versioned Project, Sequence, Shot, Scene, Node, Layer, Track, Transform, Geometry, Material, Camera, Light, Animation, Constraint, Simulation, Asset, and Dependency models.
-- [ ] Support stable IDs, parent/child relationships, references, reusable components, and non-destructive patches.
-- [ ] Define coordinate systems, units, time bases, color spaces, naming, and asset URI rules.
-- [ ] Separate editorial data, creative intent, scene graph, asset graph, tool execution graph, and render configuration.
-- [ ] Add schema migrations, validation, snapshots, and compatibility tests.
+- [x] Define versioned Project, Sequence, Shot, Scene, Node, Track, Transform, Component, Asset, Clip, and Revision models in Project Schema v1.0.0.
+- [x] Support stable IDs, parent/child relationships, scene roots, sequence-to-shot references, and component data.
+- [x] Define coordinate-system, units, timebase, color-space, and asset URI fields.
+- [x] Separate editorial reference, sequences, scenes, nodes, tracks, shots, assets, and revisions in the canonical project document.
+- [x] Add schema validation and semantic reference/hierarchy validation for the CPU-cache project fixture.
+- [ ] Add non-destructive patch execution with optimistic concurrency/version checks.
+- [ ] Add schema migrations, immutable snapshots, and compatibility tests.
 
 #### P1.1 — Tool platform and extensibility
 - [x] Define tool manifest schema and typed tool/registry/gateway contracts.
