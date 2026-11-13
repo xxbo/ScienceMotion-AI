@@ -39,7 +39,7 @@ export class InMemoryPluginManager {
     return this.success(this.plugins.get(id)!.status);
   }
 
-  enable(pluginId: string, enabledAt = new Date().toISOString()): PluginOperationResult {
+  async enable(pluginId: string, enabledAt = new Date().toISOString()): Promise<PluginOperationResult> {
     const entry = this.plugins.get(pluginId);
     if (!entry) return this.failure(pluginId, "0.0.0", "PLUGIN_NOT_FOUND", `Plugin not installed: ${pluginId}`);
     if (entry.status.state === "enabled") return this.success(entry.status);
@@ -61,19 +61,13 @@ export class InMemoryPluginManager {
       }
       entry.status = { ...entry.status, state: "enabled", enabledAt, error: undefined };
       if (entry.plugin.healthCheck) {
-        // Health checks are async in production; the sync lifecycle method records registration health.
-        void entry.plugin.healthCheck().then((health) => {
-          const current = this.plugins.get(pluginId);
-          if (!current || current.status.state !== "enabled") return;
-          current.status.lastHealthCheck = { ...health, checkedAt: new Date().toISOString() };
-          if (!health.ok) current.status.error = health.message ?? "Plugin health check failed";
-        }).catch((error: unknown) => {
-          const current = this.plugins.get(pluginId);
-          if (current) current.status.lastHealthCheck = {
-            ok: false, checkedAt: new Date().toISOString(),
-            message: error instanceof Error ? error.message : String(error),
-          };
-        });
+        const health = await entry.plugin.healthCheck();
+        entry.status.lastHealthCheck = { ...health, checkedAt: new Date().toISOString() };
+        if (!health.ok) {
+          for (const tool of registered) this.registry.unregister(tool.manifest.id, tool.manifest.version);
+          entry.status = { ...entry.status, state: "failed", error: health.message ?? "Plugin health check failed" };
+          return this.failure(pluginId, entry.status.version, "PLUGIN_HEALTH_CHECK_FAILED", entry.status.error, entry.status);
+        }
       }
       return this.success(entry.status);
     } catch (error) {
