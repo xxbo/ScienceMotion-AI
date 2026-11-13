@@ -116,7 +116,10 @@ P1.0 scope is the local renderer-neutral project foundation. It does not claim a
 - [ ] Add plugin version pinning/upgrades, plugin compatibility checks, and dependency graph diagnostics.
 - [ ] Persist tool-call records, input/output summaries, diagnostics, artifacts, and execution provenance.
 - [ ] Add quotas, concurrency limits, resource budgets, and approval policies for expensive/destructive operations.
-- [ ] Define stable artifact references and content-addressed asset storage.
+- [x] Define stable Artifact ID/URI, media type, size, SHA-256, provenance, license, and attribution contracts.
+- [x] Implement in-memory and filesystem content-addressed Artifact Stores with deduplication, listing, retrieval, deletion, and integrity verification.
+- [x] Validate tool-returned artifact references through the configured Artifact Store.
+- [ ] Add durable artifact reference counting/retention policy and project asset-graph integration.
 
 #### P1.2 — Execution and worker architecture
 - [ ] Keep the control plane responsible for project state, tool discovery, planning, authorization, and job orchestration.
