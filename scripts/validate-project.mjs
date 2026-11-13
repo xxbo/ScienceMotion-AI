@@ -32,6 +32,7 @@ const clips = unique(project.clips ?? [], "clips");
 const revisions = unique(project.revisions, "revisions");
 const prefabs = unique(project.prefabs ?? [], "prefabs");
 unique(project.constraints ?? [], "constraints");
+unique(project.animationTracks ?? [], "animationTracks");
 unique(project.dependencies ?? [], "dependencies");
 
 const rootOwners = new Map();
@@ -75,6 +76,15 @@ for (const clip of project.clips ?? []) {
 }
 for (const prefab of project.prefabs ?? []) {
   for (const id of prefab.rootNodeIds) if (!nodes.has(id)) errors.push(`prefab ${prefab.id} references missing root node ${id}`);
+}
+for (const track of project.animationTracks ?? []) {
+  if (!nodes.has(track.targetNodeId)) errors.push(`animation track ${track.id} references missing node ${track.targetNodeId}`);
+  const frames = track.keyframes.map((keyframe) => keyframe.frame);
+  if (new Set(frames).size !== frames.length) errors.push(`animation track ${track.id} contains duplicate keyframe frames`);
+  for (let index = 1; index < frames.length; index++) {
+    if (frames[index] <= frames[index - 1]) errors.push(`animation track ${track.id} keyframes must be sorted by ascending frame`);
+  }
+  for (const frame of frames) if (frame < 0) errors.push(`animation track ${track.id} has a negative frame`);
 }
 for (const constraint of project.constraints ?? []) {
   if (!nodes.has(constraint.sourceNodeId)) errors.push(`constraint ${constraint.id} references missing source node ${constraint.sourceNodeId}`);
