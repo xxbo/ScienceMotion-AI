@@ -89,6 +89,7 @@ for (const track of project.animationTracks ?? []) {
 for (const constraint of project.constraints ?? []) {
   if (!nodes.has(constraint.sourceNodeId)) errors.push(`constraint ${constraint.id} references missing source node ${constraint.sourceNodeId}`);
   if (!nodes.has(constraint.targetNodeId)) errors.push(`constraint ${constraint.id} references missing target node ${constraint.targetNodeId}`);
+  if (constraint.sourceNodeId === constraint.targetNodeId && constraint.type !== "custom") errors.push(`constraint ${constraint.id} cannot target its own source node`);
 }
 const entityExists = (type, id) => ({ node: nodes, scene: scenes, shot: shots, asset: assets, prefab: prefabs, clip: clips }[type]?.has(id) ?? false);
 for (const dependency of project.dependencies ?? []) {
