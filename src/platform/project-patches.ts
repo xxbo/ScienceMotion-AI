@@ -69,9 +69,11 @@ export function applyProjectPatch(
     } else if (operation.op === "remove-node") {
       const node = project.nodes.find((item) => item.id === operation.nodeId);
       if (!node) throw new Error(`Node not found: ${operation.nodeId}`);
-      const descendants = (id: string): string[] => {
+      const descendants = (id: string, visited = new Set<string>()): string[] => {
+        if (visited.has(id)) throw new Error(`Cannot remove from cyclic hierarchy at ${id}`);
+        visited.add(id);
         const current = project.nodes.find((item) => item.id === id);
-        return (current?.childIds ?? []).flatMap((childId) => [childId, ...descendants(childId)]);
+        return (current?.childIds ?? []).flatMap((childId) => [childId, ...descendants(childId, visited)]);
       };
       const children = descendants(node.id);
       if (children.length && !operation.recursive) throw new Error("Node has children; recursive removal must be explicit");
