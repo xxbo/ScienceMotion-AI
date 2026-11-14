@@ -134,7 +134,7 @@ test("gateway timeout aborts cooperative execution", async () => {
   const gateway = new LocalAgentToolGateway(registry);
   const result = await gateway.invoke("geometry.primitive.create", { kind: "box" }, context);
   assert.equal(observedAbort, true);
-  assert.equal(result.diagnostics[0].code, "TOOL_CANCELLED");
+  assert.equal(result.diagnostics[0].code, "TOOL_TIMEOUT");
 });
 
 
@@ -165,14 +165,17 @@ test("gateway replays successful idempotent calls and rejects key reuse with dif
 test("gateway enforces per-tool concurrency limits", async () => {
   const registry = new InMemoryAgentToolRegistry();
   let release: (() => void) | undefined;
+  let markStarted!: () => void;
+  const started = new Promise<void>((resolve) => { markStarted = resolve; });
   registry.register(makeTool({
     execution: { deterministic: true, stateful: false, destructive: false, cost: "low", maxConcurrency: 1 },
   }, async () => new Promise((resolve) => {
     release = () => resolve({ ok: true, output: { kind: "box" }, diagnostics: [] });
+    markStarted();
   })));
   const gateway = new LocalAgentToolGateway(registry);
   const first = gateway.invoke("geometry.primitive.create", { kind: "box" }, context);
-  await Promise.resolve();
+  await started;
   const second = await gateway.invoke("geometry.primitive.create", { kind: "box" }, { ...context, callId: "call-2" });
   assert.equal(second.diagnostics[0].code, "TOOL_CONCURRENCY_LIMIT");
   release?.();

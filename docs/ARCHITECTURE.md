@@ -6,7 +6,7 @@ Last updated: 2026-11-14
 
 ScienceMotion AI is an agent-facing science-video framework intended to host hundreds of composable creative tools. Editorial meaning, project state, tool execution, artifacts and rendering are distinct boundaries.
 
-P1.0 is the accepted local project foundation. P1.1 is active; A–E provide local infrastructure. The reviewed baseline `26f20bab6b56a6aa8774c80e5da25db84d00fefb` passed [CI #43463301921](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43463301921). The next architectural priority is to connect executable tools to visible project-driven output. [PLAN.md](PLAN.md) owns sequencing; [P1.1-ACCEPTANCE.md](P1.1-ACCEPTANCE.md) owns exit gates.
+P1.0 is the accepted local project foundation. P1.1 is active; A–E provide local infrastructure and the first F slice hardens local execution. The reviewed baseline `26f20bab6b56a6aa8774c80e5da25db84d00fefb` passed [CI #43463301921](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43463301921). The next architectural priority remains executable tools connected to visible project-driven output. [PLAN.md](PLAN.md) owns sequencing; [P1.1-ACCEPTANCE.md](P1.1-ACCEPTANCE.md) owns exit gates; [P1.1-F.md](P1.1-F.md) records the current execution slice and limits.
 
 ## Current project and rendering paths
 
@@ -34,15 +34,17 @@ Previews and video exports return Artifact references with minimal render eviden
 
 A thin discovery/invocation host supports deterministic scripted regression and one real AI trial through the same APIs. The general autonomous visual inspection/repair planner remains P1.4; forced execution isolation remains P1.2.
 
-## Existing tool platform and required hardening
+## Tool platform and F execution baseline
 
 Manifests declare namespaced IDs, versions, schemas, descriptions/examples, categories/tags, capabilities, engines, project compatibility, cost, permissions and execution hints. Discovery supports filtering and pagination. Geometry manifests are currently catalogue fixtures.
 
-The local Gateway validates schemas and configured artifact references, checks a supplied permission allow-list, signals cooperative cancellation, limits concurrency and retries explicitly retryable results for tools declaring idempotency. Execution history and result replay currently use memory.
+The Gateway owns JSON Schema, permission/risk policy and configured Artifact checks. Its LocalToolExecutor owns synchronous pending publication, input-hash matching, owned atomic store reservations, retry, timeout/cancellation, capacity accounting and terminal evidence. Gateways sharing a store object share admission coordination. Call/key identities use JSON tuples; inputs/context and returned results are isolated copies.
 
-P1.1-F must make pending/completed idempotency input matching and reservation atomic in the tested local scope, persist invocation evidence, verify cancellation/storage races and configure explicit host permissions/call limits. Admission failures must not corrupt another invocation's record. Interrupted operations need explicit recovery states rather than assumed exactly-once side effects. Broad budget services are not part of this bounded slice.
+ToolExecutionStore now uses reserve/finish ownership instead of independent save/update calls. Memory and optional exclusive-writer filesystem adapters implement this contract. The small local filesystem ledger has version/integrity validation, staged synced publication, conservative write-error handling and restart recovery of unfinished records to interrupted. Only confirmed success is replayed; uncertain effects require reconciliation. Records are retained rather than silently expired. The backend and stale-lock recovery procedure are scoped in P1.1-F.md.
 
-Timeouts and AbortSignal are cooperative controls, not process isolation. Long-running/non-cooperative engines belong behind the later worker boundary.
+Gateway defaults grant no declared permissions, block destructive/high-cost operations without explicit host authorization and bound invocation concurrency/deadlines. The future creative host must configure its policy explicitly. Hooks are observational; hook failures cannot rewrite committed outcomes. Shutdown stops admission and drains actual underlying work before store closure.
+
+Timeouts and AbortSignal remain cooperative controls, not process isolation. Timed-out work keeps its concurrency slot until it settles and cannot later overwrite its terminal evidence. Forced termination and distributed guarantees belong to workers. Cancellation during storage admission is observed before starting the tool after the storage operation settles. Project/Artifact transactions and a complete effect-reconciliation protocol remain F work.
 
 ## Existing plugin versions and publication
 
@@ -68,6 +70,6 @@ P1.2 introduces single-host isolated workers, job/progress/cancellation contract
 
 Existing successful metadata checks establish streams, dimensions/FPS and duration, not visual quality or generic project rendering. Planned acceptance combines deterministic project/tool/render tests, before/after previews, restore/failure checks, visual review, a real AI trial and a separate 300-entry synthetic catalogue test. Synthetic entries are not finished creative tools.
 
-Historical P1.0 evidence: [CI #43390347025](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43390347025). P1.1-D evidence: [CI #43405266507](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43405266507). Plugin version tests cover the domain manager, real Registry/Gateway and manifest/lock schemas. Documentation identity tests protect README, PLAN and ARCHITECTURE from accidental source-code or cross-document replacement.
+Historical P1.0 evidence: [CI #43390347025](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43390347025). P1.1-D evidence: [CI #43405266507](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43405266507). Plugin version tests cover the domain manager, real Registry/Gateway and manifest/lock schemas. F tests exercise atomic ownership, failure/cancellation/restart and a real revisioned repository mutation through Gateway. Documentation identity tests protect README, PLAN and ARCHITECTURE from accidental source-code or cross-document replacement.
 
-Keep current behavior, target design and gate evidence separate. New runtime capabilities require tests and scoped documentation; this planning revision does not implement the target bridge.
+Keep current behavior, target design and gate evidence separate. New runtime capabilities require tests and scoped documentation; the generic creative bridge remains planned work.

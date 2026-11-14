@@ -1,8 +1,8 @@
 import Ajv, { type ValidateFunction } from "ajv";
-import { InMemoryToolExecutionStore, hashToolInput } from "./tool-execution-store";
-import type { ToolExecutionRecord, ToolExecutionStore } from "../contracts/agent-tool";
 import type { ArtifactStore } from "../contracts/artifact";
 import type { ArtifactLifecycleManager } from "../contracts/artifact-lifecycle";
+import { LocalToolExecutor, toolFailure, type ToolExecutorOptions } from "./tool-execution";
+export type { ToolExecutionEvent } from "./tool-execution";
 import type {
   AgentTool,
   AgentToolGateway,
@@ -13,22 +13,11 @@ import type {
   ToolSearchQuery,
 } from "../contracts/agent-tool";
 
-export interface ToolExecutionEvent {
-  phase: "started" | "completed" | "failed";
-  toolId: string;
-  toolVersion: string;
-  projectId: string;
-  runId: string;
-  callId: string;
-  durationMs?: number;
-  message?: string;
-}
-
-export interface ToolGatewayOptions {
+export interface ToolGatewayOptions extends ToolExecutorOptions {
+  /** Omitted allow-list grants no permissions. Host configuration, never tool input. */
   allowedPermissions?: string[];
-  onEvent?: (event: ToolExecutionEvent) => void;
-  executionStore?: import("../contracts/agent-tool").ToolExecutionStore;
-  maxAttempts?: number;
+  allowDestructive?: boolean;
+  allowHighCost?: boolean;
   artifactStore?: ArtifactStore;
   artifactLifecycle?: ArtifactLifecycleManager;
 }
@@ -149,195 +138,65 @@ export class InMemoryAgentToolRegistry implements AgentToolRegistry {
   }
 }
 
+/** Validation/policy adapter; admission and execution evidence live in LocalToolExecutor. */
 export class LocalAgentToolGateway implements AgentToolGateway {
   private readonly ajv = new Ajv({ allErrors: true, strict: false });
+  private readonly executor: LocalToolExecutor;
+  private readonly permissions: Set<string>;
   private readonly options: ToolGatewayOptions;
-  private readonly inFlight = new Map<string, Promise<ToolResult>>();
-  private readonly activeByTool = new Map<string, number>();
-  private readonly executions: ToolExecutionStore;
 
   constructor(private readonly registry: InMemoryAgentToolRegistry, options: ToolGatewayOptions = {}) {
-    this.options = options;
-    this.executions = options.executionStore ?? new InMemoryToolExecutionStore();
+    this.options = { ...options };
+    this.permissions = new Set(options.allowedPermissions ?? []);
+    this.executor = new LocalToolExecutor(options);
   }
 
-  async invoke<TInput = unknown, TOutput = unknown>(
-    toolId: string,
-    input: TInput,
-    context: ToolCallContext
-  ): Promise<ToolResult<TOutput>> {
+  async invoke<TInput = unknown, TOutput = unknown>(toolId: string, input: TInput, context: ToolCallContext): Promise<ToolResult<TOutput>> {
     const tool = this.registry.getImplementation(toolId);
-    if (!tool) return this.failure("TOOL_NOT_FOUND", `No registered tool matches ${toolId}`);
+    if (!tool) return toolFailure("TOOL_NOT_FOUND", `No registered tool matches ${toolId}`);
     const manifest = tool.manifest;
-    const required = manifest.execution.permissions ?? [];
-    if (this.options.allowedPermissions && required.some((permission) => !this.options.allowedPermissions!.includes(permission))) {
-      return this.failure("TOOL_PERMISSION_DENIED", `Missing permission for tool ${toolId}`);
+    if ((manifest.execution.permissions ?? []).some((permission) => !this.permissions.has(permission))) {
+      return toolFailure("TOOL_PERMISSION_DENIED", `Missing permission for tool ${toolId}`);
     }
-    if (context.signal?.aborted) return this.failure("TOOL_CANCELLED", "Tool call was cancelled before execution");
-    const validateInput = this.compile(manifest.inputSchema);
-    if (!validateInput(input)) return this.failure("TOOL_INPUT_INVALID", this.formatErrors(validateInput));
-
-    const inputHash = hashToolInput(input);
-    const idempotencyKey = context.idempotencyKey
-      ? `${context.projectId}:${toolId}@${manifest.version}:${context.idempotencyKey}`
-      : undefined;
-    if (idempotencyKey && !manifest.execution.idempotent) {
-      return this.failure("TOOL_NOT_IDEMPOTENT", `Tool ${toolId} does not declare idempotent execution`);
+    if ((manifest.execution.destructive && !this.options.allowDestructive) ||
+        (manifest.execution.cost === "high" && !this.options.allowHighCost)) {
+      return toolFailure("TOOL_APPROVAL_REQUIRED", "This operation requires explicit host authorization");
     }
-    if (idempotencyKey) {
-      const pending = this.inFlight.get(idempotencyKey);
-      if (pending) return pending as Promise<ToolResult<TOutput>>;
-      const existing = await this.executions.getByIdempotencyKey(idempotencyKey);
-      if (existing) {
-        if (existing.inputHash !== inputHash) return this.failure("IDEMPOTENCY_CONFLICT", "Idempotency key was already used with different input");
-        if (existing.status === "succeeded" && existing.result) return structuredClone(existing.result) as ToolResult<TOutput>;
-        if (existing.status === "started") return this.failure("TOOL_ALREADY_RUNNING", "An invocation with this idempotency key is already running");
-        return this.failure("IDEMPOTENCY_KEY_CONSUMED", "The idempotency key belongs to a previous failed invocation");
-      }
-    }
-
-    const active = this.activeByTool.get(toolId) ?? 0;
-    const limit = manifest.execution.maxConcurrency;
-    if (limit !== undefined && active >= limit) {
-      return this.failure("TOOL_CONCURRENCY_LIMIT", `Tool concurrency limit reached (${limit})`);
-    }
-
-    this.activeByTool.set(toolId, active + 1);
-    const promise = this.executeWithGovernance(tool, input, context, inputHash, idempotencyKey);
-    if (idempotencyKey) this.inFlight.set(idempotencyKey, promise);
+    if (context.signal?.aborted) return toolFailure("TOOL_CANCELLED", "Tool call was cancelled before validation");
+    let validateInput: ValidateFunction; let validateOutput: ValidateFunction;
     try {
-      return await promise as ToolResult<TOutput>;
-    } finally {
-      if (idempotencyKey) this.inFlight.delete(idempotencyKey);
-    }
-  }
-
-  private async executeWithGovernance(
-    tool: RegisteredTool,
-    input: unknown,
-    context: ToolCallContext,
-    inputHash: string,
-    idempotencyKey?: string
-  ): Promise<ToolResult> {
-    const manifest = tool.manifest;
-    const startedAt = new Date().toISOString();
-    const started = Date.now();
-    const record: ToolExecutionRecord = {
-      id: `${context.projectId}:${context.runId}:${context.callId}`, toolId: manifest.id, toolVersion: manifest.version,
-      projectId: context.projectId, runId: context.runId, callId: context.callId,
-      idempotencyKey, status: "started", startedAt, inputHash,
-    };
-    const controller = new AbortController();
-    const onCallerAbort = () => controller.abort(context.signal?.reason);
-    context.signal?.addEventListener("abort", onCallerAbort, { once: true });
-    const executionContext: ToolCallContext = { ...context, signal: controller.signal };
-    let timeout: ReturnType<typeof setTimeout> | undefined;
+      validateInput = this.ajv.compile(manifest.inputSchema);
+      validateOutput = this.ajv.compile(manifest.outputSchema);
+    } catch (error) { return toolFailure("TOOL_SCHEMA_INVALID", error instanceof Error ? error.message : String(error)); }
     try {
-      await this.executions.save(record);
-      this.options.onEvent?.({
-        phase: "started", toolId: manifest.id, toolVersion: manifest.version,
-        projectId: context.projectId, runId: context.runId, callId: context.callId,
-      });
-      const maxAttempts = manifest.execution.idempotent
-        ? Math.max(1, Math.min(5, this.options.maxAttempts ?? 2))
-        : 1;
-      let finalResult: ToolResult | undefined;
-      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-        const timeoutMs = manifest.execution.timeoutMs ?? 30_000;
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          timeout = setTimeout(() => {
-            controller.abort(new Error(`Tool timed out after ${timeoutMs}ms`));
-            reject(new Error(`Tool timed out after ${timeoutMs}ms`));
-          }, timeoutMs);
-        });
-        try {
-          const result = await Promise.race([tool.execute(input, executionContext), timeoutPromise]);
-          if (controller.signal.aborted) throw new Error("Tool call was cancelled");
-          const validateOutput = this.compile(manifest.outputSchema);
-          if (result.ok && result.output !== undefined && !validateOutput(result.output)) {
-            throw new Error(`Tool output does not match its declared schema: ${this.formatErrors(validateOutput)}`);
+      if (!validateInput(input)) return toolFailure("TOOL_INPUT_INVALID", this.formatErrors(validateInput));
+    } catch (error) { return toolFailure("TOOL_INPUT_INVALID", error instanceof Error ? error.message : String(error)); }
+    const result = await this.executor.invoke(tool, input, context, async (result, signal) => {
+      if (result.ok && !validateOutput(result.output)) throw new Error(`Tool output does not match its declared schema: ${this.formatErrors(validateOutput)}`);
+      if (result.ok && result.artifacts?.length && this.options.artifactStore) {
+        for (const artifact of result.artifacts) {
+          signal.throwIfAborted();
+          const stored = await this.options.artifactStore.get(artifact.id);
+          if (!stored || stored.uri !== artifact.uri || stored.mediaType !== artifact.mediaType ||
+              (artifact.contentHash && stored.contentHash !== artifact.contentHash)) {
+            throw new Error(`Tool returned an unknown or inconsistent artifact reference: ${artifact.id}`);
           }
-          if (result.ok && result.artifacts?.length && this.options.artifactStore) {
-            for (const artifact of result.artifacts) {
-              const stored = await this.options.artifactStore.get(artifact.id);
-              if (!stored || stored.uri !== artifact.uri ||
-                  stored.mediaType !== artifact.mediaType ||
-                  (artifact.contentHash && stored.contentHash !== artifact.contentHash)) {
-                throw new Error(`Tool returned an unknown or inconsistent artifact reference: ${artifact.id}`);
-              }
-            }
-          }
-          if (result.ok && result.artifacts?.length && this.options.artifactLifecycle) {
-            for (const artifact of result.artifacts) {
-              await this.options.artifactLifecycle.attach({
-                artifactId: artifact.id,
-                ownerType: "tool-run",
-                ownerId: `${context.projectId}:${context.runId}:${context.callId}`,
-                role: "tool-output",
-              });
-            }
-          }
-          finalResult = {
-            ...result,
-            metadata: {
-              ...result.metadata, toolId: manifest.id, toolVersion: manifest.version,
-              durationMs: Date.now() - started, attempt, idempotencyKey,
-            },
-          };
-          if (result.ok || !result.metadata?.retryable || attempt === maxAttempts) break;
-        } finally {
-          if (timeout) clearTimeout(timeout);
-          timeout = undefined;
         }
       }
-      const result = finalResult ?? this.failure("TOOL_EXECUTION_FAILED", "Tool execution produced no result");
-      record.status = result.ok ? "succeeded" : "failed";
-      record.result = structuredClone(result);
-      record.errorCode = result.ok ? undefined : result.diagnostics[0]?.code;
-      record.completedAt = new Date().toISOString();
-      record.durationMs = Date.now() - started;
-      await this.executions.update(record);
-      this.options.onEvent?.({
-        phase: result.ok ? "completed" : "failed", toolId: manifest.id,
-        toolVersion: manifest.version, projectId: context.projectId,
-        runId: context.runId, callId: context.callId, durationMs: record.durationMs,
-        message: result.ok ? undefined : result.diagnostics[0]?.message,
-      });
-      return result;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      const cancelled = controller.signal.aborted;
-      const code = cancelled ? "TOOL_CANCELLED" : "TOOL_EXECUTION_FAILED";
-      const result = this.failure(code, message);
-      record.status = "failed";
-      record.errorCode = code;
-      record.result = result;
-      record.completedAt = new Date().toISOString();
-      record.durationMs = Date.now() - started;
-      try { await this.executions.update(record); } catch { /* preserve original execution failure */ }
-      this.options.onEvent?.({
-        phase: "failed", toolId: manifest.id, toolVersion: manifest.version,
-        projectId: context.projectId, runId: context.runId, callId: context.callId,
-        durationMs: record.durationMs, message,
-      });
-      return result;
-    } finally {
-      if (timeout) clearTimeout(timeout);
-      context.signal?.removeEventListener("abort", onCallerAbort);
-      this.activeByTool.set(manifest.id, Math.max(0, (this.activeByTool.get(manifest.id) ?? 1) - 1));
-    }
+      if (result.ok && result.artifacts?.length && this.options.artifactLifecycle) {
+        for (const artifact of result.artifacts) {
+          signal.throwIfAborted();
+          await this.options.artifactLifecycle.attach({ artifactId: artifact.id, ownerType: "tool-run",
+            ownerId: `${context.projectId}:${context.runId}:${context.callId}`, role: "tool-output" });
+        }
+      }
+    });
+    return result as ToolResult<TOutput>;
   }
 
-  private compile(schema: Record<string, unknown>): ValidateFunction {
-    return this.ajv.compile(schema);
-  }
+  async shutdown(): Promise<void> { await this.executor.shutdown(); }
 
   private formatErrors(validate: ValidateFunction): string {
-    return (validate.errors ?? []).map((error) =>
-      `${error.instancePath || "/"} ${error.message ?? "is invalid"}`).join("; ");
-  }
-
-  private failure(code: string, message: string): ToolResult<never> {
-    return { ok: false, diagnostics: [{ level: "error", code, message }] };
+    return (validate.errors ?? []).map((error) => `${error.instancePath || "/"} ${error.message ?? "is invalid"}`).join("; ");
   }
 }
