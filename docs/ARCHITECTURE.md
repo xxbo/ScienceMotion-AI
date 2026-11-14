@@ -4,62 +4,70 @@ Last updated: 2026-11-14
 
 ## Direction and current boundaries
 
-ScienceMotion AI is an agent-facing science-video framework intended to host hundreds of composable creative tools. The platform separates editorial meaning, project state, tool execution, artifacts and specialist renderers.
+ScienceMotion AI is an agent-facing science-video framework intended to host hundreds of composable creative tools. Editorial meaning, project state, tool execution, artifacts and rendering are distinct boundaries.
 
-P1.0 is the accepted local project foundation. P1.1 is active. The current control plane is in-process; isolated workers are P1.2. See [Development Plan](PLAN.md) for stage ownership and [P1.1-E](P1.1-E.md) for plugin version semantics and acceptance evidence.
+P1.0 is the accepted local project foundation. P1.1 is active; A–E provide local infrastructure. The reviewed baseline `26f20bab6b56a6aa8774c80e5da25db84d00fefb` passed [CI #43463301921](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43463301921). The next architectural priority is to connect executable tools to visible project-driven output. [PLAN.md](PLAN.md) owns sequencing; [P1.1-ACCEPTANCE.md](P1.1-ACCEPTANCE.md) owns exit gates.
 
-## Project and rendering
+## Current project and rendering paths
 
-Project Schema v1.1 models sequences, scenes, nodes, transforms, component payloads, shots/tracks/clips, assets, prefabs, animation tracks, constraints, dependency edges and revisions. Editorial content remains independently represented by the Episode package.
+Project Schema v1.1 models sequences, scenes, nodes/transforms/components, shots/tracks/clips, assets, prefabs, animation tracks, constraints, dependencies and revisions. The Episode package independently represents editorial content.
 
-Node Patch batches clone project state, check revisions and return a new document on success. An in-memory repository supplies single-process compare-and-swap. Memory and filesystem snapshots support content hashing and restore. These mechanisms do not provide a distributed database transaction or a physics solver.
+The Patch API currently implements node add/update/remove/reparent operations. Batches clone state and check revisions; the in-memory repository provides local CAS. Memory/filesystem snapshots hash and restore project data. These accepted mechanisms are not a complete transactional editing API for every entity or a physics solver.
 
-The Remotion video pipeline and SVG storyboard currently consume the Episode package. A seven-shot Project Graph fixture is validated separately. Full generic Project Graph rendering, specialist component execution and the agent visual iteration loop are later integration work.
-
-## Tool platform
-
-Tool manifests declare namespaced IDs, stable versions, schemas, descriptions, categories/tags, capabilities, engines, project compatibility, cost, permissions and execution hints. Registry discovery filters these fields and supports pagination. The sample geometry tool/plugin manifests are catalogue fixtures, not proof of an implemented creative tool suite.
-
-The local Gateway validates input/output and configured artifact references, checks a supplied permission allow-list, passes cooperative cancellation, limits concurrent executions and retries explicitly retryable results for tools declaring idempotency. Execution records and successful replay currently use an in-memory store. Atomic concurrent idempotency reservations, durable history, full budgets and approval policy remain open.
-
-Timeout/cancellation stops waiting or signals cooperative code; it is not process isolation. Long-running or non-cooperative engines will run behind worker boundaries.
-
-## Plugin versions and publication
-
-`InMemoryPluginManager` uses a structural registry interface compatible with the existing registry. It installs multiple versions per plugin ID while publishing at most one active version for that ID. Installed metadata is copied/frozen. Installing a version never automatically switches live tools.
-
-Activation checks version pins, active dependencies, enabled dependents, reachable dependency cycles, plugin/tool Project Schema compatibility and candidate health. Old registrations stay available during asynchronous health checks. Registration replacement and rollback are synchronous; candidate registration failure restores old registrations. Lifecycle mutations during a transition return `PLUGIN_BUSY`.
-
-Pinning and version-lock import/export preserve exact choices. Import validates the complete lock before changing pins; it does not download/install/activate code. Explicit rollback uses the same dependency and compatibility checks as activation. Registry rollback cannot undo external side effects; health checks must be read-only. Already-started invocations may finish with the old implementation.
-
-Supported dependency ranges are a deliberately bounded stable-version subset: exact, `*`, caret and tilde. Prereleases, compound ranges, automatic dependency solving, atomic multi-plugin upgrades, signature checking and remote distribution remain separate work. Plugins are trusted host-supplied objects, not sandboxed extensions.
-
-## Artifacts and lifecycle
-
-Artifacts use `sha256:<hex>` IDs and `artifact://sha256/<hex>` URIs. Large binaries stay outside Project JSON. Memory/filesystem stores provide deduplication, metadata, provenance and read-time hash verification.
-
-Reference records identify artifact, owner and role. The lifecycle manager supports attach/detach, project asset linking/unlinking, reference reconciliation and grace-period garbage collection. Tool output references can be retained by Gateway. ProjectAsset stores URI/hash and metadata rather than binary content.
-
-Current locking is per lifecycle-manager instance. Hosts must route related mutations through that instance; direct low-level deletion bypasses lifecycle checks. Project document persistence and reference updates are not one atomic transaction. Reference reconciliation and retention still need cross-process, snapshot and failure-path hardening before shared-worker deployment. Scheduled collection and remote object storage are not implemented by the local store.
-
-## Specialist engines and workers
-
-Remotion is the working video engine. The intended adapters include Three.js for procedural real-time 3D, Blender for offline 3D/compositing, Manim for mathematical animation and FFmpeg for media processing. Future adapters declare supported features and surface incompatibilities instead of silently losing meaning.
-
-The target flow is:
+The working Remotion video and SVG storyboard consume Episode data. CPU-cache scene types map to topic-specific components containing layout/animation and some text. The Project Graph fixture is validated separately; editing it is not yet the generic route to changing the rendered video.
 
 ```text
-Agent -> discovery/manifest -> gateway -> tool
-                                 |        |
-                              records  Project Graph / artifacts
-                                          |
-                              isolated engine worker -> preview/final media
+Current working render: Episode -> CPU-cache components -> MP4 / storyboard
+Current platform:      Registry/Gateway + Project Graph + Artifact lifecycle
+Next bridge:           executable tools -> project snapshot -> generic 2D renderer
 ```
 
-Worker job envelopes, process isolation, durable queues, resource budgets and remote artifact transfer belong to P1.2/P4. A generic automated preview/inspect/repair loop remains P1.4 work.
+## Planned creative bridge — P1.1-G
 
-## Documentation and verification
+This section is target design, not implemented status.
 
-P1.0 acceptance: [CI #43390347025](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43390347025). The P1.1-D baseline passed [CI #43405266507](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43405266507).
+Approved research/script/narration/caption content remains upstream. Agent planning uses discovered schemas to perform revisioned project edits. The host resolves approved content and pinned artifact dependencies into immutable render inputs. One canonical scene/timeline representation drives output; do not maintain an independent, conflicting timeline in the adapter.
 
-Plugin version tests cover both the domain manager and the real Registry/Gateway. Manifest and lock schemas are exercised alongside existing platform tests. A documentation identity test guards README, PLAN and ARCHITECTURE against accidental replacement with source code or each other. New capabilities are committed with their tests and scoped documentation; a successful render does not by itself prove every data-model or concurrency guarantee.
+A generic 2D adapter initially maps text, shapes, groups, transforms, opacity and explicitly supported keyframes to Remotion components. Topic-specific meaning stays in data, not new TSX scene types. Unsupported components/interpolation return diagnostics. Renderers neither call language models nor mutate editorial/project input.
+
+Previews and video exports return Artifact references with minimal render evidence: snapshot hash/revision, tool/plugin selections, adapter version, profile and output hashes. A targeted tool edit followed by a new snapshot must change the expected visual result. The existing Episode demo stays as a regression fixture during this transition.
+
+A thin discovery/invocation host supports deterministic scripted regression and one real AI trial through the same APIs. The general autonomous visual inspection/repair planner remains P1.4; forced execution isolation remains P1.2.
+
+## Existing tool platform and required hardening
+
+Manifests declare namespaced IDs, versions, schemas, descriptions/examples, categories/tags, capabilities, engines, project compatibility, cost, permissions and execution hints. Discovery supports filtering and pagination. Geometry manifests are currently catalogue fixtures.
+
+The local Gateway validates schemas and configured artifact references, checks a supplied permission allow-list, signals cooperative cancellation, limits concurrency and retries explicitly retryable results for tools declaring idempotency. Execution history and result replay currently use memory.
+
+P1.1-F must make pending/completed idempotency input matching and reservation atomic in the tested local scope, persist invocation evidence, verify cancellation/storage races and configure explicit host permissions/call limits. Admission failures must not corrupt another invocation's record. Interrupted operations need explicit recovery states rather than assumed exactly-once side effects. Broad budget services are not part of this bounded slice.
+
+Timeouts and AbortSignal are cooperative controls, not process isolation. Long-running/non-cooperative engines belong behind the later worker boundary.
+
+## Existing plugin versions and publication
+
+The manager installs multiple plugin versions but publishes one active version per plugin ID. Installed metadata is copied/frozen. Activation checks pins, dependencies/dependents, reachable cycles, project compatibility and bounded candidate health while old tools remain available. Registration replacement/rollback is synchronous; lifecycle mutations during a transition return `PLUGIN_BUSY`.
+
+Locks preserve exact choices; import validates before applying pins and does not download/install/activate code. Rollback restores registration selection, not external effects. Health checks are read-only; already-started calls may finish on old implementations. Supported dependency ranges are the stable exact/`*`/caret/tilde subset described in [P1.1-E.md](P1.1-E.md).
+
+Keep this capability while validating real tool packages. Automatic solving, atomic multi-plugin upgrades, distribution and signatures are deferred rather than prerequisites for creative integration.
+
+## Existing artifacts and planned consistency boundary
+
+Artifacts use `sha256:<hex>` IDs and `artifact://sha256/<hex>` URIs. Binary bytes remain outside project JSON. Memory/filesystem stores deduplicate content and verify hashes on read; references identify artifact, owner and role. The lifecycle manager supports links/unlinks, reconciliation and age-based collection, and Gateway can retain tool outputs.
+
+Current locks are per manager instance. Direct low-level deletion bypasses lifecycle checks; project persistence and reference updates are separate operations. P1.1-F must route destructive access through the host, add a tested local commit/recovery protocol, check asset consumers, repair changed-content references and preserve dependencies required by retained snapshots. Local data safety is required before creative-loop acceptance; cross-process shared-storage guarantees remain later work.
+
+## Professional engines and deployment
+
+Remotion remains the first video engine. Planned specialist adapters include Three.js for 3D, Blender for offline 3D/compositing, Manim for mathematics and FFmpeg for media processing. Reuse common project/tool/artifact contracts with explicit capability boundaries.
+
+P1.2 introduces single-host isolated workers, job/progress/cancellation contracts and enforceable resources. P4 introduces remote execution/storage and cross-process transactions when needed. A plugin marketplace, remote package execution and a full Studio UI do not block the first local creative loop.
+
+## Verification and document ownership
+
+Existing successful metadata checks establish streams, dimensions/FPS and duration, not visual quality or generic project rendering. Planned acceptance combines deterministic project/tool/render tests, before/after previews, restore/failure checks, visual review, a real AI trial and a separate 300-entry synthetic catalogue test. Synthetic entries are not finished creative tools.
+
+Historical P1.0 evidence: [CI #43390347025](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43390347025). P1.1-D evidence: [CI #43405266507](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43405266507). Plugin version tests cover the domain manager, real Registry/Gateway and manifest/lock schemas. Documentation identity tests protect README, PLAN and ARCHITECTURE from accidental source-code or cross-document replacement.
+
+Keep current behavior, target design and gate evidence separate. New runtime capabilities require tests and scoped documentation; this planning revision does not implement the target bridge.

@@ -1,21 +1,34 @@
 # ScienceMotion AI
 
-An extensible creative framework for AI agents making science explainers and other complex videos. Build a platform that can discover, compose and govern hundreds of tools; templates remain optional accelerators, not the creative ceiling.
+An extensible science-video creation framework for AI agents: discover typed tools, compose original graphics/animation, preview, revise and export. Grow to hundreds of tools without rewriting orchestration; templates remain optional accelerators.
 
 ## Current status
 
+Reviewed baseline: `26f20bab6b56a6aa8774c80e5da25db84d00fefb`, with successful [CI #43463301921](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43463301921). The existing 84 tests and Episode-based video pipeline passed. **P1.1 remains active.**
+
 | Stage | Implemented scope |
 | --- | --- |
-| P0 | Working Remotion, Mandarin TTS and MP4 CI pipeline; media polish remains open |
-| P1.0 | Accepted local Project Graph, patch/revision operations, prefab/animation data and snapshots |
-| P1.1-A–C | Local discovery, gateway, plugin lifecycle, execution records and content-addressed artifacts |
-| P1.1-D | Local artifact references, project links/unlinks, reconciliation and garbage collection |
-| P1.1-E | Multi-version plugin installation, one active version, pins, version locks, guarded switching and rollback |
-| P1.2+ | Isolated workers, professional creative tools and the agent visual feedback loop are planned |
+| P0 | Remotion, Mandarin TTS and MP4 pipeline; media polish remains open |
+| P1.0 | Accepted local Project Graph, node patches/revisions, prefab/animation data and snapshots |
+| P1.1-A–D | Local discovery/gateway, plugin lifecycle, execution records, content-addressed artifacts and references |
+| P1.1-E | Multiple installed plugin versions, one active version, pins/locks, guarded switching and rollback |
+| P1.1-F/G/H | Next: bounded reliability fixes, real tools, project-driven 2D rendering and creative-loop acceptance |
+| P1.2+ | Isolated workers, broader tools/professional engines and general autonomous visual iteration |
 
-P1.1-E is a local implementation with focused tests. It is not a declaration that P1.1 as a whole is finished. See [the implementation and acceptance notes](docs/P1.1-E.md) for tested boundaries.
+Current geometry JSON manifests are catalogue fixtures. The working CPU-cache video consumes an Episode package with topic-specific components; generic Project Snapshot rendering is planned, not already delivered.
 
-The geometry tool and plugin JSON files are catalogue fixtures. Their presence does not mean a complete executable geometry plugin or generic Project Graph video renderer has been delivered.
+## Next milestone
+
+Connect the existing foundation into one public path:
+
+```text
+Approved content -> AI tool calls -> Project Graph -> immutable snapshot
+  -> generic 2D preview -> targeted edit -> video export / restore
+```
+
+The planned proof uses roughly 10–12 executable tools and two short, different-topic fixtures, plus a separate 300-manifest synthetic catalogue test. Reuse Remotion and the existing contracts. Marketplace/distributed infrastructure is deferred until this creative loop works.
+
+See [Development Plan](docs/PLAN.md) for sequencing and [P1.1 Acceptance](docs/P1.1-ACCEPTANCE.md) for measurable gates. These targets are not completed features.
 
 ## Development checks
 
@@ -35,8 +48,8 @@ npm run render:storyboard
 
 `npm run studio` and `npm run render` also generate narration and require the Python voice environment described by the repository's voice scripts and CI workflow.
 
-## Design
+## Design and documentation
 
-Editorial content and animation/rendering stay separate. P1.0's Project Graph is the common data model. P1.1 supplies tool manifests, registry, gateway, plugins, execution records and artifact references. Specialist renderers and workers will consume approved snapshots through explicit contracts.
+Content generation and rendering remain independent. Creative tools share the canonical Project Graph; renderers interpret approved data without rewriting meaning. Track executable tools, catalogue entries and visually verified outputs separately.
 
-Read [Platform Vision](docs/PLATFORM_VISION.md), [Development Plan](docs/PLAN.md), [Architecture](docs/ARCHITECTURE.md), and [P1.1-E](docs/P1.1-E.md).
+Read [Platform Vision](docs/PLATFORM_VISION.md), [Architecture](docs/ARCHITECTURE.md), and [P1.1-E implementation notes](docs/P1.1-E.md). This roadmap update changes documentation, not runtime behavior.

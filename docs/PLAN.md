@@ -2,92 +2,95 @@
 
 Last updated: 2026-11-14
 
-## Product goal
+## Product goal and planning correction
 
-Build ScienceMotion AI: an extensible, professional science-video creation framework for AI agents. The immediate priority is a platform skeleton that can discover, compose, execute, observe and extend hundreds of tools. Tool count and a single polished demo are not substitutes for reliable contracts.
+Build ScienceMotion AI as an extensible science-video scaffold for AI agents: discover tools, compose original visuals, inspect previews, make targeted edits and render professional outputs. Preserve the ability to grow to hundreds of tools, while proving that those tools can actually create and modify video.
 
-Templates are optional accelerators. Reuse the existing Remotion/TTS pipeline and CPU-cache reference project while growing independent editorial, project, tool, artifact and rendering layers.
+The 2026-11-14 review changes the next priority, not the technology direction: reuse the existing platform and connect a small real creative path before broadening management infrastructure. Content generation and rendering remain decoupled; the Project Graph remains the common creative model; templates remain optional.
 
-## Non-negotiable principles
+[Platform Vision](PLATFORM_VISION.md) defines the product. [P1.1 Acceptance](P1.1-ACCEPTANCE.md) defines the exit gates. Status is evidence-based, not a percentage inferred from files or test counts.
 
-1. Content generation and animation/rendering remain decoupled. Renderers consume approved data, not language-model prompts that silently rewrite meaning.
-2. All creative tools share the P1.0 Project Graph; avoid parallel project models.
-3. Stable IDs, versioned schemas, explicit migrations, revision checks and reproducible artifacts underpin editing.
-4. Agents discover typed tools dynamically and combine both low-level primitives and high-level helpers.
-5. Preview, inspection and local revision are first-class goals.
-6. Begin with a modular local control plane; introduce isolated workers and distributed storage as explicit later stages.
-7. Distinguish implemented behavior, tested scope and planned capabilities. CI green does not prove untested concurrency, physical simulation or visual quality.
+## Verified baseline
 
-## P0 — Media foundation
+Reviewed code baseline: `26f20bab6b56a6aa8774c80e5da25db84d00fefb`. [CI #43463301921](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43463301921) passed the existing 84 platform tests, type/schema checks, SVG storyboard, Remotion MP4 render, metadata/audio checks and artifact upload.
 
-Core Remotion 1080p rendering, Mandarin TTS, episode validation, SVG storyboards and MP4 metadata/audio-stream checks have passed CI.
+This validates the implemented baseline. It does not demonstrate generic Project Graph rendering, a real creative tool suite, autonomous visual inspection or the future acceptance gates below. This planning update is documentation-only.
 
-Still open, non-blocking for tool-platform work: measured speech/caption alignment, perceptual audio/video review, music/SFX mixing and ducking, a polished 2–3 minute episode, proxy previews and formal render manifests.
+### P0 — Media foundation
 
-## P1 — Scalable platform skeleton
+Core Remotion 1080p rendering, Mandarin TTS, Episode validation, SVG storyboards and MP4 metadata/audio-stream checks work. The current CPU-cache render still uses the Episode package and topic-specific scene components.
 
-### P1.0 — Canonical project foundation: accepted local baseline
+Measured speech/caption alignment, music/SFX mixing and ducking, a polished 2–3 minute episode and advanced audiovisual quality work remain open. Minimal project-driven previews/export evidence move into P1.1-G; broad proxy-rendering optimization stays later.
 
-Acceptance evidence: [CI #43390347025](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43390347025), commit `9cbcf933f3654e94699f199b85a4c0f7bbae1d12`.
+### P1.0 — Accepted local project foundation
 
-Delivered Project Schema v1.1.0 and types; scenes/nodes/transforms/components; sequences/shots/tracks/clips/assets; prefab/constraint/dependency/animation data; graph validation; non-destructive node patches and revisions; local repository CAS; schema migration; hashing, memory/filesystem snapshots and restore; CPU-cache project fixture and unit/property tests.
+Historical acceptance: [CI #43390347025](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43390347025), commit `9cbcf933f3654e94699f199b85a4c0f7bbae1d12`.
 
-Accepted scope is a local data/editing foundation. Constraint solving, distributed transactions, remote object storage and generic Project Graph rendering are not implied. The existing video pipeline still renders the Episode package.
+Delivered Project Schema v1.1.0, scene/node and timeline/asset models, prefab/constraint/dependency/animation data, validation, node Patch operations, revisions, local repository CAS, migration, hashing, snapshots and restore.
 
-### P1.1 — Tool platform: active
+Acceptance means the local data/editing/snapshot baseline. The current Patch contract provides add/update/remove/reparent node operations; other entity data definitions do not imply equivalent transactional editing APIs. Generic project rendering and a complete video-creation loop were not part of this acceptance. Extend the model through explicit versioned operations/migrations only as real tools need them.
 
-| Slice | Implemented local scope | Remaining boundary |
+## P1.1 — Tool platform: active, creative integration next
+
+### Implemented slices retained
+
+| Slice | Implemented local scope | Known boundary |
 | --- | --- | --- |
-| A: manifests/registry/plugins | Namespaces, schemas, discovery filters, paging, version selection, install/enable/disable/uninstall, health checks | Package distribution, sandboxing and broader compatibility |
-| B: execution governance | Input/output checks, configured permission checks, cooperative cancellation/timeouts, bounded retries, per-tool concurrency, in-memory execution records and result replay | Durable records, atomic concurrent idempotency reservation, budgets/approvals |
-| C: artifacts | SHA-256 IDs/URIs, memory/filesystem stores, deduplication, read integrity and returned-reference checks | Shared-storage transactions and production retention |
-| D: local artifact lifecycle | Persistent references, project links/unlinks, reconciliation, local manager serialization and age-based collection | Project/reference transaction integration, stale-reference repair edge cases and scheduled GC |
-| E: plugin versions | Multi-version installation, one active version, pins/lock documents, guarded upgrade/downgrade/rollback, dependency diagnostics and schema compatibility | Automatic dependency solving, atomic multi-plugin upgrades and trusted package integrity |
+| A: manifests/registry/plugins | Typed manifests, namespaces, discovery, paging, installation and lifecycle | Geometry JSON entries are catalogue fixtures; real creative implementations remain to be connected |
+| B: execution governance | Validation, configured permissions, cooperative cancellation/timeouts, retries, concurrency, in-memory records/replay | Atomic concurrent idempotency, cancellation races, durable evidence and explicit policy defaults need hardening |
+| C: artifacts | SHA-256 IDs/URIs, memory/filesystem stores, metadata, deduplication and integrity checks | Shared-storage guarantees are later work |
+| D: artifact lifecycle | Persistent references, project links/unlinks, reconciliation and manager-local collection protection | Project/reference commits, snapshot protection, asset-use checks and repair edge cases remain open |
+| E: plugin versions | Multi-version installation, one active version, pins/locks, guarded switching/rollback, dependency and compatibility checks | Automatic solving, marketplace/distribution and multi-plugin upgrade transactions are deferred |
 
-P1.1-D baseline: [CI #43405266507](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43405266507), commit `64eb191e08d1b633b6ce69927cf631ea2a090161`.
+P1.1-D baseline: [CI #43405266507](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43405266507). P1.1-E implementation boundaries are in [P1.1-E.md](P1.1-E.md); its full baseline CI is recorded above. Keep these delivered capabilities; expand them only when the creative acceptance path requires it.
 
-P1.1-E implementation and test boundaries are in [P1.1-E.md](P1.1-E.md). Focused local checks have passed; full acceptance is tied to the workflow for the commit containing this update. P1.1 overall remains open.
+### P1.1-F — Bounded reliability and editing integration (next)
 
-Next work:
-- [ ] Harden execution governance: atomic idempotency reservation/input matching, durable history, cancellation races and retention of execution evidence.
-- [ ] Introduce explicit budgets, destructive-operation approvals and permission policy defaults.
-- [ ] Implement real built-in project/geometry tools through the existing repository/Patch APIs. Current geometry JSON manifests are catalogue fixtures.
-- [ ] Complete artifact/project transaction and reconciliation checks; preserve shared assets and snapshot references.
-- [ ] Integrate plugin → discovery → gateway → project mutation/artifact → snapshot, with failure/retry and version-switch tests.
-- [ ] Complete P1.1 acceptance on one exact commit and document remaining deployment boundaries.
+- [ ] Atomically reserve idempotency identity and check input hashes for both pending and completed calls; cover concurrent same-key/different-input requests and rejection cleanup.
+- [ ] Persist local execution evidence, distinguish cancellation/timeout/failure outcomes and verify restart behavior. Interrupted/uncertain work must not be silently replayed as success or blindly re-executed.
+- [ ] Coordinate project revisions with artifact references through a tested local commit/recovery protocol. Reject removal of assets still used by clips/dependencies unless an explicit valid cascade is requested; preserve assets required by retained snapshots.
+- [ ] Repair stale references when an asset ID points to changed content; validate artifact URI/hash consistency and failure paths. Centralize destructive lifecycle access in the host composition.
+- [ ] Add only the scene/animation/asset operations required by the first tool set through the common revisioned editing boundary, with explicit schema compatibility/migrations where needed.
+- [ ] Make animation semantics explicit: implement supported interpolation correctly and diagnose unsupported curves/easing rather than silently treating them as linear.
+- [ ] Configure explicit least-privilege permissions and bounded local call limits; require approval or disable destructive/high-cost paths in the first host. A general budget service is not a prerequisite.
 
-### P1.2 — Isolated execution
+Exit: focused failure/race/recovery tests pass; no silent duplicate mutation, loss of retained assets or false execution-success record in the tested local scope. Detailed cases: gate R in the acceptance document. Do not turn F into a distributed database or plugin ecosystem project.
 
-Versioned job envelopes; render/simulation/audio/asset/sandbox worker contracts; durable queues; progress/cancellation; safe retries; failure isolation; CPU/memory/GPU/disk/network budgets. Start on one host before remote worker pools. Add shared persistence and cross-process transactions when introduced.
+### P1.1-G — Executable tools and Project Snapshot rendering
 
-### P1.3 — Initial creative tool families
+- [ ] Implement an initial set of roughly 10–12 real tools using Plugin → Registry → Gateway → the canonical repository/editing boundary. Proposed tool names and required behaviors are in the acceptance document.
+- [ ] Add a generic 2D renderer adapter consuming immutable project snapshots: text, basic shapes, grouping, transforms, opacity and explicitly supported animation. Preserve approved editorial content; surface unsupported-capability diagnostics.
+- [ ] Produce a frame/short-shot preview and a short final video as validated Artifacts. Record the project revision/snapshot hash, tool/plugin selections, render profile and output hashes.
+- [ ] Create two short, different-topic fixtures through public tool calls; do not add topic-specific TSX scenes. Demonstrate a targeted edit changes the intended rendered content while unrelated project state remains intact.
+- [ ] Validate dynamic discovery/invocation with 300 synthetic manifests, separately from the executable-tool count. Test a new plugin tool without changing gateway/registry/orchestration core.
 
-Project/scene/node/sequence/timeline operations; geometry/transforms; text/shapes/paths/SVG/masks/gradients/charts; animation/keyframes/easing; media imports and provenance; audio/captions/mixing; frame/shot previews and diagnostic inspection.
+The generic Project Graph-to-renderer bridge and this small tool set are deliberately pulled forward from later integration/tool-family work. Reuse Remotion and keep the existing Episode demo as a regression fixture. No engine replacement or parallel project model is planned.
 
-### P1.4 — Agent iteration
+### P1.1-H — Creative-loop and extension acceptance
 
-Dynamic tool discovery and schema reading; production plans and execution dependencies; preview → inspect → diagnose → patch → re-render; object/shot-level revision; human review gates; durable traces and render manifests.
+- [ ] Run a deterministic integration scenario: empty project → discovery → tool calls → project snapshot → preview → targeted revision → export → save/restart/restore, including failure/retry/version-switch paths.
+- [ ] Run one real AI discovery-and-tool-use trial against the same host APIs, with recorded manifests, calls, revisions, diagnostics and artifacts; the model should not edit renderer source to complete the task.
+- [ ] Review representative frames and timing from both short fixtures against content/legibility/layout expectations. Keep this separate from stream/codec metadata validation.
+- [ ] Close P1.1 only on one exact commit with all acceptance gates and evidence recorded. Unverified gates stay open; a passing legacy demo does not close them.
 
-### P1.5 — Extension and scale acceptance
+### Deferred until after this creative loop
 
-Representative multi-namespace catalogue; composition of many small tools; plugin/version/failure/cancellation/permission contract tests; new tools and engines added without rewriting orchestration; immutable render snapshots and explicit unsupported-capability diagnostics.
+Plugin marketplace/distribution/signatures, automatic dependency solving, atomic multi-plugin upgrade plans, distributed idempotency/storage, remote object storage, elaborate retention scheduling and a full Studio UI. Necessary local integrity fixes remain in F; broad infrastructure work needs a demonstrated requirement.
 
-## P2 — Professional engines and creative depth
+## Later stages (preserved, boundaries clarified)
 
-Remotion motion design; Three.js geometry/materials/cameras/lights; Blender offline 3D and compositing; Manim equations/plots; scientific simulation; advanced shaders, cinematography, color and audio. Engines own specialist execution behind declared capability contracts.
+| Stage | Responsibility |
+| --- | --- |
+| P1.2 — Isolated execution | Job envelopes, single-host worker processes, progress/cancellation, failure isolation and enforceable CPU/memory/GPU/disk/network budgets; remote pools only when needed |
+| P1.3 — Creative breadth | Expand the initial tools into coherent project/timeline, paths/SVG/charts, geometry, materials/cameras, animation, audio/captions and inspection families |
+| P1.4 — Agent iteration | General provider-independent planning and autonomous preview/inspect/diagnose/patch loops, beyond the bounded P1.1 live-agent trial |
+| P1.5 — Extension and scale | Real multi-tool composition, performance evidence and new engines without orchestration rewrites; synthetic catalogue tests are not a count of creative features |
+| P2 — Professional depth | Advanced Remotion motion design, Three.js/Blender 3D, Manim mathematics, simulations, shaders, cinematography, color and audio |
+| P3 — Providers/assets | Pluggable research/LLM/TTS/media providers, sources/claims, transformations, licensing and local-provider options |
+| P4 — Production operations | Remote workers/storage, shared transactions, resumable jobs, incremental/batch exports, operational metrics and optional Studio UI |
 
-## P3 — Providers and asset intelligence
+## Engineering rules
 
-Pluggable research/LLM/TTS and image/video/audio/model providers; source and claim tracking; asset transformations/segmentation/optimization; provenance/licenses/attribution; local-provider options and caching.
+Every new task identifies an acceptance gate or real creative operation it serves. Progress reports separate executable tools, catalogue fixtures, synthetic test entries, supported render features and visually reviewed outputs. Scope changes update Vision, Plan, Architecture and acceptance gates together.
 
-## P4 — Production operations
-
-Remote workers/object storage, resumable jobs and incremental rendering, visual/audio quality gates, version comparison and reproducibility reports, batch/multi-format exports, optional Studio UI, operational metrics and multi-project isolation.
-
-## Tool domains and engineering workflow
-
-Grow coherent namespaces: `project.*`, `graphics.2d.*`, `geometry.*`, `animation.*`, `camera.*`, `lighting.*`, `materials.*`, `simulation.*`, `assets.*`, `audio.*`, `compositing.*`, `render.*`, `inspect.*`, and namespaced specialist `engine.<provider>.*` extensions.
-
-The CPU-cache explainer remains the reference fixture, not a privileged template. Production capabilities should use the same public contracts as future agents and plugins.
-
-Validate code and documentation before a consolidated commit. Preserve a readable README, a current architecture description and a separate plan; keep transient debugging history in Git history or focused acceptance notes. A phase closes on inspected evidence, not unchecked status-label edits.
+Keep code, tests and scoped documentation in consolidated commits. Inspect the exact commit's CI and representative outputs before changing status. Preserve working foundations; defer speculative infrastructure; use the CPU-cache fixture and a second topic to prevent template lock-in.

@@ -1,84 +1,67 @@
 # ScienceMotion AI — Platform Vision
 
-Last updated: 2026-11-13
+Last updated: 2026-11-14
 
 ## Product definition
 
-ScienceMotion AI is a **professional creative framework and extensible tool platform for AI agents that create videos**.
+ScienceMotion AI is a professional, extensible science-video creation framework for AI agents. Agents discover typed tools, compose original graphics and animation, preview results, revise selected elements and render deliverables. The platform should grow to hundreds of tools without hard-coding individual tools into agent orchestration.
 
-The primary engineering objective is to build a platform skeleton capable of hosting hundreds of composable creative tools, multiple specialist engines, and iterative agent workflows. We are building infrastructure for AI creative agents—not a fixed-template video generator.
+The product has two equally important outcomes: extensible infrastructure and executable creative capability. Catalogue size, management features and a single polished demo are each insufficient on their own. Templates and high-level workflows are optional accelerators, never the creative ceiling.
 
-An agent should be able to discover available capabilities, understand their schemas, create a project and scene graph, combine tools freely, invoke specialist engines, preview results, inspect defects, revise selected elements, and render professional deliverables.
+## Immediate objective after the architecture review
 
-Templates and high-level workflows are useful accelerators, never the creative ceiling.
+Reuse the existing Project Graph, Registry, Gateway, Plugin Manager, Artifact Store and Remotion/TTS foundation. Move the next development focus from adding management features to proving a small, real creative path:
 
-## What the platform provides
+```text
+Approved editorial package
+  -> agent planning and typed tool calls
+  -> versioned Project Graph mutations
+  -> immutable project snapshot
+  -> generic 2D renderer adapter
+  -> preview / targeted revision / final video
+```
 
-1. A canonical project/scene graph with versioned schemas and non-destructive editing.
-2. A discoverable tool catalogue with typed manifests, namespaces, capabilities, examples, and versions.
-3. A controlled tool gateway for validation, permissions, budgets, cancellation, retries, and execution traces.
-4. A worker system that isolates rendering, simulation, audio, asset processing, and sandboxed code execution.
-5. Engine adapters for Remotion, Three.js, Blender, Manim, FFmpeg, and future engines.
-6. An asset/artifact system with stable references, hashes, provenance, licensing, and caching.
-7. A visual feedback loop: preview → inspect → diagnose → patch → re-render.
-8. A provider-independent agent orchestration layer that does not hard-code individual tools or engines.
+Deliver approximately ten executable tools, a bounded generic 2D rendering subset, two short explainers on different topics, and a catalogue-scale test using 300 synthetic manifests. These are planned P1.1 acceptance targets, not claims about current capabilities. Detailed gates are defined in [P1.1 Acceptance](P1.1-ACCEPTANCE.md).
 
-## Agent creative workflow
+A scripted invocation sequence first provides reproducible regression evidence; a real AI invocation trial then demonstrates discovery and schema-guided use of the same tools. A full autonomous visual critique agent remains a later milestone.
 
-1. Understand the brief, audience, format, quality bar, and constraints.
-2. Discover tools by intent/capability and retrieve their schemas/examples.
-3. Plan a project, scene graph, timeline, assets, and dependencies.
-4. Compose low-level and high-level tools to create original visuals.
-5. Dispatch specialist work to appropriate isolated workers/engines.
-6. Preview frames/shots/sequences and inspect visual/audio diagnostics.
-7. Patch selected nodes or shots while preserving approved content.
-8. Render final outputs and persist manifests, traces, and artifacts.
+## Non-negotiable boundaries
 
-The agent is a creative director and tool orchestrator. It is not restricted to a hard-coded scene catalogue.
+1. **Content and rendering are independent.** Research, claims, narration and captions belong upstream. Renderers consume approved data and do not call language models, invent explanations or rewrite meaning. Topic-specific text must not be embedded in a generic renderer.
+2. **One creative project model.** All creative tools use the canonical Project Graph and revisioned editing boundary. Editorial data remains separate and is referenced or compiled into approved render inputs; avoid conflicting copies of scene/timeline state.
+3. **Freedom through composition.** Expose low-level primitives alongside high-level helpers. A new topic must not require a new topic-specific TSX scene or a privileged template.
+4. **Stable, inspectable execution.** Typed manifests, explicit capabilities, version pins, input validation, permission policy, execution evidence and artifact provenance make tool composition reliable.
+5. **Local revision and reproducibility.** Objects, tracks and assets retain stable identities. Snapshots preserve the dependencies needed to restore and render a project. Unsupported features return diagnostics rather than silently changing semantics.
+6. **Stage deployment complexity.** Start with a modular local control plane and trusted plugins, then isolated single-host workers, then distributed storage/execution when needed.
 
-## Tool domains
+## What the platform ultimately provides
 
-- Project, sequence, scene graph, timeline, layers, tracks, and revisions.
-- 2D vector graphics, typography, diagrams, charts, masks, gradients, and motion design.
-- Geometry, meshes, transforms, materials, textures, lights, cameras, rigs, and shaders.
-- Animation, keyframes, easing, constraints, path motion, transitions, and retiming.
-- Scientific visualization and simulation: equations, plots, particles, forces, waves, trajectories, rigid bodies, and selected fluid effects.
-- Asset discovery, import, generation, transformation, metadata, provenance, and licensing.
-- Narration, TTS, subtitles, music, sound effects, mixing, and audio QA.
-- Compositing, color, effects, preview, rendering, inspection, comparison, and quality assurance.
-- Specialist engine and sandboxed script/shader execution.
+| Domain | Intended capability |
+| --- | --- |
+| Project editing | Scenes, nodes, timelines, assets, revisions, snapshots and non-destructive operations |
+| Tool platform | Discovery, schemas/examples, plugins, versions, controlled execution and traces |
+| Creative primitives | Text, diagrams, paths, charts, geometry, transforms, materials, cameras and lights |
+| Animation and simulation | Keyframes, easing, transitions, mathematical/scientific visualization and specialist simulations |
+| Media and assets | Import/generation, narration, captions, audio mixing, provenance and licensing |
+| Rendering and feedback | Engine adapters, previews, diagnostics, targeted repair, final exports and manifests |
+| Workers | Isolation, job progress, cancellation, resource limits and later remote execution |
 
-## Platform design requirements
+Remotion is the first working video engine. Three.js, Blender, Manim, FFmpeg and provider integrations remain specialist extension directions, not simultaneous prerequisites for the first creative loop.
 
-Every tool must declare:
-- Stable ID and semantic version.
-- Name, purpose, description, examples, namespace, and category.
-- Typed input/output schemas.
-- Capabilities, engine/provider requirements, and compatibility.
-- Determinism, statefulness, cost, destructive behavior, timeout, cancellation, and permissions.
-- Output artifact types and diagnostics.
+## Meaning of professional quality
 
-The registry must support dynamic discovery, search, version pinning, plugin lifecycle, and compatibility filtering. The gateway must validate and govern all execution. Workers must be isolated from the control plane and from one another.
+Technical validity, creative correctness and presentation quality are separate evidence tracks. In addition to decodable video/audio, verify that edits affect the intended visuals, approved content is preserved, unsupported animation is diagnosed, and representative frames avoid accidental clipping, unreadable labels and unintended overlap. Record human review of representative frames and animation timing; metadata checks alone do not establish visual quality.
 
-The architecture should scale in stages: local modular runtime, single-host worker pools, then distributed workers and durable queues when required. Avoid premature microservices while preserving stable boundaries.
+Advanced cinematography, full 3D/physics, rich audio mixing and polished long-form episodes remain later depth work. The first 2D slice must be useful and inspectable without being misrepresented as that final quality level.
 
-## Content and rendering decoupling
+## Guardrails against scope drift
 
-Editorial meaning, creative intent, project/scene graph, tool execution, assets, and render configuration are separate concerns. Renderers consume immutable project snapshots and never rewrite editorial content or call LLMs. The same project can be rendered by different engines through adapters.
+Every proposed task must strengthen an acceptance gate or enable a demonstrated creative operation. Reliability fixes required by that path take priority; speculative infrastructure does not. Use acceptance evidence instead of unsupported percentage-complete estimates.
 
-## MVP strategy
+Report separately: implemented executable tools, catalogue-only fixtures, synthetic scale-test entries, supported render capabilities and visually reviewed outputs. The CPU-cache explainer remains a reusable fixture, not the product boundary. A second topic must use the same public contracts.
 
-Build the platform skeleton before attempting a huge catalogue:
-1. Canonical project and scene graph.
-2. Tool manifest, registry, discovery, and gateway.
-3. Plugin/version/capability contracts.
-4. Job envelopes, isolated workers, and artifact references.
-5. Initial composable tools for project, geometry, 2D graphics, animation, timeline, assets, audio, preview, and inspection.
-6. Agent preview/inspect/patch/re-render loop.
-7. Specialist engines and deeper creative tools.
+Until the first creative loop is accepted, defer a plugin marketplace, remote package distribution/signatures, automatic dependency solving, atomic multi-plugin upgrade plans, distributed transactions, remote object storage and elaborate GC scheduling. Local data integrity and safe execution remain mandatory.
 
-The first success criterion is not a fixed number of tools. It is proving that new tools and engines can be added through contracts without changing the agent orchestration core.
+## Document ownership
 
-## Reference project
-
-The CPU-cache explainer is the first end-to-end reference project and test fixture. It should exercise the same public project model and tools available to any agent. It is not the product's only use case or architecture boundary.
+This document owns product goals and durable principles. [Development Plan](PLAN.md) owns sequencing and status; [Architecture](ARCHITECTURE.md) distinguishes current implementation from target design; [P1.1 Acceptance](P1.1-ACCEPTANCE.md) owns measurable exit gates. Update these together when a milestone boundary changes.
