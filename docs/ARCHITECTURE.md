@@ -1,18 +1,18 @@
 # Architecture
 
-Last updated: 2026-11-14
+Last updated: 2026-11-15
 
 ## Direction and current boundaries
 
 ScienceMotion AI is an agent-facing science-video framework intended to host hundreds of composable creative tools. Editorial meaning, project state, tool execution, artifacts and rendering are distinct boundaries.
 
-P1.0 is the accepted local project foundation. P1.1 is active; A–E provide local infrastructure and the first F slice hardens local execution. The reviewed baseline `26f20bab6b56a6aa8774c80e5da25db84d00fefb` passed [CI #43463301921](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43463301921). The next architectural priority remains executable tools connected to visible project-driven output. [PLAN.md](PLAN.md) owns sequencing; [P1.1-ACCEPTANCE.md](P1.1-ACCEPTANCE.md) owns exit gates; [P1.1-F.md](P1.1-F.md) records the current execution slice and limits.
+P1.0 is the accepted local project foundation. P1.1 is active; A–E provide local infrastructure and F hardens execution and project/asset consistency. The execution baseline `2566bd0de8b95b27a6adeeeb188c5d854f2b73e5` passed [CI #43612600513](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43612600513). The next architectural priority remains executable tools connected to visible project-driven output. [PLAN.md](PLAN.md) owns sequencing; [P1.1-ACCEPTANCE.md](P1.1-ACCEPTANCE.md) owns exit gates; [P1.1-F.md](P1.1-F.md) and [project/asset consistency](P1.1-F-PROJECT-ASSETS.md) record implemented scope and limits.
 
 ## Current project and rendering paths
 
 Project Schema v1.1 models sequences, scenes, nodes/transforms/components, shots/tracks/clips, assets, prefabs, animation tracks, constraints, dependencies and revisions. The Episode package independently represents editorial content.
 
-The Patch API currently implements node add/update/remove/reparent operations. Batches clone state and check revisions; the in-memory repository provides local CAS. Memory/filesystem snapshots hash and restore project data. These accepted mechanisms are not a complete transactional editing API for every entity or a physics solver.
+Patch protocol 1.1.0 preserves node add/update/remove/reparent operations. Protocol 1.2.0 adds asset add/replace/remove without changing ProjectDocument 1.1.0. Batches clone state and check revisions; asset removal rejects declared consumers. The in-memory repository supplies local CAS, and the optional filesystem workspace persists canonical documents and retained snapshots through a conservative reference protocol. Scene/animation editing and complete graph-to-render integration remain open.
 
 The working Remotion video and SVG storyboard consume Episode data. CPU-cache scene types map to topic-specific components containing layout/animation and some text. The Project Graph fixture is validated separately; editing it is not yet the generic route to changing the rendered video.
 
@@ -40,11 +40,11 @@ Manifests declare namespaced IDs, versions, schemas, descriptions/examples, cate
 
 The Gateway owns JSON Schema, permission/risk policy and configured Artifact checks. Its LocalToolExecutor owns synchronous pending publication, input-hash matching, owned atomic store reservations, retry, timeout/cancellation, capacity accounting and terminal evidence. Gateways sharing a store object share admission coordination. Call/key identities use JSON tuples; inputs/context and returned results are isolated copies.
 
-ToolExecutionStore now uses reserve/finish ownership instead of independent save/update calls. Memory and optional exclusive-writer filesystem adapters implement this contract. The small local filesystem ledger has version/integrity validation, staged synced publication, conservative write-error handling and restart recovery of unfinished records to interrupted. Only confirmed success is replayed; uncertain effects require reconciliation. Records are retained rather than silently expired. The backend and stale-lock recovery procedure are scoped in P1.1-F.md.
+ToolExecutionStore uses reserve/finish ownership instead of independent save/update calls. Memory and optional exclusive-writer filesystem adapters implement this contract. The small local filesystem ledger has version/integrity validation, staged synced publication, conservative write-error handling and restart recovery of unfinished records to interrupted. Only confirmed success is replayed; uncertain effects require reconciliation. Records are retained rather than silently expired. The backend and stale-lock recovery procedure are scoped in P1.1-F.md.
 
 Gateway defaults grant no declared permissions, block destructive/high-cost operations without explicit host authorization and bound invocation concurrency/deadlines. The future creative host must configure its policy explicitly. Hooks are observational; hook failures cannot rewrite committed outcomes. Shutdown stops admission and drains actual underlying work before store closure.
 
-Timeouts and AbortSignal remain cooperative controls, not process isolation. Timed-out work keeps its concurrency slot until it settles and cannot later overwrite its terminal evidence. Forced termination and distributed guarantees belong to workers. Cancellation during storage admission is observed before starting the tool after the storage operation settles. Project/Artifact transactions and a complete effect-reconciliation protocol remain F work.
+Timeouts and AbortSignal remain cooperative controls, not process isolation. Timed-out work keeps its concurrency slot until it settles and cannot later overwrite its terminal evidence. Forced termination and distributed guarantees belong to workers. Cancellation during storage admission is observed before starting the tool after storage settles. Project publication and execution evidence are separate ledgers: callers reconcile persisted revisions after uncertain outcomes; no universal exactly-once side-effect guarantee is implied.
 
 ## Existing plugin versions and publication
 
@@ -54,11 +54,17 @@ Locks preserve exact choices; import validates before applying pins and does not
 
 Keep this capability while validating real tool packages. Automatic solving, atomic multi-plugin upgrades, distribution and signatures are deferred rather than prerequisites for creative integration.
 
-## Existing artifacts and planned consistency boundary
+## Artifact and workspace consistency
 
-Artifacts use `sha256:<hex>` IDs and `artifact://sha256/<hex>` URIs. Binary bytes remain outside project JSON. Memory/filesystem stores deduplicate content and verify hashes on read; references identify artifact, owner and role. The lifecycle manager supports links/unlinks, reconciliation and age-based collection, and Gateway can retain tool outputs.
+Artifacts use `sha256:<hex>` IDs and `artifact://sha256/<hex>` URIs. Binary bytes remain outside project JSON. Memory/filesystem stores deduplicate content and verify hashes. Filesystem immutable publication uses unique staged/synced files and exclusive links. References identify artifact, owner and role; related lifecycle instances sharing one reference-store object serialize mutations with collection. Independently constructed stores/processes over the same directories are not a shared transaction system.
 
-Current locks are per manager instance. Direct low-level deletion bypasses lifecycle checks; project persistence and reference updates are separate operations. P1.1-F must route destructive access through the host, add a tested local commit/recovery protocol, check asset consumers, repair changed-content references and preserve dependencies required by retained snapshots. Local data safety is required before creative-loop acceptance; cross-process shared-storage guarantees remain later work.
+Only canonical Artifact URIs denote locally managed dependencies. External URI hashes do not confer local ownership. Reconciliation verifies actual bytes, matches both role and content identity and preserves old references when dependencies are missing or invalid. Consumer checks cover clips, dependency edges and component assetId/assetIds fields; custom references must declare dependency edges. No automatic cascade is implemented.
+
+`FileSystemProjectWorkspace` implements the existing ProjectRepository over canonical ProjectDocument and ProjectSnapshot objects. A versioned checksummed ledger records heads, retained snapshots and an in-progress intent. A commit persists old heads plus intent, acquires temporary pins, publishes the new state, reconciles permanent references, then releases pins and clears intent. On failure the instance blocks further mutations/GC until reopened. Recovery trusts the published ledger, verifies dependencies and repairs conservatively. A failed response does not prove the data publication was rolled back.
+
+Workspace project reference roles include workspace identity; snapshot owners include workspace/project/snapshot identities. Current project edits cannot release retained-snapshot or other-owner references. Restore appends a fresh revision; snapshot release is explicit. One exclusive workspace writer and shared host lifecycle composition are required. The state ledger is deliberately small and local, not a parallel creative model or distributed database.
+
+Legacy standalone snapshot files are not automatically enrolled in retention. Detached-document lifecycle helpers are compatibility utilities; persisted creative edits use the workspace. Raw low-level deletion still bypasses lifecycle protection and must remain private to host storage composition. First creative-host wiring/policy, scheduled GC and remote/shared storage remain open. Details and failure tests: [P1.1-F-PROJECT-ASSETS.md](P1.1-F-PROJECT-ASSETS.md).
 
 ## Professional engines and deployment
 
@@ -70,6 +76,6 @@ P1.2 introduces single-host isolated workers, job/progress/cancellation contract
 
 Existing successful metadata checks establish streams, dimensions/FPS and duration, not visual quality or generic project rendering. Planned acceptance combines deterministic project/tool/render tests, before/after previews, restore/failure checks, visual review, a real AI trial and a separate 300-entry synthetic catalogue test. Synthetic entries are not finished creative tools.
 
-Historical P1.0 evidence: [CI #43390347025](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43390347025). P1.1-D evidence: [CI #43405266507](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43405266507). Plugin version tests cover the domain manager, real Registry/Gateway and manifest/lock schemas. F tests exercise atomic ownership, failure/cancellation/restart and a real revisioned repository mutation through Gateway. Documentation identity tests protect README, PLAN and ARCHITECTURE from accidental source-code or cross-document replacement.
+Historical P1.0 evidence: [CI #43390347025](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43390347025). P1.1-D evidence: [CI #43405266507](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43405266507). Plugin version tests cover the domain manager, real Registry/Gateway and schemas. F tests cover execution admission/restart, revisioned edits, workspace/reference publication failures, snapshot retention and local store reopen. Documentation identity tests protect README, PLAN and ARCHITECTURE from accidental source-code or cross-document replacement.
 
 Keep current behavior, target design and gate evidence separate. New runtime capabilities require tests and scoped documentation; the generic creative bridge remains planned work.

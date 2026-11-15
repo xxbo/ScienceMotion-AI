@@ -1,6 +1,6 @@
 # Development Plan
 
-Last updated: 2026-11-14
+Last updated: 2026-11-15
 
 ## Product goal and planning correction
 
@@ -14,7 +14,9 @@ The 2026-11-14 review changes the next priority, not the technology direction: r
 
 Reviewed code baseline: `26f20bab6b56a6aa8774c80e5da25db84d00fefb`. [CI #43463301921](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43463301921) passed the existing 84 platform tests, type/schema checks, SVG storyboard, Remotion MP4 render, metadata/audio checks and artifact upload.
 
-This validates the implemented baseline. It does not demonstrate generic Project Graph rendering, a real creative tool suite, autonomous visual inspection or the future acceptance gates below. The subsequent planning reset was documentation-only; the F execution-reliability slice is recorded in [P1.1-F.md](P1.1-F.md) and is validated by its own commit's workflow.
+The F execution baseline `2566bd0de8b95b27a6adeeeb188c5d854f2b73e5` passed [CI #43612600513](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43612600513). It adds 25 focused reliability tests and three real Gateway/Repository integration tests. The next asset/workspace slice has its own tests and commit workflow, described in [P1.1-F Project/Artifact consistency](P1.1-F-PROJECT-ASSETS.md).
+
+These baselines do not demonstrate generic Project Graph rendering, a real creative tool suite, autonomous visual inspection or the future acceptance gates below.
 
 ### P0 — Media foundation
 
@@ -28,7 +30,7 @@ Historical acceptance: [CI #43390347025](https://github.com/xxbo/ScienceMotion-A
 
 Delivered Project Schema v1.1.0, scene/node and timeline/asset models, prefab/constraint/dependency/animation data, validation, node Patch operations, revisions, local repository CAS, migration, hashing, snapshots and restore.
 
-Acceptance means the local data/editing/snapshot baseline. The current Patch contract provides add/update/remove/reparent node operations; other entity data definitions do not imply equivalent transactional editing APIs. Generic project rendering and a complete video-creation loop were not part of this acceptance. Extend the model through explicit versioned operations/migrations only as real tools need them.
+Acceptance means the local data/editing/snapshot baseline. Its original Patch contract provides add/update/remove/reparent node operations. F explicitly adds asset operations in Patch protocol 1.2.0 while preserving ProjectDocument 1.1.0 and legacy node patches. Other entity definitions do not imply equivalent editing APIs. Generic project rendering and a complete video-creation loop were not part of P1.0 acceptance.
 
 ## P1.1 — Tool platform: active, creative integration next
 
@@ -37,27 +39,29 @@ Acceptance means the local data/editing/snapshot baseline. The current Patch con
 | Slice | Implemented local scope | Known boundary |
 | --- | --- | --- |
 | A: manifests/registry/plugins | Typed manifests, namespaces, discovery, paging, installation and lifecycle | Geometry JSON entries are catalogue fixtures; real creative implementations remain to be connected |
-| B: execution governance | Validation, retries, concurrency and replay; F adds owned reservations, persistent local evidence and cancellation/policy hardening | Local guarantees only; project/effect reconciliation and first-host integration remain open |
+| B: execution governance | Validation, retries, concurrency and replay; F adds owned reservations, persistent local evidence and cancellation/policy hardening | Local guarantees only; first-host integration and external-effect reconciliation remain open |
 | C: artifacts | SHA-256 IDs/URIs, memory/filesystem stores, metadata, deduplication and integrity checks | Shared-storage guarantees are later work |
-| D: artifact lifecycle | Persistent references, project links/unlinks, reconciliation and manager-local collection protection | Project/reference commits, snapshot protection, asset-use checks and repair edge cases remain open |
+| D: artifact lifecycle | Persistent references and local collection protection; F adds revisioned asset edits, workspace recovery and retained-snapshot pins | Protection requires the documented local host composition; broad retention/distribution remains deferred |
 | E: plugin versions | Multi-version installation, one active version, pins/locks, guarded switching/rollback, dependency and compatibility checks | Automatic solving, marketplace/distribution and multi-plugin upgrade transactions are deferred |
 
 P1.1-D baseline: [CI #43405266507](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43405266507). P1.1-E implementation boundaries are in [P1.1-E.md](P1.1-E.md); its full baseline CI is recorded above. Keep these delivered capabilities; expand them only when the creative acceptance path requires it.
 
 ### P1.1-F — Bounded reliability and editing integration (active)
 
-The first execution-reliability slice is implemented with 25 focused tests and three real Gateway/Repository integration tests. See [P1.1-F.md](P1.1-F.md) for API migration, restart/lock recovery, evidence and deployment limits. F as a whole remains open.
+Execution reliability is described in [P1.1-F.md](P1.1-F.md). The second local slice is in [P1.1-F-PROJECT-ASSETS.md](P1.1-F-PROJECT-ASSETS.md), including publication/recovery ordering, ownership, protocol compatibility and failure tests. F as a whole remains open.
 
 - [x] Atomically reserve idempotency identity and check input hashes for both pending and completed calls; cover concurrent same-key/different-input requests and rejection cleanup.
 - [x] Persist local execution evidence, distinguish cancellation/timeout/failure outcomes and verify execution-store restart behavior. Interrupted/uncertain work is retained for explicit reconciliation, not silently replayed as success or blindly re-executed.
 - [x] Test pre-start/admission/in-flight cancellation, non-cooperative timeout capacity retention, terminal-write failures and graceful admission stop/drain.
-- [ ] Coordinate project revisions with artifact references through a tested local commit/recovery protocol. Reject removal of assets still used by clips/dependencies unless an explicit valid cascade is requested; preserve assets required by retained snapshots.
-- [ ] Repair stale references when an asset ID points to changed content; validate artifact URI/hash consistency and failure paths. Centralize destructive lifecycle access in the host composition.
-- [ ] Add only the scene/animation/asset operations required by the first tool set through the common revisioned editing boundary, with explicit schema compatibility/migrations where needed.
+- [x] Add the bounded local workspace intent/pin/publish/reconcile protocol for canonical project revisions and retained snapshots; verify old/new authoritative heads after injected publication/cleanup failures.
+- [x] Reject removal of assets used by clips/dependencies/component asset references. Protect retained-snapshot dependencies across live asset removal, GC and reopen/restore; no automatic cascade.
+- [x] Repair changed-content references using both asset role and artifact identity. Reject URI/hash conflicts and verify bytes, preserving old evidence on missing/corrupt dependencies.
+- [x] Add asset operations through Patch protocol 1.2.0 with schema compatibility checks; keep ProjectDocument 1.1.0 and old node patches working.
+- [ ] Add only the remaining scene/animation operations needed by the first tool set through the common revisioned editing boundary.
 - [ ] Make animation semantics explicit: implement supported interpolation correctly and diagnose unsupported curves/easing rather than silently treating them as linear.
-- [ ] Configure explicit least-privilege permissions and bounded local call limits in the first creative host. Gateway defaults now grant no permissions and block destructive/high-cost paths without explicit host authorization; a general budget service is not a prerequisite.
+- [ ] Compose the first creative host using the workspace, shared lifecycle and explicit least-privilege Gateway permissions/call limits. Do not expose raw deletion or independent reference writers. Destructive/high-cost paths require host authorization; a general budget service is not a prerequisite.
 
-Exit: focused failure/race/recovery tests pass; no silent duplicate mutation, loss of retained assets or false execution-success record in the tested local scope. Detailed cases: gate R in the acceptance document. Do not turn F into a distributed database or plugin ecosystem project.
+Exit: focused failure/race/recovery tests pass and the creative host uses the tested local boundaries. No claim of a transaction spanning every external tool effect or distributed exactly-once execution. Detailed cases remain in Gate R; F is not a distributed database or plugin ecosystem project.
 
 ### P1.1-G — Executable tools and Project Snapshot rendering
 

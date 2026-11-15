@@ -1,31 +1,25 @@
 import type { ProjectDocument, SceneNode } from "../contracts/project";
 import type { ProjectPatchDocument, ProjectPatchResult } from "../contracts/project-patch";
+import { assertAssetReferences, assertAssetRemovable, assertProjectAsset } from "./project-assets";
 
-function clone<T>(value: T): T {
-  return structuredClone(value);
-}
-
+function clone<T>(value: T): T { return structuredClone(value); }
 function assertUniqueNodeIds(nodes: SceneNode[]): void {
   const ids = nodes.map((node) => node.id);
   if (new Set(ids).size !== ids.length) throw new Error("Patch would create duplicate node IDs");
 }
-
 function assertNoHierarchyCycles(nodes: SceneNode[]): void {
   const byId = new Map(nodes.map((node) => [node.id, node]));
-  const visiting = new Set<string>();
-  const visited = new Set<string>();
+  const visiting = new Set<string>(); const visited = new Set<string>();
   const visit = (id: string): void => {
     if (visiting.has(id)) throw new Error(`Patch would create a hierarchy cycle at ${id}`);
     if (visited.has(id)) return;
     visiting.add(id);
     for (const childId of byId.get(id)?.childIds ?? []) visit(childId);
-    visiting.delete(id);
-    visited.add(id);
+    visiting.delete(id); visited.add(id);
   };
   for (const node of nodes) if (!node.parentId) visit(node.id);
   for (const node of nodes) if (!visited.has(node.id)) visit(node.id);
 }
-
 function belongsToScene(project: ProjectDocument, nodeId: string, sceneId: string): boolean {
   const scene = project.scenes.find((item) => item.id === sceneId);
   if (!scene) return false;
@@ -39,11 +33,6 @@ function belongsToScene(project: ProjectDocument, nodeId: string, sceneId: strin
   };
   return scene.rootNodeIds.some(contains);
 }
-
-function projectRevisionExists(project: ProjectDocument, revisionId: string): boolean {
-  return project.revisions.some((revision) => revision.id === revisionId);
-}
-
 function detachFromParent(nodes: SceneNode[], node: SceneNode): void {
   if (!node.parentId) return;
   const parent = nodes.find((item) => item.id === node.parentId);
@@ -55,43 +44,55 @@ export function applyProjectPatch(
   patch: ProjectPatchDocument,
   options: { currentRevisionId: string; newRevisionId: string; createdAt: string; message: string }
 ): ProjectPatchResult {
-  if (patch.schemaVersion !== source.schemaVersion) throw new Error("Patch schema version does not match project schema");
+  if (source.schemaVersion !== "1.1.0" || !["1.1.0", "1.2.0"].includes(patch.schemaVersion)) throw new Error("Unsupported patch/project schema version");
+  if (!patch.patches.length || !options.newRevisionId.trim()) throw new Error("Patch operations and a new revision ID are required");
   if (patch.projectId !== source.project.id) throw new Error("Patch targets a different project");
   const actualRevisionId = source.revisions[source.revisions.length - 1]?.id;
   if (!actualRevisionId || actualRevisionId !== options.currentRevisionId) {
     throw new Error(`Revision conflict: repository is at ${actualRevisionId ?? "no revision"}, expected ${options.currentRevisionId}`);
   }
   if (patch.baseRevisionId !== actualRevisionId) throw new Error("Revision conflict: project has changed since patch was created");
-  if (projectRevisionExists(source, options.newRevisionId)) throw new Error(`Revision already exists: ${options.newRevisionId}`);
-
+  if (source.revisions.some((revision) => revision.id === options.newRevisionId)) throw new Error(`Revision already exists: ${options.newRevisionId}`);
   const project = clone(source);
-  const changed = new Set<string>();
-
+  const changed = new Set<string>(); const changedAssets = new Set<string>();
   for (const operation of patch.patches) {
-    if (operation.op === "add-node") {
+    if (operation.op === "add-asset" || operation.op === "replace-asset" || operation.op === "remove-asset") {
+      if (patch.schemaVersion !== "1.2.0") throw new Error("Asset operations require Patch Schema 1.2.0");
+      if (operation.op === "add-asset") {
+        assertProjectAsset(operation.asset);
+        if (project.assets.some((asset) => asset.id === operation.asset.id)) throw new Error(`Asset already exists: ${operation.asset.id}`);
+        project.assets.push(clone(operation.asset)); changedAssets.add(operation.asset.id);
+      } else {
+        const index = project.assets.findIndex((asset) => asset.id === operation.assetId);
+        if (index < 0) throw new Error(`Asset not found: ${operation.assetId}`);
+        if (operation.op === "remove-asset") {
+          assertAssetRemovable(project, operation.assetId);
+          project.assets.splice(index, 1);
+        } else {
+          assertProjectAsset(operation.asset);
+          if (operation.asset.id !== operation.assetId) throw new Error("Asset IDs are immutable");
+          project.assets[index] = clone(operation.asset);
+        }
+        changedAssets.add(operation.assetId);
+      }
+    } else if (operation.op === "add-node") {
       if (project.nodes.some((node) => node.id === operation.node.id)) throw new Error(`Node already exists: ${operation.node.id}`);
       const scene = project.scenes.find((item) => item.id === operation.sceneId);
       if (!scene) throw new Error(`Scene not found: ${operation.sceneId}`);
       if (operation.node.parentId && !project.nodes.some((node) => node.id === operation.node.parentId)) throw new Error("Parent node not found");
-      if (operation.node.parentId && !belongsToScene(project, operation.node.parentId, operation.sceneId)) {
-        throw new Error("Parent node does not belong to the target scene");
-      }
+      if (operation.node.parentId && !belongsToScene(project, operation.node.parentId, operation.sceneId)) throw new Error("Parent node does not belong to the target scene");
       project.nodes.push(clone(operation.node));
       if (operation.node.parentId) {
         const parent = project.nodes.find((node) => node.id === operation.node.parentId)!;
-        parent.childIds = [...(parent.childIds ?? []), operation.node.id];
-        changed.add(parent.id);
-      } else {
-        scene.rootNodeIds.push(operation.node.id);
-      }
+        parent.childIds = [...(parent.childIds ?? []), operation.node.id]; changed.add(parent.id);
+      } else scene.rootNodeIds.push(operation.node.id);
       changed.add(operation.node.id);
     } else if (operation.op === "update-node") {
       const node = project.nodes.find((item) => item.id === operation.nodeId);
       if (!node) throw new Error(`Node not found: ${operation.nodeId}`);
       if (operation.changes.id && operation.changes.id !== node.id) throw new Error("Node IDs are immutable");
       if (operation.changes.parentId !== undefined || operation.changes.childIds !== undefined) throw new Error("Use reparent-node to change hierarchy");
-      Object.assign(node, clone(operation.changes));
-      changed.add(node.id);
+      Object.assign(node, clone(operation.changes)); changed.add(node.id);
     } else if (operation.op === "remove-node") {
       const node = project.nodes.find((item) => item.id === operation.nodeId);
       if (!node) throw new Error(`Node not found: ${operation.nodeId}`);
@@ -109,14 +110,10 @@ export function applyProjectPatch(
       project.nodes = project.nodes.filter((item) => !removeIds.has(item.id));
       for (const item of project.nodes) item.childIds = (item.childIds ?? []).filter((id) => !removeIds.has(id));
       for (const prefab of project.prefabs) prefab.rootNodeIds = prefab.rootNodeIds.filter((id) => !removeIds.has(id));
-      project.constraints = project.constraints.filter((constraint) =>
-        !removeIds.has(constraint.sourceNodeId) && !removeIds.has(constraint.targetNodeId)
-      );
+      project.constraints = project.constraints.filter((constraint) => !removeIds.has(constraint.sourceNodeId) && !removeIds.has(constraint.targetNodeId));
       project.animationTracks = project.animationTracks.filter((track) => !removeIds.has(track.targetNodeId));
       project.dependencies = project.dependencies.filter((dependency) =>
-        !(dependency.fromType === "node" && removeIds.has(dependency.fromId)) &&
-        !(dependency.toType === "node" && removeIds.has(dependency.toId))
-      );
+        !(dependency.fromType === "node" && removeIds.has(dependency.fromId)) && !(dependency.toType === "node" && removeIds.has(dependency.toId)));
       removeIds.forEach((id) => changed.add(id));
     } else if (operation.op === "reparent-node") {
       const node = project.nodes.find((item) => item.id === operation.nodeId);
@@ -125,36 +122,21 @@ export function applyProjectPatch(
       if (!scene) throw new Error(`Scene not found: ${operation.sceneId}`);
       if (operation.newParentId === node.id) throw new Error("A node cannot parent itself");
       if (operation.newParentId && !project.nodes.some((item) => item.id === operation.newParentId)) throw new Error("New parent not found");
-      if (operation.newParentId && !belongsToScene(project, operation.newParentId, operation.sceneId)) {
-        throw new Error("New parent does not belong to the target scene");
-      }
-      const oldParentId = node.parentId;
-      detachFromParent(project.nodes, node);
+      if (operation.newParentId && !belongsToScene(project, operation.newParentId, operation.sceneId)) throw new Error("New parent does not belong to the target scene");
+      const oldParentId = node.parentId; detachFromParent(project.nodes, node);
       if (oldParentId) changed.add(oldParentId);
       for (const item of project.scenes) item.rootNodeIds = item.rootNodeIds.filter((id) => id !== node.id);
       node.parentId = operation.newParentId;
       if (operation.newParentId) {
         const parent = project.nodes.find((item) => item.id === operation.newParentId)!;
-        parent.childIds = [...(parent.childIds ?? []), node.id];
-        changed.add(parent.id);
-      } else {
-        scene.rootNodeIds.push(node.id);
-      }
+        parent.childIds = [...(parent.childIds ?? []), node.id]; changed.add(parent.id);
+      } else scene.rootNodeIds.push(node.id);
       changed.add(node.id);
-    }
+    } else throw new Error("Unsupported project patch operation");
   }
-
-  assertUniqueNodeIds(project.nodes);
-  assertNoHierarchyCycles(project.nodes);
-
+  assertUniqueNodeIds(project.nodes); assertNoHierarchyCycles(project.nodes);
+  if (changedAssets.size) assertAssetReferences(project);
   project.project.updatedAt = options.createdAt;
-  project.revisions.push({
-    id: options.newRevisionId,
-    parentRevisionId: options.currentRevisionId,
-    createdAt: options.createdAt,
-    message: options.message,
-    author: "ScienceMotion Agent",
-  });
-
-  return { project, changedNodeIds: [...changed], revisionId: options.newRevisionId };
+  project.revisions.push({ id: options.newRevisionId, parentRevisionId: options.currentRevisionId, createdAt: options.createdAt, message: options.message, author: "ScienceMotion Agent" });
+  return { project, changedNodeIds: [...changed], ...(changedAssets.size ? { changedAssetIds: [...changedAssets] } : {}), revisionId: options.newRevisionId };
 }
