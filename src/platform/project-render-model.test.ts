@@ -49,3 +49,22 @@ test("project renderer supports structured SVG paths and rejects markup payloads
   const rejected = buildProjectRenderModel(invalid, 0);
   assert.ok(rejected.diagnostics.some((entry) => entry.code === "RENDER_INVALID_PATH_DATA"));
 });
+
+
+test("project renderer maps bar and line chart data without topic-specific components", () => {
+  const changed = structuredClone(project);
+  changed.nodes.push({ id: "revenue-chart", name: "Revenue", type: "shape",
+    transform: { position: [200,300,0], rotation: [0,0,0], scale: [1,1,1] },
+    components: [{ kind: "geometry", data: { primitive: "chart", chartType: "bar", width: 640, height: 360,
+      chartData: [{ label: "Q1", value: 12 }, { label: "Q2", value: 18 }, { label: "Q3", value: 15 }] } }] });
+  changed.scenes[0].rootNodeIds.push("revenue-chart");
+  const model = buildProjectRenderModel(changed, 0);
+  const chart = model.elements.find((element) => element.id === "revenue-chart");
+  assert.equal(chart?.type, "chart");
+  assert.equal(chart?.chartType, "bar");
+  assert.deepEqual(chart?.chartData?.map((point) => point.value), [12, 18, 15]);
+  const invalid = structuredClone(changed);
+  invalid.nodes.find((node) => node.id === "revenue-chart")!.components[0].data.chartData = [{ label: "bad", value: Number.NaN }];
+  const rejected = buildProjectRenderModel(invalid, 0);
+  assert.ok(rejected.diagnostics.some((entry) => entry.code === "RENDER_INVALID_CHART_DATA"));
+});

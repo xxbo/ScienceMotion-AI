@@ -215,3 +215,25 @@ test("creative host exposes safe SVG path creation as a structured tool", async 
     assert.equal(rejected.ok, false);
   } finally { await host?.close(); await rm(root, { recursive: true, force: true }); }
 });
+
+
+test("creative host creates a chart through the public tool and the render model consumes it", async () => {
+  const root = await directory(); let host: CreativeHost | undefined;
+  try {
+    host = await openCreativeHost({ directory: root });
+    const session = host.createSession({ projectId: "chart-project", permissions: ["project.read", "project.write"],
+      toolIds: ["project.create", "project.scene.create", "graphics.2d.chart.create", "project.inspect"] });
+    assert.equal((await call(session, "project.create", { name: "Chart project", episodeId: "chart-fixture" })).ok, true);
+    assert.equal((await call(session, "project.scene.create", { sceneId: "chart-scene", name: "Chart", durationFrames: 90 })).ok, true);
+    const created = await call(session, "graphics.2d.chart.create", { sceneId: "chart-scene", nodeId: "growth",
+      chartType: "line", x: 100, y: 120, width: 720, height: 400,
+      data: [{ label: "Jan", value: 10 }, { label: "Feb", value: 18 }, { label: "Mar", value: 14 }] });
+    assert.equal(created.ok, true, JSON.stringify(created));
+    const project = (await call(session, "project.inspect")).output as ProjectDocument;
+    const frame = buildProjectRenderModel(project, 0);
+    assert.equal(frame.elements.find((element) => element.id === "growth")?.chartType, "line");
+    const rejected = await call(session, "graphics.2d.chart.create", { sceneId: "chart-scene", nodeId: "bad",
+      chartType: "bar", x: 0, y: 0, width: 400, height: 240, data: [{ label: "NaN", value: "nope" }] });
+    assert.equal(rejected.ok, false);
+  } finally { await host?.close(); await rm(root, { recursive: true, force: true }); }
+});

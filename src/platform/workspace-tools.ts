@@ -132,6 +132,28 @@ export const workspacePlugin: CreativePluginFactory = {
             "Create SVG path " + a.nodeId);
           return ok({ nodeId: a.nodeId, revisionId: result.revisionId });
         }),
+      tool("graphics.2d.chart.create", "Create a data-driven bar or line chart as a renderer-neutral Project Graph node.", ["project.read", "project.write"],
+        object({ ...strings(["sceneId", "nodeId"]), chartType: { enum: ["bar", "line"] },
+          x: { type: "number" }, y: { type: "number" }, width: { type: "number", minimum: 240, maximum: 4000 },
+          height: { type: "number", minimum: 160, maximum: 3000 }, fill: { type: "string" }, labelColor: { type: "string" },
+          fontSize: { type: "number", minimum: 8, maximum: 48 },
+          data: { type: "array", minItems: 2, maxItems: 24, items: { type: "object", additionalProperties: false,
+            required: ["label", "value"], properties: { label: { type: "string", minLength: 1, maxLength: 48 }, value: { type: "number" } } } } },
+          ["sceneId", "nodeId", "chartType", "x", "y", "width", "height", "data"]),
+        async (input) => {
+          const a = input as { sceneId: string; nodeId: string; chartType: "bar" | "line"; x: number; y: number; width: number; height: number;
+            fill?: string; labelColor?: string; fontSize?: number; data: Array<{ label: string; value: number }> };
+          if (a.data.length < 2 || a.data.length > 24 || a.data.some((point) => !Number.isFinite(point.value) || !point.label.trim() || point.label.length > 48))
+            throw new Error("Chart requires 2–24 labelled finite data points");
+          const current = await services.project.read(); if (!current) throw new Error("Project not found");
+          const result = await services.project.applyPatch({ schemaVersion: "1.3.0", projectId: current.project.id, baseRevisionId: current.revisions.at(-1)!.id,
+            patches: [{ op: "add-node", sceneId: a.sceneId, node: { id: a.nodeId, name: a.nodeId, type: "shape",
+              transform: { position: [a.x, a.y, 0], rotation: [0,0,0], scale: [1,1,1] },
+              components: [{ kind: "geometry", data: { primitive: "chart", chartType: a.chartType, chartData: a.data,
+                width: a.width, height: a.height, fill: a.fill ?? "#55d6e8", labelColor: a.labelColor ?? "#dbe7f3", fontSize: a.fontSize ?? 16 } }] } }] },
+            "Create " + a.chartType + " chart " + a.nodeId);
+          return ok({ nodeId: a.nodeId, revisionId: result.revisionId });
+        }),
       tool("project.node.transform.set", "Set a node's 2D/3D transform through the canonical revisioned editing boundary.", ["project.read", "project.write"],
         object({ ...strings(["nodeId"]), position: { type: "array", minItems: 3, maxItems: 3, items: { type: "number" } },
           rotation: { type: "array", minItems: 3, maxItems: 3, items: { type: "number" } },
@@ -163,7 +185,7 @@ export const workspacePlugin: CreativePluginFactory = {
         }),
     ];
     return { manifest: { id: "builtin.workspace", version: "1.0.0", name: "Local workspace tools",
-      description: "Revisioned project editing, 2D text/shapes/paths, animation, snapshot-based preview/video rendering and execution inspection behind scoped host services.",
+      description: "Revisioned project editing, 2D text/shapes/paths/charts, animation, snapshot-based preview/video rendering and execution inspection behind scoped host services.",
       toolIds: tools.map((entry) => entry.manifest.id), projectSchemaVersions: ["1.1.0"], lifecycle: "beta",
       permissions: ["project.read", "project.write", "project.delete", "artifact.read", "artifact.write", "snapshot.read", "snapshot.write", "snapshot.restore", "execution.read"] }, tools };
   },
