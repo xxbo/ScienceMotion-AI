@@ -14,6 +14,7 @@ import { assertCreativeDocument, assertFiniteJson } from "./project-creative-edi
 import { projectArtifactBindings } from "./project-assets";
 import { hashProject } from "./project-snapshots";
 import type { ProjectGraphRenderOutput, ProjectGraphRenderRequest } from "../contracts/renderer";
+import { inspectProjectSnapshot, SnapshotInspectionError } from "./snapshot-inspection";
 
 type Revision = { newRevisionId: string; createdAt: string; message: string };
 type Reference = { artifactId: string; ownerType: string; ownerId: string; role: string };
@@ -308,6 +309,20 @@ export async function assembleCreativeHost(runtime: CreativeHostRuntime, factori
         return publishRenderArtifact(scope, output, { snapshotId, revisionId, snapshotHash: saved.contentHash, startFrame, durationFrames, sceneId,
           width: sequence.width, height: sequence.height, fps: sequence.fps });
       }),
+    },
+    inspect: {
+      snapshot: (snapshotId: string, frames?: readonly number[]) => {
+        // Copy before queued service execution; plugins cannot change the selected frames after admission.
+        const selected = frames === undefined ? undefined : structuredClone(frames);
+        return task(["snapshot.read"], async (scope) => {
+          const saved = await snapshot(scope, snapshotId);
+          try { return jsonCopy(inspectProjectSnapshot(saved, selected), limits.maxProjectBytes); }
+          catch (error) {
+            if (error instanceof SnapshotInspectionError) fail(error.code, error.message);
+            throw error;
+          }
+        });
+      },
     },
     executions: { list: () => task(["execution.read"], async (scope) => {
       // The evidence store keeps optional undefined fields in its live in-memory view.

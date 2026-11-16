@@ -4,13 +4,15 @@ import type { ProjectPatchDocument } from "../contracts/project-patch";
 import { createEmptyProject } from "./empty-project";
 import patchSchema from "../../schemas/project-patch.schema.json";
 import { isSafeSvgPathData } from "../renderers/remotion/project-render-model";
+import { MAX_INSPECTION_FRAMES } from "./snapshot-inspection";
+import inspectionSchema from "../../schemas/snapshot-inspection.schema.json";
 
 const strings = (names: string[]) => Object.fromEntries(names.map((name) => [name, { type: "string", minLength: 1 }]));
 const object = (properties: Record<string, unknown>, required = Object.keys(properties)): Record<string, unknown> => ({ type: "object", additionalProperties: false, properties, required });
 const patchInput = structuredClone(patchSchema) as Record<string, unknown>;
 delete patchInput.$id; // Local #/definitions references remain standalone in the Gateway's Ajv instance.
 
-/** Workspace primitives for F host validation. These are not the G visual/tool suite. */
+/** Built-in project, creative, rendering and inspection tools behind scoped host services. */
 export const workspacePlugin: CreativePluginFactory = {
   id: "builtin.workspace", version: "1.0.0",
   create(services: CreativeServices) {
@@ -45,6 +47,17 @@ export const workspacePlugin: CreativePluginFactory = {
         object(strings(["snapshotId"])), async (input) => ok(await services.snapshots.read((input as { snapshotId: string }).snapshotId))),
       tool("project.snapshot.restore", "Restore a same-project snapshot as a new revision. Requires explicit destructive authorization.", ["project.write", "snapshot.restore"],
         object(strings(["snapshotId", "baseRevisionId", "message"])), async (input) => { const args = input as { snapshotId: string; baseRevisionId: string; message: string }; return ok(await services.snapshots.restore(args.snapshotId, args.baseRevisionId, args.message)); }, true),
+      tool("inspect.snapshot", "Inspect an immutable snapshot without encoding video. Returns model diagnostics, shape/chart bounds and exact sampled-frame coverage; browser text layout, final pixels, audio and content quality are not checked.", ["snapshot.read"],
+        object({ snapshotId: { type: "string", minLength: 1, maxLength: 256 },
+          frames: { type: "array", minItems: 1, maxItems: MAX_INSPECTION_FRAMES, uniqueItems: true, items: { type: "integer", minimum: 0 } } }, ["snapshotId"]),
+        async (input) => {
+          const args = input as { snapshotId: string; frames?: number[] };
+          const report = await services.inspect.snapshot(args.snapshotId, args.frames);
+          return { ok: true, output: report, diagnostics: report.issues.map((issue) => ({ level: issue.level, code: issue.code,
+            message: issue.message, details: { source: issue.source, frames: issue.frames,
+              ...(issue.nodeId ? { nodeId: issue.nodeId } : {}), ...(issue.trackId ? { trackId: issue.trackId } : {}),
+              ...(issue.sceneId ? { sceneId: issue.sceneId } : {}) } })) };
+        }, false, inspectionSchema),
       tool("render.preview", "Render one frame from a project-owned immutable snapshot and return a retained PNG Artifact.", ["snapshot.read", "artifact.write"],
         object({ snapshotId: { type: "string", minLength: 1 }, frame: { type: "integer", minimum: 0 }, sceneId: { type: "string", minLength: 1 } }, ["snapshotId", "frame"]),
         async (input) => {

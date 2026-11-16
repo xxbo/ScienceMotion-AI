@@ -5,6 +5,7 @@ import type { ProjectDocument } from "./project";
 import type { ProjectPatchDocument, ProjectPatchResult } from "./project-patch";
 import type { ProjectSnapshot } from "../platform/project-snapshots";
 import type { ProjectGraphRenderOutput, ProjectGraphRenderRequest } from "./renderer";
+import type { SnapshotInspectionReport } from "./inspection";
 
 export const CREATIVE_PERMISSIONS = [
   "project.read", "project.write", "project.delete", "snapshot.read", "snapshot.write",
@@ -31,6 +32,7 @@ export interface CreativeServices {
     read(artifactId: string, snapshotId?: string): Promise<{ record: ArtifactRecord; bytes: Uint8Array }>;
   };
   render: { preview(snapshotId: string, frame: number, sceneId?: string): Promise<ArtifactRecord>; video(snapshotId: string, startFrame: number, durationFrames: number, sceneId?: string): Promise<ArtifactRecord> };
+  inspect: { snapshot(snapshotId: string, frames?: readonly number[]): Promise<SnapshotInspectionReport> };
   executions: { list(): Promise<ToolExecutionRecord[]> };
 }
 export interface CreativePluginFactory {

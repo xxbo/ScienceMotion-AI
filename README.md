@@ -4,7 +4,7 @@ An extensible science-video creation framework for AI agents: discover typed too
 
 ## Current status
 
-Reviewed baseline: `26f20bab6b56a6aa8774c80e5da25db84d00fefb`, with successful [CI #43463301921](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43463301921). The existing 84 tests and Episode-based video pipeline passed. **P1.1 remains active.**
+Main is the delivery baseline. The merged chart/scene-selection fix on `020ae447bb81a6e727872188689407a14abac60c` passed [CI #43801547940](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43801547940) with 185 tests and render/pixel checks. Recorded SHAs are historical evidence; current source is main HEAD. **P1.1 remains active.**
 
 | Stage | Implemented scope |
 | --- | --- |
@@ -14,6 +14,7 @@ Reviewed baseline: `26f20bab6b56a6aa8774c80e5da25db84d00fefb`, with successful [
 | P1.1-E | Multiple installed plugin versions, one active version, pins/locks, guarded switching and rollback |
 | P1.1-F | Accepted trusted local creative host; CI #43783296488 passed |
 | P1.1-G | Initial 2D tools and snapshot PNG/MP4 rendering implemented and CI-verified; chart drawing regression checks added; two-topic acceptance remains open |
+| Inspection I1 | Read-only model diagnostics, declared shape/chart bounds and exact frame coverage; browser text/layout measurement is next |
 | P1.1-H | Two-topic creative-loop and real AI invocation acceptance remains open |
 | P1.2+ | Isolated workers, broader tools/professional engines and general autonomous visual iteration |
 
@@ -27,7 +28,7 @@ Connect the existing foundation into one public path:
 
 ```text
 Approved content -> AI tool calls -> Project Graph -> immutable snapshot
-  -> generic 2D preview -> targeted edit -> video export / restore
+  -> structured inspection -> targeted edit -> representative preview -> video export / restore
 ```
 
 The planned proof uses roughly 10–12 executable tools and two short, different-topic fixtures, plus a separate 300-manifest synthetic catalogue test. Reuse Remotion and the existing contracts. Marketplace/distributed infrastructure is deferred until this creative loop works.
@@ -48,6 +49,7 @@ npm run validate:project-patch
 npm run validate:tool-manifests
 npm run validate:plugin-manifests
 npm run render:storyboard
+npm run inspect:snapshot-smoke
 ```
 
 `npm run studio` and `npm run render` also generate narration and require the Python voice environment described by the repository's voice scripts and CI workflow.

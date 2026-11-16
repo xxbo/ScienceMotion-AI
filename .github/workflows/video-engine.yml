@@ -42,6 +42,9 @@ jobs:
       - name: Run platform unit tests
         run: npm test
 
+      - name: Inspect snapshots and repair animation without video encoding
+        run: npm run inspect:snapshot-smoke
+
       - name: Validate project patch schema
         run: npm run validate:project-patch
 
@@ -103,4 +106,5 @@ jobs:
             out/charts-after.png
             out/charts-video.mp4
             out/chart-render-evidence.json
+            out/snapshot-inspection-evidence.json
           if-no-files-found: error
