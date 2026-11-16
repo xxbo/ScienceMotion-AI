@@ -26,28 +26,28 @@ Recorded baselines are historical evidence, not aliases for main HEAD. [PR #1](h
 | --- | --- | --- |
 | P0 media | Remotion 1080p, Mandarin TTS, Episode validation, SVG storyboards and MP4/audio checks | Measured narration/caption alignment, mixing/ducking and polished long-form presentation |
 | P1.0 project | ProjectDocument 1.1.0, revisions, node edits, local CAS, migrations, snapshots and restore | Integrated creative acceptance belongs to P1.1 |
-| P1.1 A–E platform | Discovery, Gateway, execution evidence, artifacts/references, version pins and guarded switching; public executable test extension | Integrated host version switching and 300-entry synthetic acceptance |
+| P1.1 A–E platform | Discovery, Gateway, execution evidence, artifacts/references, host version switching with failure preservation, public extension and 300-entry synthetic acceptance | Remote package/code loading and automatic version selection remain deferred |
 | P1.1-F host | Trusted in-process single-writer host, scoped grants/limits, recovery and Patch 1.3.0 | Isolation and distributed guarantees belong to later phases |
 | P1.1-G creation/render | Scene/text/shape/path/chart/transform/keyframe tools; snapshot PNG/MP4; two-topic creation/edit/export/restart/restore and real dependency recovery | Broader media import/audio/captions and professional presentation remain later work |
 | Inspection I1 | Read-only model diagnostics, declared shape/chart bounds and exact frame coverage | Final visual quality remains unchecked |
 | Inspection I2 | Production-browser text lines, actual element boxes, viewport overflow and heuristic font fallback; no screenshot/video encoding | Exact glyph fonts/ink, occlusion, cross-session evidence caching and visual quality remain open |
 | P1.1-H AI acceptance | Two-topic deterministic public-tool scenario, failures/retries, frame comparisons and persisted evidence | Local AI-client interface, real-AI trial and human visual review |
 
-The built-in workspace catalogue has 19 executable tools including inspection and administrative operations. The two-topic scenario adds one executable test extension using public services; one JSON catalogue-only manifest and future synthetic entries are counted separately. This does not mean 20 distinct production creative capabilities. `assets.import` is still planned.
+The built-in workspace catalogue has 19 executable tools including inspection and administrative operations. The two-topic scenario adds one executable test extension using public services; one JSON catalogue-only manifest and 300 synthetic scale entries (100 IDs × 3 versions) are counted separately. Plugin administration is an application API, not an additional AI tool. `assets.import` is still planned.
 
 ## Next delivery sequence
 
 Current checkpoint decision (2026-11-16): continue engineering and defer the user's effect review to the final acceptance. Keep the [30-second CPU-cache sample](showcase/README.md) as the comparison baseline. Automated checks remain required for every increment. The sample does not close the two-topic, restore, real-AI or human-review gates.
 
-P1.1 is still active. I1, bounded I2 measurement and the [two-topic creation/edit/export/restart/restore scenario](P1.1-CREATIVE-LOOP.md) are implemented. The [acceptance checklist](P1.1-ACCEPTANCE.md) has 18/25 closed items: R 6/6, I 4/5, C 4/5, Q 2/3, X 2/3 and A 0/3. Items differ in scope; this is not an effort percentage. Final visual review stays an explicit pending gate, not a prerequisite for continuing engineering.
+P1.1 is still active. I1, bounded I2 measurement, the [two-topic workflow](P1.1-CREATIVE-LOOP.md), [host plugin switching and catalogue scale](P1.1-PLUGIN-SWITCH-SCALE.md) are implemented. The [acceptance checklist](P1.1-ACCEPTANCE.md) has 20/25 closed items: R 6/6, I 4/5, C 5/5, Q 2/3, X 3/3 and A 0/3. Items differ in scope; this is not an effort percentage. Final visual review stays an explicit pending gate, not a prerequisite for continuing engineering.
 
 | Order | Increment | Completion evidence |
 | --- | --- | --- |
 | 1 — implemented | Inspection I1: expose model checks through the public host | Typed report; permission/hash/frame/work limits; repair/recheck/restart scenario with zero render/vision calls |
 | 2 — implemented | Inspection I2: measure actual browser layout | Font-ready line/element boxes; scoped reports; seeded text/motion/font cases; repair/recheck/restart and production-pixel correspondence |
 | 3 — implemented | Two-topic creation and restoration | Two 12-second briefs use the same public tools/renderer; inspect/repair, text/motion edits, preview/export, failed mutation/idempotent retry, restart and restore with real data dependencies |
-| 4 — next | Integrated extension/version and scale acceptance | Keep the executable brief extension; expose guarded version switching through the production host, preserve the old version on failed upgrade, exercise 300 synthetic manifests and record timings |
-| 5 | Real-AI trial | Thin local AI-client interface; discovered schemas/diagnostics, real model decisions, calls/revisions/outputs and interventions; retain deterministic regression alongside it |
+| 4 — implemented | Integrated extension/version and scale acceptance | Public host administration pauses/drains calls, switches exact versions and preserves the old version on failed upgrade; both topics continue editing; 300 synthetic manifests and timings recorded |
+| 5 — next | Real-AI trial | Thin local AI-client interface; discovered schemas/diagnostics, real model decisions, calls/revisions/outputs and interventions; retain deterministic regression alongside it |
 | 6 | P1.1 closure and effect review | Human review of both fixtures; gates R/I/C/Q/X/A mapped to one integrated main commit/CI run and reviewed outputs |
 
 Land each verified increment independently. I2 is a bounded measurement feature, not a new Studio UI or a general autonomous video critic. Additional infrastructure needs an acceptance case that depends on it.
@@ -97,7 +97,7 @@ Model/geometry checks do not prove text layout, arbitrary path extents, occlusio
 
 Start from an empty project, discover tools, create content, save a snapshot, inspect, preview, edit selected text/position and animation, export, restart, restore and compare. Include failure/safe retry and plugin version switching, with a failed upgrade preserving the previous usable implementation.
 
-The deterministic [creative-loop scenario](P1.1-CREATIVE-LOOP.md) now covers this path through restore, including revision-conflict rejection and durable idempotent replay. It exports six MP4s and 18 previews with snapshot/revision/hash receipts. Production-host plugin switching remains the missing part of the combined failure/retry/switch acceptance item.
+The deterministic [creative-loop scenario](P1.1-CREATIVE-LOOP.md) covers this path through restore, including revision-conflict rejection, durable idempotent replay and real brief-plugin upgrades with failed-candidate preservation. It exports six MP4s and 18 previews with snapshot/revision/hash receipts and plugin-transition evidence. The application explicitly supplies the selected factories when reopening; exported version choices do not load code automatically.
 
 Both topics use the same public contracts; no new topic-specific TSX scene is allowed. Preserve approved content and unrelated state during repairs. Compare canonical data, asset identities and declared frame tolerances rather than requiring byte-identical MP4s across environments.
 

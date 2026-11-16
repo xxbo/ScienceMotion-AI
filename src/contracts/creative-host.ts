@@ -1,4 +1,4 @@
-import type { AgentToolPlugin } from "./agent-plugin";
+import type { AgentToolPlugin, PluginLockDocument, PluginOperationResult, PluginStatus } from "./agent-plugin";
 import type { AgentToolManifest, ToolExecutionRecord, ToolResult, ToolSearchQuery } from "./agent-tool";
 import type { ArtifactRecord, ArtifactStore } from "./artifact";
 import type { ProjectDocument } from "./project";
@@ -84,11 +84,20 @@ export interface CreativeHostLimits {
 export interface CreativeHost {
   /** Administrative API: the application, never the AI request, assigns grants. */
   createSession(grant: CreativeSessionGrant): CreativeSession;
+  /** Trusted application administration, never exposed as an AI tool or scoped service.
+   * Install exact code without activation; activate drains calls and preserves the old selection on failure.
+   * The application supplies matching factories when reopening; the lock contains no executable code. */
+  readonly plugins: {
+    install(factory: CreativePluginFactory): PluginOperationResult;
+    activate(pluginId: string, version: string): Promise<PluginOperationResult>;
+    list(): PluginStatus[];
+    exportLock(): PluginLockDocument;
+  };
   readonly maintenance: {
     collectGarbage(olderThanMs?: number): Promise<{ scanned: number; retained: number; deleted: string[]; errors: Array<{ artifactId: string; message: string }> }>;
     releaseSnapshot(projectId: string, snapshotId: string): Promise<void>;
   };
-  status(): { state: "ready" | "draining" | "closed" | "failed"; sessions: number; tools: number };
+  status(): { state: "ready" | "switching" | "draining" | "closed" | "failed"; sessions: number; tools: number };
   /** Stop admission synchronously, drain tools and service work, then close persistent resources. */
   close(): Promise<void>;
 }

@@ -42,6 +42,9 @@ jobs:
       - name: Run platform unit tests
         run: npm test
 
+      - name: Verify 300-manifest catalogue scale and compatibility
+        run: npm run accept:catalogue-scale
+
       - name: Inspect snapshots and repair animation without video encoding
         run: npm run inspect:snapshot-smoke
 
@@ -128,4 +131,5 @@ jobs:
             out/layout-inspection-evidence.json
             out/layout-before.png
             out/layout-after.png
+            out/catalogue-scale-evidence.json
           if-no-files-found: error
