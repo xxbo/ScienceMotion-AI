@@ -2,7 +2,7 @@ import type { ProjectDocument, SceneNode } from "../../contracts/project";
 import { sampleAnimationTrack } from "../../platform/animation";
 
 export interface ProjectRenderElement {
-  id: string; type: "text" | "shape"; text?: string;
+  id: string; type: "text" | "shape" | "path"; text?: string; pathData?: string; fillRule?: "nonzero" | "evenodd";
   primitive?: "rect" | "circle" | "ellipse" | "line";
   width: number; height: number; fill: string; stroke: string; strokeWidth: number; radius: number;
   color: string; fontSize: number; fontFamily: string; fontWeight: number;
@@ -24,7 +24,16 @@ const finite = (v: unknown, fallback: number): number => typeof v === "number" &
 const color = (v: unknown, fallback: string): string =>
   typeof v === "string" && (/^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(v) || /^(transparent|black|white|red|green|blue|orange|yellow|purple|gray|grey|cyan)$/i.test(v))
     ? v : fallback;
-const component = (node: SceneNode, kind: string) => node.components.find((item) => item.kind === kind)?.data;
+/** Accept path commands only; raw SVG/XML, CSS, URLs and scripts are never parsed. */
+export function isSafeSvgPathData(value: string): boolean {
+  if (typeof value !== "string" || value.length === 0 || value.length > 20000) return false;
+  if (!/^[MmLlHhVvCcSsQqTtAaZz0-9eE+.,\-\s]+$/.test(value)) return false;
+  const tokens = value.match(/[MmLlHhVvCcSsQqTtAaZz]|[-+]?(?:\d*\.\d+|\d+\.?\d*)(?:[eE][-+]?\d+)?/g);
+  if (!tokens || !tokens.some((token) => /^[MmLlHhVvCcSsQqTtAaZz]$/.test(token))) return false;
+  const stripped = value.replace(/[MmLlHhVvCcSsQqTtAaZz]|[-+]?(?:\d*\.\d+|\d+\.?\d*)(?:[eE][-+]?\d+)?|[\s,]+/g, "");
+  return stripped.length === 0;
+}
+\nconst component = (node: SceneNode, kind: string) => node.components.find((item) => item.kind === kind)?.data;
 const safeDimension = (value: unknown, fallback: number): number => Math.max(0, Math.min(10000, finite(value, fallback)));
 
 function animatedTransform(project: ProjectDocument, node: SceneNode, frame: number, diagnostics: ProjectRenderModel["diagnostics"]) {
@@ -103,6 +112,18 @@ export function buildProjectRenderModel(project: ProjectDocument, frame: number,
         strokeWidth: safeDimension(data.strokeWidth, 0), radius: safeDimension(data.radius, 0),
         color: "#f4f7fb", fontSize: 0, fontFamily: "sans-serif", fontWeight: 400,
         textAlign: "left", opacity, transform: "matrix(" + matrix.join(",") + ")",
+      });
+    } else if (node.type === "path") {
+      const data = component(node, "geometry") ?? {};
+      const pathData = typeof data.pathData === "string" ? data.pathData : "";
+      if (!isSafeSvgPathData(pathData)) diagnostics.push({ level: "error", code: "RENDER_INVALID_PATH_DATA", message: "Path node " + node.id + " has invalid or unsupported SVG path data" });
+      else result.elements.push({
+        id: node.id, type: "path", pathData, fillRule: data.fillRule === "evenodd" ? "evenodd" : "nonzero",
+        width: safeDimension(data.width, 1000), height: safeDimension(data.height, 1000),
+        fill: color(data.fill, "#55d6e8"), stroke: color(data.stroke, "transparent"),
+        strokeWidth: safeDimension(data.strokeWidth, 0), radius: 0, color: "#f4f7fb",
+        fontSize: 0, fontFamily: "sans-serif", fontWeight: 400, textAlign: "left",
+        opacity, transform: "matrix(" + matrix.join(",") + ")",
       });
     } else if (node.type !== "group") {
       diagnostics.push({ level: "warning", code: "RENDER_UNSUPPORTED_NODE_TYPE", message: "Node type is not supported by the 2D adapter: " + node.type });

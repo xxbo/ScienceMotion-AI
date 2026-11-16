@@ -2,7 +2,7 @@ import type { AgentTool, AgentToolManifest, ToolResult } from "../contracts/agen
 import type { CreativePermission, CreativePluginFactory, CreativeServices } from "../contracts/creative-host";
 import type { ProjectPatchDocument } from "../contracts/project-patch";
 import { createEmptyProject } from "./empty-project";
-import patchSchema from "../../schemas/project-patch.schema.json";
+import patchSchema from "../../schemas/project-patch.schema.json";\nimport { isSafeSvgPathData } from "../renderers/remotion/project-render-model";
 
 const strings = (names: string[]) => Object.fromEntries(names.map((name) => [name, { type: "string", minLength: 1 }]));
 const object = (properties: Record<string, unknown>, required = Object.keys(properties)): Record<string, unknown> => ({ type: "object", additionalProperties: false, properties, required });
@@ -114,6 +114,23 @@ export const workspacePlugin: CreativePluginFactory = {
             "Create shape " + a.nodeId);
           return ok({ nodeId: a.nodeId, revisionId: result.revisionId });
         }),
+      tool("graphics.2d.path.create", "Create a safe structured SVG path node; raw SVG markup is not accepted.", ["project.read", "project.write"],
+        object({ ...strings(["sceneId", "nodeId", "pathData"]), x: { type: "number" }, y: { type: "number" },
+          width: { type: "number", minimum: 1, maximum: 10000 }, height: { type: "number", minimum: 1, maximum: 10000 },
+          fill: { type: "string" }, stroke: { type: "string" }, strokeWidth: { type: "number", minimum: 0, maximum: 100 },
+          fillRule: { enum: ["nonzero", "evenodd"] } }, ["sceneId", "nodeId", "pathData", "x", "y", "width", "height"]),
+        async (input) => {
+          const a = input as { sceneId: string; nodeId: string; pathData: string; x: number; y: number; width: number; height: number; fill?: string; stroke?: string; strokeWidth?: number; fillRule?: "nonzero" | "evenodd" };
+          if (!isSafeSvgPathData(a.pathData)) throw new Error("Invalid SVG path data; raw SVG/XML markup is not accepted");
+          const current = await services.project.read(); if (!current) throw new Error("Project not found");
+          const result = await services.project.applyPatch({ schemaVersion: "1.3.0", projectId: current.project.id, baseRevisionId: current.revisions.at(-1)!.id,
+            patches: [{ op: "add-node", sceneId: a.sceneId, node: { id: a.nodeId, name: a.nodeId, type: "path",
+              transform: { position: [a.x, a.y, 0], rotation: [0,0,0], scale: [1,1,1] },
+              components: [{ kind: "geometry", data: { pathData: a.pathData, width: a.width, height: a.height, fill: a.fill ?? "#55d6e8",
+                stroke: a.stroke ?? "transparent", strokeWidth: a.strokeWidth ?? 0, fillRule: a.fillRule ?? "nonzero" } }] } }] },
+            "Create SVG path " + a.nodeId);
+          return ok({ nodeId: a.nodeId, revisionId: result.revisionId });
+        }),
       tool("project.node.transform.set", "Set a node's 2D/3D transform through the canonical revisioned editing boundary.", ["project.read", "project.write"],
         object({ ...strings(["nodeId"]), position: { type: "array", minItems: 3, maxItems: 3, items: { type: "number" } },
           rotation: { type: "array", minItems: 3, maxItems: 3, items: { type: "number" } },
@@ -145,7 +162,7 @@ export const workspacePlugin: CreativePluginFactory = {
         }),
     ];
     return { manifest: { id: "builtin.workspace", version: "1.0.0", name: "Local workspace tools",
-      description: "Revisioned project editing, 2D text/shapes, animation, snapshot-based preview/video rendering and execution inspection behind scoped host services.",
+      description: "Revisioned project editing, 2D text/shapes/paths, animation, snapshot-based preview/video rendering and execution inspection behind scoped host services.",
       toolIds: tools.map((entry) => entry.manifest.id), projectSchemaVersions: ["1.1.0"], lifecycle: "beta",
       permissions: ["project.read", "project.write", "project.delete", "artifact.read", "artifact.write", "snapshot.read", "snapshot.write", "snapshot.restore", "execution.read"] }, tools };
   },
