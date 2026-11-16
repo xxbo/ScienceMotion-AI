@@ -47,7 +47,7 @@ export interface ProjectRenderResult {
   snapshotHash: string; outputPath: string;
   diagnostics: Array<{ level: "info" | "warning" | "error"; code: string; message: string }>;
 }
-export interface ProjectGraphRenderer {
+export interface ProjectGraphSnapshotRenderer {
   readonly id: string; readonly version: string; readonly supportedProjectSchemaVersions: string[];
   render(request: ProjectRenderRequest): Promise<ProjectRenderResult>;
 }

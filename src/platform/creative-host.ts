@@ -11,7 +11,7 @@ import { InMemoryPluginManager } from "./plugin-manager";
 import { InMemoryAgentToolRegistry, LocalAgentToolGateway } from "./tool-registry";
 import { assembleCreativeHost, resolveCreativeLimits, type CreativeHostRuntime } from "./creative-host-core";
 import { workspacePlugin } from "./workspace-tools";
-import type { ProjectGraphRenderer } from "../contracts/renderer";
+import type { ProjectGraphSnapshotRenderer } from "../contracts/renderer";
 import { RemotionProjectGraphRenderer } from "../renderers/remotion/remotion-project-graph-renderer";
 import projectSchema from "../../schemas/project.schema.json";
 import patchSchema from "../../schemas/project-patch.schema.json";
@@ -23,7 +23,7 @@ export interface OpenCreativeHostOptions {
   directory: string;
   plugins?: readonly CreativePluginFactory[];
   limits?: Partial<CreativeHostLimits>;
-  renderer?: ProjectGraphRenderer;
+  renderer?: ProjectGraphSnapshotRenderer;
   renderEntryPoint?: string;
 }
 function assertValid(validate: ValidateFunction, value: unknown, label: string): void {

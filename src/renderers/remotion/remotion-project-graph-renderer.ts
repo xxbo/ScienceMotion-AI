@@ -3,8 +3,8 @@ import { renderMedia, renderStill, selectComposition } from "@remotion/renderer"
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import type { ProjectGraphPreviewRequest, ProjectGraphRenderer, ProjectGraphRenderOutput, ProjectGraphVideoRequest } from "../../contracts/renderer";
-export class RemotionProjectGraphRenderer implements ProjectGraphRenderer {
+import type { ProjectGraphPreviewRequest, ProjectGraphSnapshotRenderer, ProjectGraphRenderOutput, ProjectGraphVideoRequest } from "../../contracts/renderer";
+export class RemotionProjectGraphRenderer implements ProjectGraphSnapshotRenderer {
  readonly id="remotion.project-graph";readonly version="1.0.0";private serveUrlPromise?:Promise<string>;
  constructor(private readonly entryPoint=resolve("src/index.ts")){}
  private serveUrl():Promise<string>{if(!this.serveUrlPromise)this.serveUrlPromise=bundle({entryPoint:this.entryPoint}).catch(e=>{this.serveUrlPromise=undefined;throw e;});return this.serveUrlPromise;}

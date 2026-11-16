@@ -200,7 +200,8 @@ export async function assembleCreativeHost(runtime: CreativeHostRuntime, factori
       metadata: { ...metadata, rendererId: output.rendererId, rendererVersion: output.rendererVersion },
       provenance: { projectId: scope.context.projectId, runId: scope.context.runId, callId: scope.context.callId, toolId: scope.manifest.id,
         toolVersion: scope.manifest.version, pluginId: scope.manifest.pluginId, parametersHash: createHash("sha256").update(JSON.stringify(metadata)).digest("hex") } });
-    if (stored.kind !== expected.kind || stored.mediaType !== expected.mediaType) fail("HOST_ARTIFACT_TYPE_CONFLICT", "Render artifact content hash collides with another media declaration");
+    check(scope, ["snapshot.read", "artifact.write"]);
+    if (stored.kind !== expected.kind || stored.mediaType !== output.mediaType) fail("HOST_ARTIFACT_TYPE_CONFLICT", "Render artifact content hash collides with another media declaration");
     scope.produced.add(stored.id); return scopedRecord(scope, stored);
   };
   const services: CreativeServices = frozen({
@@ -283,6 +284,7 @@ export async function assembleCreativeHost(runtime: CreativeHostRuntime, factori
         if (hashProject(saved.document) !== saved.contentHash) fail("HOST_SNAPSHOT_CORRUPT", "Snapshot content hash does not match its immutable document");
         const sequence = saved.document.sequences[0];
         if (!sequence || frame >= sequence.durationFrames) fail("HOST_RENDER_FRAME_INVALID", "Preview frame is outside the sequence");
+        if (sceneId && !saved.document.scenes.some((item) => item.id === sceneId)) fail("HOST_RENDER_SCENE_INVALID", "Requested scene is not part of the snapshot");
         const revisionId = saved.document.revisions.at(-1)?.id;
         if (!revisionId) fail("HOST_SNAPSHOT_INVALID", "Snapshot has no revision identity");
         const output = await runtime.renderPreview({ project: structuredClone(saved.document), revisionId, snapshotHash: saved.contentHash,
@@ -298,6 +300,7 @@ export async function assembleCreativeHost(runtime: CreativeHostRuntime, factori
         if (hashProject(saved.document) !== saved.contentHash) fail("HOST_SNAPSHOT_CORRUPT", "Snapshot content hash does not match its immutable document");
         const sequence = saved.document.sequences[0];
         if (!sequence || startFrame + durationFrames > sequence.durationFrames) fail("HOST_RENDER_RANGE_INVALID", "Video render range exceeds the sequence");
+        if (sceneId && !saved.document.scenes.some((item) => item.id === sceneId)) fail("HOST_RENDER_SCENE_INVALID", "Requested scene is not part of the snapshot");
         const revisionId = saved.document.revisions.at(-1)?.id;
         if (!revisionId) fail("HOST_SNAPSHOT_INVALID", "Snapshot has no revision identity");
         const output = await runtime.renderVideo({ project: structuredClone(saved.document), revisionId, snapshotHash: saved.contentHash,

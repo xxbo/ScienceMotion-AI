@@ -3,11 +3,11 @@ import assert from "node:assert/strict";
 import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { CreativeHost, CreativeInvocation, CreativePluginFactory, CreativeSession } from "../contracts/creative-host";
+import type { CreativeHost, CreativeInvocation, CreativePluginFactory, CreativeSession, CreativeSessionGrant } from "../contracts/creative-host";
 import type { ProjectDocument } from "../contracts/project";
 import type { ArtifactRecord } from "../contracts/artifact";
 import { openCreativeHost } from "./creative-host";
-import type { ProjectGraphRenderer } from "../contracts/renderer";
+import type { ProjectGraphSnapshotRenderer } from "../contracts/renderer";
 import { buildProjectRenderModel } from "../renderers/remotion/project-render-model";
 
 let counter = 0;
@@ -142,7 +142,7 @@ test("production host: real creative tools mutate Project Graph and the generic 
 test("production host: snapshot preview/video tools return retained, traceable Artifacts", async () => {
   const root = await directory(); let host: CreativeHost | undefined;
   const calls: Array<{ mode: string; revisionId: string; snapshotHash: string }> = [];
-  const renderer: ProjectGraphRenderer = {
+  const renderer: ProjectGraphSnapshotRenderer = {
     id: "test.project-graph", version: "test-1",
     async renderPreview(request) {
       calls.push({ mode: "preview", revisionId: request.revisionId, snapshotHash: request.snapshotHash });
@@ -182,7 +182,7 @@ test("render tools reject foreign snapshots and out-of-range frames", async () =
   };
   try {
     host = await openCreativeHost({ directory: root, renderer });
-    const grant = { permissions: ["project.read", "project.write", "snapshot.write", "snapshot.read", "artifact.write"],
+    const grant: CreativeSessionGrant = { permissions: ["project.read", "project.write", "snapshot.write", "snapshot.read", "artifact.write"],
       toolIds: ["project.create", "project.inspect", "project.snapshot.save", "render.preview"] };
     const owner = host.createSession({ ...grant, projectId: "owner" });
     assert.equal((await call(owner, "project.create", { name: "Owner", episodeId: "owner", durationFrames: 30 })).ok, true);
