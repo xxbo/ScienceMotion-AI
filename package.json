@@ -21,7 +21,8 @@
     "render:project": "remotion render src/index.ts ProjectGraph out/project-graph-demo.mp4",
     "validate:project-render": "node scripts/validate-project-render.mjs out/project-graph-demo.mp4",
     "render:host-smoke": "tsx scripts/render-project-host-smoke.ts",
-    "validate:host-render": "node scripts/validate-host-render.mjs"
+    "validate:host-render": "node scripts/validate-host-render.mjs",
+    "render:chart-smoke": "tsx scripts/render-chart-smoke.ts"
   },
   "dependencies": {
     "@remotion/cli": "^4.0.0",

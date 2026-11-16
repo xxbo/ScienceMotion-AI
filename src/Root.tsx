@@ -19,6 +19,8 @@ export const RemotionRoot: React.FC = () => (
     <Composition id="ProjectGraph" component={ProjectGraphForRemotion}
       durationInFrames={projectDemo.project.sequences[0].durationFrames}
       fps={projectDemo.project.sequences[0].fps} width={projectDemo.project.sequences[0].width}
-      height={projectDemo.project.sequences[0].height} defaultProps={projectDemo as unknown as Record<string, unknown>} calculateMetadata={projectGraphMetadata} />
+      height={projectDemo.project.sequences[0].height}
+      // A demo sceneId would survive input-prop merging and hide other projects' timeline scenes.
+      defaultProps={{ project: projectDemo.project } as unknown as Record<string, unknown>} calculateMetadata={projectGraphMetadata} />
   </>
 );

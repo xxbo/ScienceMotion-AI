@@ -79,6 +79,9 @@ jobs:
       - name: Validate Creative Host render Artifacts
         run: npm run validate:host-render
 
+      - name: Verify chart rendering and targeted pixel changes
+        run: npm run render:chart-smoke
+
       - name: Render demo video
         run: npm run render
 
@@ -96,4 +99,8 @@ jobs:
             out/project-graph-demo.mp4
             out/project-graph-host-preview.png
             out/project-graph-host-video.mp4
+            out/charts-before.png
+            out/charts-after.png
+            out/charts-video.mp4
+            out/chart-render-evidence.json
           if-no-files-found: error
