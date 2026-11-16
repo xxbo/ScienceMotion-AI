@@ -2,108 +2,124 @@
 
 Last updated: 2026-11-16
 
-## Product goal and planning correction
+## Goal and current priority
 
-Build ScienceMotion AI as an extensible science-video scaffold for AI agents: discover tools, compose original visuals, inspect previews, make targeted edits and render professional outputs. Preserve the ability to grow to hundreds of tools, while proving that those tools can actually create and modify video.
+Build an extensible science-video framework for AI agents: discover typed tools, compose original visuals, inspect results, make targeted edits and export reproducible videos. Content meaning stays upstream; Project Graph remains the single creative model; templates are optional.
 
-The 2026-11-14 review changes the next priority, not the technology direction: reuse the existing platform and connect a small real creative path before broadening management infrastructure. Content generation and rendering remain decoupled; the Project Graph remains the common creative model; templates remain optional.
+Prioritize a small demonstrated creation-and-repair workflow on Remotion. Programs should perform structural, temporal and geometry checks and return evidence to the AI. The AI uses node identities and diagnostics to choose edits. Representative rendered frames, media validation and human review remain necessary for final-output correctness and presentation quality.
 
-[Platform Vision](PLATFORM_VISION.md) defines the product. [P1.1 Acceptance](P1.1-ACCEPTANCE.md) defines the exit gates. Status is evidence-based, not a percentage inferred from files or test counts.
+[Platform Vision](PLATFORM_VISION.md) owns durable principles, [Architecture](ARCHITECTURE.md) implementation boundaries, and [P1.1 Acceptance](P1.1-ACCEPTANCE.md) measurable exit gates. Test counts and catalogue size are not product-completion percentages.
 
-## Verified baseline
+## Main is the delivery baseline
 
-Reviewed code baseline: `26f20bab6b56a6aa8774c80e5da25db84d00fefb`. [CI #43463301921](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43463301921) passed the existing 84 platform tests, type/schema checks, SVG storyboard, Remotion MP4 render, metadata/audio checks and artifact upload.
+1. Start reviewable increments from current main and preserve existing edits.
+2. Run focused local checks and full repository CI. Inspect the exact PR head, current base and CI result before merging; update/retest integration if the base changes.
+3. Merge completed work promptly after successful CI and review. A draft branch alone is not delivered work.
+4. Verify the resulting main commit and its push CI. Report the main SHA, CI link, delivered behavior and remaining gates.
+5. Keep code, meaningful tests and scoped documentation together. Older or unrelated passing checks cannot close a new acceptance gate.
 
-The F execution baseline `2566bd0de8b95b27a6adeeeb188c5d854f2b73e5` passed [CI #43612600513](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43612600513). It adds 25 focused reliability tests and three real Gateway/Repository integration tests. The next asset/workspace slice has its own tests and commit workflow, described in [P1.1-F Project/Artifact consistency](P1.1-F-PROJECT-ASSETS.md).
+Recorded baselines are historical evidence, not aliases for main HEAD. [PR #1](https://github.com/xxbo/ScienceMotion-AI/pull/1) merged chart drawing and snapshot scene-selection fixes. Main `020ae447bb81a6e727872188689407a14abac60c` passed [CI #43801547940](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43801547940): 185 tests, production chart pixel checks and the legacy narrated video pipeline.
 
-These baselines do not demonstrate generic Project Graph rendering, a real creative tool suite, autonomous visual inspection or the future acceptance gates below.
+## Current capability and limits
 
-### P0 — Media foundation
-
-Core Remotion 1080p rendering, Mandarin TTS, Episode validation, SVG storyboards and MP4 metadata/audio-stream checks work. The current CPU-cache render still uses the Episode package and topic-specific scene components.
-
-Measured speech/caption alignment, music/SFX mixing and ducking, a polished 2–3 minute episode and advanced audiovisual quality work remain open. Minimal project-driven previews/export evidence move into P1.1-G; broad proxy-rendering optimization stays later.
-
-### P1.0 — Accepted local project foundation
-
-Historical acceptance: [CI #43390347025](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43390347025), commit `9cbcf933f3654e94699f199b85a4c0f7bbae1d12`.
-
-Delivered Project Schema v1.1.0, scene/node and timeline/asset models, prefab/constraint/dependency/animation data, validation, node Patch operations, revisions, local repository CAS, migration, hashing, snapshots and restore.
-
-Acceptance means the local data/editing/snapshot baseline. Its original Patch contract provides add/update/remove/reparent node operations. F explicitly adds asset operations in Patch protocol 1.2.0 while preserving ProjectDocument 1.1.0 and legacy node patches. Other entity definitions do not imply equivalent editing APIs. Generic project rendering and a complete video-creation loop were not part of P1.0 acceptance.
-
-## P1.1 — Tool platform: active, creative integration next
-
-### Implemented slices retained
-
-| Slice | Implemented local scope | Known boundary |
+| Area | Delivered foundation | Remaining work |
 | --- | --- | --- |
-| A: manifests/registry/plugins | Typed manifests, namespaces, discovery, paging, installation and lifecycle | Geometry JSON entries are catalogue fixtures; real creative implementations remain to be connected |
-| B: execution governance | Validation, retries, concurrency and replay; F adds owned reservations, persistent local evidence and cancellation/policy hardening | Local guarantees only; first-host integration and external-effect reconciliation remain open |
-| C: artifacts | SHA-256 IDs/URIs, memory/filesystem stores, metadata, deduplication and integrity checks | Shared-storage guarantees are later work |
-| D: artifact lifecycle | Persistent references and local collection protection; F adds revisioned asset edits, workspace recovery and retained-snapshot pins | Protection requires the documented local host composition; broad retention/distribution remains deferred |
-| E: plugin versions | Multi-version installation, one active version, pins/locks, guarded switching/rollback, dependency and compatibility checks | Automatic solving, marketplace/distribution and multi-plugin upgrade transactions are deferred |
+| P0 media | Remotion 1080p, Mandarin TTS, Episode validation, SVG storyboards and MP4/audio checks | Measured narration/caption alignment, mixing/ducking and polished long-form presentation |
+| P1.0 project | ProjectDocument 1.1.0, revisions, node edits, local CAS, migrations, snapshots and restore | Integrated creative acceptance belongs to P1.1 |
+| P1.1 A–E platform | Discovery, Gateway, execution evidence, artifacts/references, version pins and guarded switching | 300-entry synthetic test and executable extension acceptance |
+| P1.1-F host | Trusted in-process single-writer host, scoped grants/limits, recovery and Patch 1.3.0 | Isolation and distributed guarantees belong to later phases |
+| P1.1-G creation/render | Scene/text/shape/path/chart/transform/keyframe tools; snapshot PNG/MP4; chart SVG/pixel regressions | Two-topic creation, targeted text/animation edits and integrated restore evidence |
+| Inspection I1 | Read-only model diagnostics, declared shape/chart bounds and exact frame coverage | Browser layout and final visual quality remain unchecked |
+| P1.1-H AI acceptance | Deterministic host scenarios and a discoverable tool surface | Complete integrated scenario, real-AI trial and human visual review |
 
-P1.1-D baseline: [CI #43405266507](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43405266507). P1.1-E implementation boundaries are in [P1.1-E.md](P1.1-E.md); its full baseline CI is recorded above. Keep these delivered capabilities; expand them only when the creative acceptance path requires it.
+The built-in workspace catalogue has 18 executable tools including inspection and administrative operations. This does not mean 18 distinct creative capabilities. Geometry JSON catalogue fixtures and future synthetic entries are counted separately. `assets.import` is still planned.
 
-### P1.1-F — Bounded reliability and editing integration (accepted local baseline)
+## Next delivery sequence
 
-Execution reliability is described in [P1.1-F.md](P1.1-F.md). The second local slice is in [P1.1-F-PROJECT-ASSETS.md](P1.1-F-PROJECT-ASSETS.md), including publication/recovery ordering, ownership, protocol compatibility and failure tests. The complete local host composition and Patch 1.3 schema passed [CI #43783296488](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43783296488), including 170 platform tests, schema validation and the legacy video render. This closes the F implementation/CI gate for the trusted single-writer local host; it does not claim distributed transactions or third-party sandboxing.
+| Order | Increment | Completion evidence |
+| --- | --- | --- |
+| 1 | Inspection I1: expose model checks through the public host | Typed report; permission/hash/frame/work limits; repair/recheck/restart scenario with zero render/vision calls; CI and main integration |
+| 2 | Inspection I2: measure actual browser layout | Text metrics after fonts load, viewport/crop evidence, node/frame identities and seeded overflow cases in the production composition |
+| 3 | Two-topic creation and restoration | Two 10–30 second briefs use the same public tools/renderer; inspect, revise, preview, export, restart and restore |
+| 4 | Extension and real-AI trial | 300 synthetic manifests, one executable extension, and a model using discovered schemas/diagnostics with recorded calls and interventions |
+| 5 | P1.1 closure | Gates R/I/C/Q/X/A mapped to one integrated commit/CI run and reviewed outputs |
 
-- [x] Atomically reserve idempotency identity and check input hashes for both pending and completed calls; cover concurrent same-key/different-input requests and rejection cleanup.
-- [x] Persist local execution evidence, distinguish cancellation/timeout/failure outcomes and verify execution-store restart behavior. Interrupted/uncertain work is retained for explicit reconciliation, not silently replayed as success or blindly re-executed.
-- [x] Test pre-start/admission/in-flight cancellation, non-cooperative timeout capacity retention, terminal-write failures and graceful admission stop/drain.
-- [x] Add the bounded local workspace intent/pin/publish/reconcile protocol for canonical project revisions and retained snapshots; verify old/new authoritative heads after injected publication/cleanup failures.
-- [x] Reject removal of assets used by clips/dependencies/component asset references. Protect retained-snapshot dependencies across live asset removal, GC and reopen/restore; no automatic cascade.
-- [x] Repair changed-content references using both asset role and artifact identity. Reject URI/hash conflicts and verify bytes, preserving old evidence on missing/corrupt dependencies.
-- [x] Add asset operations through Patch protocol 1.2.0 with schema compatibility checks; keep ProjectDocument 1.1.0 and old node patches working.
-- [x] Add scene/shot/animation operations needed by the first tool set through the common revisioned editing boundary (Patch protocol 1.3.0; ProjectDocument remains 1.1.0).
-- [x] Make animation semantics explicit: implement supported interpolation correctly and diagnose unsupported curves/easing rather than silently treating them as linear.
-- [x] Compose the local creative host using the filesystem workspace, shared artifact lifecycle, persistent execution ledger, version-pinned plugins, Registry and Gateway. Bind sessions to one project and explicit tool/permission grants; enforce service-level authorization, byte/operation/concurrency/deadline limits, snapshot ownership and graceful drain.
+Land each verified increment independently. I2 is a bounded measurement feature, not a new Studio UI or a general autonomous video critic. Additional infrastructure needs an acceptance case that depends on it.
 
-Exit: focused failure/race/recovery tests pass and the creative host uses the tested local boundaries. No claim of a transaction spanning every external tool effect or distributed exactly-once execution. Detailed cases remain in Gate R; F is not a distributed database or plugin ecosystem project.
+## Programmatic inspection strategy
 
-### P1.1-G — Executable tools and Project Snapshot rendering (active; snapshot render services CI-verified)
+```text
+Approved brief -> public tools -> immutable Project Graph snapshot
+  -> structural/model checks -> actual browser layout measurements
+  -> structured issues -> targeted tool edits -> snapshot and recheck
+  -> representative preview review -> export and media validation
+```
 
-- [x] Add the first real tools for scene/shot creation, 2D text and shape creation, node transforms and keyframe editing through the scoped Plugin → Registry → Gateway boundary.
-- [x] Add a deterministic Project Graph 2D render projection and Remotion composition for text, basic shapes, group transforms, opacity and supported keyframe sampling; keep the Episode renderer independent.
-- [x] Add a water-cycle Project Graph fixture and CI MP4/ffprobe validation for the generic composition. Verified by [CI #43786811086](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43786811086): 175/175 platform tests passed, generic Project Graph MP4 passed 1080p/30fps/10s checks, and the legacy CPU-cache MP4/audio checks passed.
-- [x] Add a structured SVG Path tool and Remotion path renderer. Path data is validated as SVG path commands only; raw SVG/XML markup is rejected. The tool writes a normal Project Graph path node through Patch 1.3.0.
-- [x] Add a snapshot-bound Remotion render service for PNG frame previews and bounded MP4 frame ranges. Validate snapshot ownership/hash, frame bounds, byte limits and renderer output declarations; publish content-addressed Artifacts with revision/snapshot/renderer provenance.
-- [x] Expose render.preview and render.video through the built-in plugin and Gateway, with explicit snapshot.read + artifact.write permissions. Return Artifact references to the AI caller. Verified by [CI #43788856539](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43788856539): 177/177 platform tests passed; production Creative Host rendered a PNG and a 3-second MP4 from a saved snapshot, and ffprobe verified the MP4 stream, 1080p, 30 FPS and duration. The existing Episode render/audio checks also passed.
-- [x] Add a data-driven bar/line chart tool and generic Remotion chart renderer; chart data remains structured Project Graph geometry, with bounded point counts and finite-value validation.
-- [x] Close the chart projection-to-drawing gap: dispatch chart elements to SVG bars/lines, cover signed/zero/extreme values, and add production PNG/MP4 pixel regression checks with a targeted chart-data edit. Exact validation evidence is tracked in [chart notes](P1.1-G-CHARTS.md); the broader gates below remain open.
-- [x] Remove the demo scene-selection default from the generic composition so snapshot renders without an explicit scene ID follow their own timeline instead of producing an empty frame. The chart pixel scenario covers this boundary.
-- [ ] Create two short, different-topic fixtures through public tool calls; do not add topic-specific TSX scenes. Demonstrate a targeted edit changes the intended rendered content while unrelated project state remains intact.
-- [ ] Validate dynamic discovery/invocation with 300 synthetic manifests, separately from the executable-tool count. Test a new plugin tool without changing gateway/registry/orchestration core.
+Derived measurements are evidence attached to the canonical snapshot, not another editable scene/timeline model. Source review, model projection, browser layout and final pixels establish different things.
 
-The generic Project Graph-to-renderer bridge and this small tool set are deliberately pulled forward from later integration/tool-family work. Reuse Remotion and keep the existing Episode demo as a regression fixture. No engine replacement or parallel project model is planned.
+### I1 — Model inspection implemented in this slice
 
-### P1.1-H — Creative-loop and extension acceptance
+- Expose `inspect.snapshot({ snapshotId, frames? })` through Plugin/Registry/Gateway with only `snapshot.read`.
+- Validate ownership, canonical document/schema/references and snapshot identity/hash.
+- Return versioned snapshot/revision evidence, grouped issues, node/track/scene IDs, checked frames, truncation and explicit unchecked domains.
+- Reuse render-model diagnostics. Check transformed declared shape/chart rectangles; edge crossings remain warnings because exits and bleeds may be intentional.
+- Inspect all frames up to 120 frames; for longer sequences sample shot boundaries, animation keys/neighbours and uniform probes within a 120-frame cap. Report omitted candidates and unsampled frames.
+- Bound frame selection, projection work and issue count. Reject excessive explicit requests rather than silently reducing their coverage.
+- Detect an intermediate-frame motion defect, repair keyframes through tools, recheck, preserve old-snapshot results and repeat after restart without rendering.
 
-- [ ] Run a deterministic integration scenario: empty project → discovery → tool calls → project snapshot → preview → targeted revision → export → save/restart/restore, including failure/retry/version-switch paths.
-- [ ] Run one real AI discovery-and-tool-use trial against the same host APIs, with recorded manifests, calls, revisions, diagnostics and artifacts; the model should not edit renderer source to complete the task.
-- [ ] Review representative frames and timing from both short fixtures against content/legibility/layout expectations. Keep this separate from stream/codec metadata validation.
-- [ ] Close P1.1 only on one exact commit with all acceptance gates and evidence recorded. Unverified gates stay open; a passing legacy demo does not close them.
+Details: [Snapshot inspection](P1.1-G-INSPECTION.md). Tool success means inspection executed. `no-issues-detected` is restricted to named checks and frames; it is not a final-video pass.
 
-### Deferred until after this creative loop
+### I2 — Actual layout measurements, next
 
-Plugin marketplace/distribution/signatures, automatic dependency solving, atomic multi-plugin upgrade plans, distributed idempotency/storage, remote object storage, elaborate retention scheduling and a full Studio UI. Necessary local integrity fixes remain in F; broad infrastructure work needs a demonstrated requirement.
+- Use the production Remotion/browser composition with the same snapshot. Wait for fonts before measuring actual text lines and boxes.
+- Return measured versus declared bounds, overflow/crop amounts, node IDs and frame ranges. Label measured, estimated and unsupported results.
+- Make clipping/overlap policy explicit. Intentional overlap, transparent padding and offscreen transitions are not unconditional errors.
+- Include scene/animation boundaries and motion samples. Adaptive refinement/analytic extrema need their own evidence; endpoint checks do not cover intermediate motion.
+- Add seeded overflow, font fallback and renderer-default mismatch cases. Retain pixel regressions to detect faults in the measurement/render bridge.
+- Reuse unchanged evidence when snapshot, measurement version and environment identities match. Broader cache infrastructure stays later.
 
-## Later stages (preserved, boundaries clarified)
+### Quality and cost evidence
+
+Record model-check time, browser-measurement time, encoded preview frames, visual-model calls, seeded defects detected/missed and resulting repairs. Establish a baseline before setting an efficiency target; do not infer savings percentages from one fixture.
+
+Model/geometry checks do not prove text layout, arbitrary path extents, occlusion, final pixels, audio synchronization, scientific correctness or visual appeal. Claims and narration still need approved-source checks. Human visual review remains Gate Q; assistant preview inspection is recorded separately.
+
+## P1.1-H integrated acceptance
+
+Start from an empty project, discover tools, create content, save a snapshot, inspect, preview, edit selected text/position and animation, export, restart, restore and compare. Include failure/safe retry and plugin version switching, with a failed upgrade preserving the previous usable implementation.
+
+Both topics use the same public contracts; no new topic-specific TSX scene is allowed. Preserve approved content and unrelated state during repairs. Compare canonical data, asset identities and declared frame tolerances rather than requiring byte-identical MP4s across environments.
+
+The real-AI trial separately records model/provider, approved brief, manifests, calls, revisions, diagnostics, artifacts and human intervention. Scripted regression does not satisfy that trial. General planning and autonomous visual critique remain P1.4.
+
+## Retained reliability boundaries
+
+Preserve owned idempotency reservations and input-hash matching, explicit uncertain outcomes, restart evidence, cooperative timeout/cancellation accounting, publication/recovery ordering, retained-snapshot asset protection, guarded plugin versions and session/plugin/tool grants.
+
+Operation is trusted, in-process and single-writer. Worker termination, enforceable compute budgets, cross-process transactions and third-party sandboxing are later capabilities. Detailed evidence remains in [F execution](P1.1-F.md), [F project/assets](P1.1-F-PROJECT-ASSETS.md), [F host](P1.1-F-CREATIVE-HOST.md) and [E versions](P1.1-E.md).
+
+## Later roadmap
 
 | Stage | Responsibility |
 | --- | --- |
-| P1.2 — Isolated execution | Job envelopes, single-host worker processes, progress/cancellation, failure isolation and enforceable CPU/memory/GPU/disk/network budgets; remote pools only when needed |
-| P1.3 — Creative breadth | Expand the initial tools into coherent project/timeline, paths/SVG/charts, geometry, materials/cameras, animation, audio/captions and inspection families |
-| P1.4 — Agent iteration | General provider-independent planning and autonomous preview/inspect/diagnose/patch loops, beyond the bounded P1.1 live-agent trial |
-| P1.5 — Extension and scale | Real multi-tool composition, performance evidence and new engines without orchestration rewrites; synthetic catalogue tests are not a count of creative features |
-| P2 — Professional depth | Advanced Remotion motion design, Three.js/Blender 3D, Manim mathematics, simulations, shaders, cinematography, color and audio |
-| P3 — Providers/assets | Pluggable research/LLM/TTS/media providers, sources/claims, transformations, licensing and local-provider options |
-| P4 — Production operations | Remote workers/storage, shared transactions, resumable jobs, incremental/batch exports, operational metrics and optional Studio UI |
+| P1.2 | Isolated single-host workers, progress/cancellation and enforceable resource limits |
+| P1.3 | Broader project/timeline, geometry, SVG/charts, animation, audio/captions and inspection tools |
+| P1.4 | Provider-independent planning and autonomous inspection/repair |
+| P1.5 | Multi-tool composition, performance evidence and new engines without orchestration rewrites |
+| P2 | Advanced motion design, Three.js/Blender, Manim, simulation, cinematography and audio |
+| P3 | Research/LLM/TTS/media providers, claims/sources, asset provenance and licensing |
+| P4 | Remote workers/storage, resumable/batch exports, metrics and optional Studio UI |
 
-## Engineering rules
+Defer marketplace/distribution/signatures, automatic dependency solving, multi-plugin upgrade transactions, distributed storage/idempotency and elaborate GC scheduling until a demonstrated workflow needs them.
 
-Every new task identifies an acceptance gate or real creative operation it serves. Progress reports separate executable tools, catalogue fixtures, synthetic test entries, supported render features and visually reviewed outputs. Scope changes update Vision, Plan, Architecture and acceptance gates together.
+## Historical acceptance evidence
 
-Keep code, tests and scoped documentation in consolidated commits. Inspect the exact commit's CI and representative outputs before changing status. Preserve working foundations; defer speculative infrastructure; use the CPU-cache fixture and a second topic to prevent template lock-in.
+| Baseline | Evidence |
+| --- | --- |
+| P1.0 project | `9cbcf933f3654e94699f199b85a4c0f7bbae1d12`, [CI #43390347025](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43390347025) |
+| Reviewed A–E | `26f20bab6b56a6aa8774c80e5da25db84d00fefb`, [CI #43463301921](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43463301921), 84 tests |
+| F execution | `2566bd0de8b95b27a6adeeeb188c5d854f2b73e5`, [CI #43612600513](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43612600513) |
+| F host | `9e936b7ad15a49b9cad572e48e9b398e6852f5aa`, [CI #43783296488](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43783296488), 170 tests |
+| Generic Project Graph | `c826aa56c1c0d9c6ff977e97f0ae724d1e9310cb`, [CI #43786811086](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43786811086), 175 tests |
+| Snapshot render | `f56a42ab22ddbfc15272d64c3eebe1622bf4e0e6`, [CI #43788856539](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43788856539), 177 tests |
+| Chart/scene fix on main | `020ae447bb81a6e727872188689407a14abac60c`, [CI #43801547940](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43801547940), 185 tests |

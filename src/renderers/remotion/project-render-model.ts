@@ -12,7 +12,7 @@ export interface ProjectRenderElement {
 export interface ProjectRenderModel {
   projectId: string; sceneId?: string; sceneFrame: number; width: number; height: number; fps: number;
   elements: ProjectRenderElement[];
-  diagnostics: Array<{ level: "warning" | "error"; code: string; message: string }>;
+  diagnostics: Array<{ level: "warning" | "error"; code: string; message: string; nodeId?: string; trackId?: string }>;
 }
 type Matrix = [number, number, number, number, number, number];
 const identity: Matrix = [1, 0, 0, 1, 0, 0];
@@ -48,9 +48,9 @@ function animatedTransform(project: ProjectDocument, node: SceneNode, frame: num
       else if (track.targetProperty === "transform.rotation" && Array.isArray(sample.value)) value.rotation = sample.value as number[];
       else if (track.targetProperty === "transform.scale" && Array.isArray(sample.value)) value.scale = sample.value as number[];
       else if (track.targetProperty === "opacity" && typeof sample.value === "number") value.opacity = Math.max(0, Math.min(1, sample.value));
-      else diagnostics.push({ level: "warning", code: "RENDER_UNSUPPORTED_ANIMATION_PROPERTY", message: "Unsupported animation property: " + track.targetProperty });
+      else diagnostics.push({ level: "warning", code: "RENDER_UNSUPPORTED_ANIMATION_PROPERTY", nodeId: node.id, trackId: track.id, message: "Unsupported animation property: " + track.targetProperty });
     } catch (error) {
-      diagnostics.push({ level: "error", code: "RENDER_INVALID_ANIMATION", message: track.id + ": " + (error instanceof Error ? error.message : String(error)) });
+      diagnostics.push({ level: "error", code: "RENDER_INVALID_ANIMATION", nodeId: node.id, trackId: track.id, message: track.id + ": " + (error instanceof Error ? error.message : String(error)) });
     }
   }
   return value;
@@ -78,15 +78,15 @@ export function buildProjectRenderModel(project: ProjectDocument, frame: number,
     fps: sequence?.fps ?? project.project.timebase.fps, elements: [], diagnostics,
   };
   if (!scene) {
-    diagnostics.push({ level: "warning", code: "RENDER_SCENE_NOT_FOUND", message: "No scene is active at frame " + frame });
+    diagnostics.push({ level: "warning", code: "RENDER_SCENE_NOT_FOUND", message: "No scene is active at the requested frame" });
     return result;
   }
   const nodes = new Map(project.nodes.map((node) => [node.id, node]));
   const visited = new Set<string>();
   const visit = (id: string, parent: Matrix, parentOpacity: number): void => {
-    if (visited.has(id)) { diagnostics.push({ level: "error", code: "RENDER_HIERARCHY_CYCLE", message: "Repeated node in hierarchy: " + id }); return; }
+    if (visited.has(id)) { diagnostics.push({ level: "error", code: "RENDER_HIERARCHY_CYCLE", nodeId: id, message: "Repeated node in hierarchy: " + id }); return; }
     const node = nodes.get(id);
-    if (!node) { diagnostics.push({ level: "error", code: "RENDER_NODE_MISSING", message: "Missing node: " + id }); return; }
+    if (!node) { diagnostics.push({ level: "error", code: "RENDER_NODE_MISSING", nodeId: id, message: "Missing node: " + id }); return; }
     visited.add(id);
     const local = localMatrix(node, project, sceneFrame, diagnostics);
     const matrix = multiply(parent, local.matrix);
@@ -112,7 +112,7 @@ export function buildProjectRenderModel(project: ProjectDocument, frame: number,
           point && typeof point.label === "string" && point.label.trim().length > 0 && point.label.length <= 48 &&
           typeof point.value === "number" && Number.isFinite(point.value));
         if (!chartType || !validData) {
-          diagnostics.push({ level: "error", code: "RENDER_INVALID_CHART_DATA", message: "Chart node " + node.id + " has invalid chart type or data" });
+          diagnostics.push({ level: "error", code: "RENDER_INVALID_CHART_DATA", nodeId: node.id, message: "Chart node " + node.id + " has invalid chart type or data" });
         } else {
           result.elements.push({
             id: node.id, type: "chart", chartType,
@@ -140,7 +140,7 @@ export function buildProjectRenderModel(project: ProjectDocument, frame: number,
     } else if (node.type === "path") {
       const data = component(node, "geometry") ?? {};
       const pathData = typeof data.pathData === "string" ? data.pathData : "";
-      if (!isSafeSvgPathData(pathData)) diagnostics.push({ level: "error", code: "RENDER_INVALID_PATH_DATA", message: "Path node " + node.id + " has invalid or unsupported SVG path data" });
+      if (!isSafeSvgPathData(pathData)) diagnostics.push({ level: "error", code: "RENDER_INVALID_PATH_DATA", nodeId: node.id, message: "Path node " + node.id + " has invalid or unsupported SVG path data" });
       else result.elements.push({
         id: node.id, type: "path", pathData, fillRule: data.fillRule === "evenodd" ? "evenodd" : "nonzero",
         width: safeDimension(data.width, 1000), height: safeDimension(data.height, 1000),
@@ -150,7 +150,7 @@ export function buildProjectRenderModel(project: ProjectDocument, frame: number,
         opacity, transform: "matrix(" + matrix.join(",") + ")",
       });
     } else if (node.type !== "group") {
-      diagnostics.push({ level: "warning", code: "RENDER_UNSUPPORTED_NODE_TYPE", message: "Node type is not supported by the 2D adapter: " + node.type });
+      diagnostics.push({ level: "warning", code: "RENDER_UNSUPPORTED_NODE_TYPE", nodeId: node.id, message: "Node type is not supported by the 2D adapter: " + node.type });
     }
     for (const childId of node.childIds ?? []) visit(childId, matrix, opacity);
   };

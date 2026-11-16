@@ -1,6 +1,6 @@
 # ScienceMotion AI — Platform Vision
 
-Last updated: 2026-11-14
+Last updated: 2026-11-16
 
 ## Product definition
 
@@ -17,6 +17,8 @@ Approved editorial package
   -> agent planning and typed tool calls
   -> versioned Project Graph mutations
   -> immutable project snapshot
+  -> programmatic checks / browser layout measurements
+  -> structured diagnostics and targeted tool edits
   -> generic 2D renderer adapter
   -> preview / targeted revision / final video
 ```
@@ -24,6 +26,8 @@ Approved editorial package
 Deliver approximately ten executable tools, a bounded generic 2D rendering subset, two short explainers on different topics, and a catalogue-scale test using 300 synthetic manifests. These are planned P1.1 acceptance targets, not claims about current capabilities. Detailed gates are defined in [P1.1 Acceptance](P1.1-ACCEPTANCE.md).
 
 A scripted invocation sequence first provides reproducible regression evidence; a real AI invocation trial then demonstrates discovery and schema-guided use of the same tools. A full autonomous visual critique agent remains a later milestone.
+
+Prefer executable structural, temporal and geometry checks over repeated visual-model inspection of whole videos. The AI consumes snapshot-bound diagnostics and revises specific objects. The initial model inspector is implemented; browser/font layout measurement is the next bounded increment. Source/model checks do not prove final pixels or scientific meaning. Preserve representative previews, media validation and human review; measure check time, vision calls and missed seeded defects before claiming efficiency gains.
 
 ## Non-negotiable boundaries
 

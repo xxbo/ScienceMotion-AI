@@ -66,6 +66,14 @@ Workspace project reference roles include workspace identity; snapshot owners in
 
 Legacy standalone snapshot files are not automatically enrolled in retention. Detached-document lifecycle helpers are compatibility utilities; persisted creative edits use the workspace. Raw low-level deletion still bypasses lifecycle protection and must remain private to host storage composition. First creative-host wiring/policy, scheduled GC and remote/shared storage remain open. Details and failure tests: [P1.1-F-PROJECT-ASSETS.md](P1.1-F-PROJECT-ASSETS.md).
 
+## Snapshot inspection — implemented I1 and planned I2
+
+The public `inspect.snapshot` tool requires only `snapshot.read`. Its scoped service validates the retained snapshot's project ownership and canonical document, then verifies identity/hash and runs the bounded model inspector. The tool returns a versioned JSON report with snapshot/revision identity, exact checked frames, grouped diagnostics and explicit unchecked domains; node/track IDs also flow into ToolResult diagnostics. It does not call the renderer or a vision provider, create media artifacts or mutate project state. Execution evidence is persisted normally.
+
+I1 reuses `buildProjectRenderModel` and checks declared affine shape/chart bounds. Short sequences up to 120 frames are checked exhaustively; longer sequences are sampled and coverage is disclosed. Selection/projection work and issue counts are bounded. Browser text layout, path ink extents, occlusion, asset bytes, final pixels/audio and content/presentation quality are outside I1. Missing findings do not establish video correctness. See [Snapshot inspection](P1.1-G-INSPECTION.md).
+
+I2 will measure actual font/layout results from the same Remotion/browser composition and snapshot. Measurements are immutable evidence, not a second scene model. The AI consumes structured findings and edits through normal revisioned tools; representative pixel/visual checks remain separate acceptance evidence.
+
 ## Professional engines and deployment
 
 Remotion remains the first video engine. Planned specialist adapters include Three.js for 3D, Blender for offline 3D/compositing, Manim for mathematics and FFmpeg for media processing. Reuse common project/tool/artifact contracts with explicit capability boundaries.
