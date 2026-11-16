@@ -1,0 +1,190 @@
+{
+  "videoSha256": "476fe0a55d78b17507a7d6626008195ebe329614aa6879a091ed8861bba9dc60",
+  "videoBytes": 936538,
+  "source": {
+    "baseCommit": "d16a92e06ba88c8223b6c7a8bac62862975440e3",
+    "snapshot": {
+      "id": "cache-showcase-v1",
+      "createdAt": "2026-11-16T06:21:31.300Z",
+      "projectId": "cpu-cache-showcase",
+      "schemaVersion": "1.1.0",
+      "contentHash": "4c312499cc95ec0dd95524115580fcf86351043c905fb4e55ecd23bed7c0c02f"
+    },
+    "nodes": 137,
+    "animationTracks": 38,
+    "toolCalls": 206,
+    "visualPath": "Unmodified public tools -> snapshot -> ProjectGraph Remotion renderer",
+    "narrationPath": "External Edge TTS + FFmpeg finishing, not a generic Project Graph audio track"
+  },
+  "media": {
+    "width": 1280,
+    "height": 720,
+    "fps": 30,
+    "frames": 900,
+    "videoSeconds": 30,
+    "audioSeconds": 30,
+    "videoCodec": "h264",
+    "audioCodec": "aac"
+  },
+  "modelInspection": {
+    "checkedFrames": [
+      0,
+      45,
+      90,
+      179,
+      180,
+      240,
+      300,
+      419,
+      420,
+      480,
+      540,
+      659,
+      660,
+      720,
+      780,
+      899
+    ],
+    "issues": [],
+    "allFramesChecked": false,
+    "notChecked": [
+      "browser-layout",
+      "text-overflow",
+      "svg-path-extents",
+      "occlusion",
+      "final-pixels",
+      "asset-bytes",
+      "audio",
+      "scientific-accuracy",
+      "presentation-quality",
+      "unsampled-frames"
+    ],
+    "elapsedMs": 379
+  },
+  "renders": [
+    {
+      "tool": "render.preview",
+      "input": {
+        "snapshotId": "cache-showcase-v1",
+        "frame": 111
+      },
+      "elapsedMs": 7398
+    },
+    {
+      "tool": "render.preview",
+      "input": {
+        "snapshotId": "cache-showcase-v1",
+        "frame": 328
+      },
+      "elapsedMs": 1725
+    },
+    {
+      "tool": "render.preview",
+      "input": {
+        "snapshotId": "cache-showcase-v1",
+        "frame": 568
+      },
+      "elapsedMs": 1957
+    },
+    {
+      "tool": "render.preview",
+      "input": {
+        "snapshotId": "cache-showcase-v1",
+        "frame": 808
+      },
+      "elapsedMs": 1915
+    },
+    {
+      "tool": "render.video",
+      "input": {
+        "snapshotId": "cache-showcase-v1",
+        "startFrame": 0,
+        "durationFrames": 180
+      },
+      "elapsedMs": 7296
+    },
+    {
+      "tool": "render.video",
+      "input": {
+        "snapshotId": "cache-showcase-v1",
+        "startFrame": 180,
+        "durationFrames": 240
+      },
+      "elapsedMs": 9155
+    },
+    {
+      "tool": "render.video",
+      "input": {
+        "snapshotId": "cache-showcase-v1",
+        "startFrame": 420,
+        "durationFrames": 240
+      },
+      "elapsedMs": 9239
+    },
+    {
+      "tool": "render.video",
+      "input": {
+        "snapshotId": "cache-showcase-v1",
+        "startFrame": 660,
+        "durationFrames": 240
+      },
+      "elapsedMs": 9195
+    }
+  ],
+  "audioFinishing": {
+    "voice": "zh-CN-YunxiNeural",
+    "rate": "+15%",
+    "shots": [
+      {
+        "scene": "why",
+        "text": "CPU 算得快，却常常要等数据。缓存，把常用数据放得更近。",
+        "ttsSeconds": 5.448,
+        "tempoFactor": 1.018317757009346,
+        "timelineStartSeconds": 0.25,
+        "spokenEndSeconds": 5.6,
+        "sceneEndSeconds": 6.0,
+        "paddedSamples": 288000,
+        "sampleRate": 48000
+      },
+      {
+        "scene": "routes",
+        "text": "数据在缓存里，就是命中，沿近路返回。找不到，就要继续向下查找，必要时访问内存。",
+        "ttsSeconds": 7.824,
+        "tempoFactor": 1.0644897959183675,
+        "timelineStartSeconds": 6.25,
+        "spokenEndSeconds": 13.599999999999998,
+        "sceneEndSeconds": 14.0,
+        "paddedSamples": 384000,
+        "sampleRate": 48000
+      },
+      {
+        "scene": "locality",
+        "text": "缓存有效，靠的是局部性：刚用过的数据可能再用，相邻的数据也常被连续访问。",
+        "ttsSeconds": 6.768,
+        "tempoFactor": 1.0,
+        "timelineStartSeconds": 14.25,
+        "spokenEndSeconds": 21.018,
+        "sceneEndSeconds": 22.0,
+        "paddedSamples": 384000,
+        "sampleRate": 48000
+      },
+      {
+        "scene": "average",
+        "text": "在这个简化模型里，命中率从零升到百分之九十，平均延迟就从十一降到二。",
+        "ttsSeconds": 6.528,
+        "tempoFactor": 1.0,
+        "timelineStartSeconds": 22.25,
+        "spokenEndSeconds": 28.778,
+        "sceneEndSeconds": 30.0,
+        "paddedSamples": 384000,
+        "sampleRate": 48000
+      }
+    ]
+  },
+  "review": {
+    "assistantRepresentativeFrames": 4,
+    "userVisualReview": "pending",
+    "humanListeningReview": "not claimed"
+  },
+  "reproduction": "npm run render:showcase; .venv/bin/python scripts/finish-cache-showcase.py"
+}

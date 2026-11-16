@@ -36,6 +36,8 @@ The built-in workspace catalogue has 18 executable tools including inspection an
 
 ## Next delivery sequence
 
+Current product checkpoint: review the [30-second CPU-cache sample](showcase/README.md) before adding more infrastructure. It demonstrates existing generic 2D tools with external narration finishing. The authoring script and fixed video provide an observable baseline; they do not close the two-topic, restore, real-AI or human-review gates. Prioritize the user's feedback on clarity, pacing and visible animation when selecting the next increment.
+
 | Order | Increment | Completion evidence |
 | --- | --- | --- |
 | 1 | Inspection I1: expose model checks through the public host | Typed report; permission/hash/frame/work limits; repair/recheck/restart scenario with zero render/vision calls; CI and main integration |
