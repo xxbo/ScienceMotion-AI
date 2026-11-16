@@ -76,6 +76,18 @@ jobs:
       - name: Measure production browser layout and repair text without image encoding
         run: npm run inspect:layout-smoke
 
+      - name: Verify two-topic public creation, repair, export and restore
+        id: creative-loop
+        run: npm run accept:creative-loop
+
+      - name: Upload creative-loop evidence and before/after/restored videos
+        if: ${{ !cancelled() && (steps.creative-loop.outcome == 'success' || steps.creative-loop.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: creative-loop-evidence
+          path: out/creative-loop/
+          if-no-files-found: error
+
       - name: Render generic Project Graph video
         run: npm run render:project
 

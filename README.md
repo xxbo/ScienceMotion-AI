@@ -15,13 +15,13 @@ Main is the delivery baseline. The merged chart/scene-selection fix on `020ae447
 | P1.1-A–D | Local discovery/gateway, plugin lifecycle, execution records, content-addressed artifacts and references |
 | P1.1-E | Multiple installed plugin versions, one active version, pins/locks, guarded switching and rollback |
 | P1.1-F | Accepted trusted local creative host; CI #43783296488 passed |
-| P1.1-G | Initial 2D tools and snapshot PNG/MP4 rendering implemented and CI-verified; chart drawing regression checks added; two-topic acceptance remains open |
+| P1.1-G | Initial 2D tools and snapshot PNG/MP4 rendering; chart regressions and two-topic creation/edit/export/restart/restore automation |
 | Inspection I1 | Read-only model diagnostics, declared shape/chart bounds and exact frame coverage |
 | Inspection I2 | Production-browser text/element measurement without image encoding; font-ready line boxes, overflow warnings and heuristic font fallback |
-| P1.1-H | Two-topic creative-loop and real AI invocation acceptance remains open |
+| P1.1-H | Deterministic two-topic workflow implemented; integrated plugin switching, real AI invocation and human review remain open |
 | P1.2+ | Isolated workers, broader tools/professional engines and general autonomous visual iteration |
 
-The built-in workspace plugin now includes initial scene, text, shape, transform and keyframe tools. The generic Project Graph composition is a first 2D slice; the CPU-cache Episode renderer remains separate. Snapshot-based PNG preview and MP4 render tools are implemented behind the Creative Host; the production Remotion host smoke test passed CI #43788856539 (177/177 tests). Two-topic creative-loop acceptance and broader tool families remain in progress.
+The built-in workspace plugin now includes initial scene, text, shape, transform and keyframe tools. The generic Project Graph composition is a first 2D slice; the CPU-cache Episode renderer remains separate. The [two-topic acceptance scenario](docs/P1.1-CREATIVE-LOOP.md) creates 12-second cache and water-cycle fixtures through public tools, detects/repairs seeded defects, edits text/motion and verifies export/restart/restore including original data dependencies. CI preserves six baseline/edited/restored MP4s, 18 previews, manifests and invocation evidence. These technical fixtures are silent and scripted.
 
 Structured SVG paths and bar/line charts use the same Project Graph composition. Chart validation now covers the final SVG drawing and production-host PNG/MP4 pixels, including a targeted data edit; see [chart implementation and evidence](docs/P1.1-G-CHARTS.md). A passing data-projection test alone does not establish visible chart output.
 
@@ -34,9 +34,9 @@ Approved content -> AI tool calls -> Project Graph -> immutable snapshot
   -> structured inspection -> targeted edit -> representative preview -> video export / restore
 ```
 
-The planned proof uses roughly 10–12 executable tools and two short, different-topic fixtures, plus a separate 300-manifest synthetic catalogue test. Reuse Remotion and the existing contracts. Marketplace/distributed infrastructure is deferred until this creative loop works.
+The current host has 19 executable built-ins; acceptance adds one executable test extension and grants 17 tools to the fixture workflow. One catalogue-only manifest and the planned 300-manifest scale scenario are counted separately. Reuse Remotion and the existing contracts; marketplace/distributed infrastructure remains deferred.
 
-Next is the two-topic creation/edit/export/restart/restore scenario. The user has deferred effect review to final acceptance; it remains pending. See [Development Plan](docs/PLAN.md) for sequencing and [P1.1 Acceptance](docs/P1.1-ACCEPTANCE.md) for measurable gates. These targets are not completed features.
+P1.1 has evidence for 18/25 acceptance items, not an effort-completion percentage. Next are integrated plugin switching and the 300-manifest scenario, then the local AI-client interface and a recorded real model trial. The user has deferred effect review to final acceptance; it remains pending. See [Development Plan](docs/PLAN.md) for sequencing and [P1.1 Acceptance](docs/P1.1-ACCEPTANCE.md) for measurable gates.
 
 ## Development checks
 
@@ -54,11 +54,14 @@ npm run validate:plugin-manifests
 npm run render:storyboard
 npm run inspect:snapshot-smoke
 npm run inspect:layout-smoke
+npm run accept:creative-loop
 ```
 
 `npm run studio` and `npm run render` also generate narration and require the Python voice environment described by the repository's voice scripts and CI workflow.
 
 `inspect:layout-smoke` requires the Remotion browser, Chinese fonts and FFmpeg for its two production PNG regressions. The `inspect.layout` tool itself returns measured JSON without encoding images or calling a visual model; see [scope and evidence](docs/P1.1-G-LAYOUT.md).
+
+`accept:creative-loop` uses the same dependencies and writes to `out/creative-loop/`. Download CI's `creative-loop-evidence` artifact for the videos, previews and complete evidence; see [assertions and remaining gates](docs/P1.1-CREATIVE-LOOP.md).
 
 ## Design and documentation
 

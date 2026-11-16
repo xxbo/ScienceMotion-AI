@@ -20,6 +20,8 @@
   "include": [
     "src/**/*.ts",
     "src/**/*.tsx",
-    "episodes/**/*.json"
+    "episodes/**/*.json",
+    "scripts/creative-loop-acceptance.ts",
+    "scripts/fixtures/**/*.ts"
   ]
 }
