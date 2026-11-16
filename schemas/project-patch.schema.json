@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://xxbo.github.io/ScienceMotion-AI/schemas/project-patch.schema.json",
   "title": "ScienceMotion Project Patch",
-  "$comment": "Patch 1.1.0 preserves node operations; 1.2.0 adds asset operations; 1.3.0 adds scene, shot and animation editing. ProjectDocument remains 1.1.0.",
+  "$comment": "Patch 1.1.0 preserves node operations; 1.2.0 adds asset operations; 1.3.0 adds scene, shot and animation editing. ProjectDocument remains 1.1.0. Keyframe validation is locally defined to keep the Patch schema self-contained.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -519,7 +519,7 @@
                     "type": "array",
                     "minItems": 1,
                     "items": {
-                      "$ref": "https://xxbo.github.io/ScienceMotion-AI/schemas/project.schema.json#/definitions/keyframe"
+                      "$ref": "#/definitions/keyframe"
                     }
                   },
                   "loop": {
@@ -659,6 +659,32 @@
         },
         "metadata": {
           "type": "object"
+        }
+      }
+    },
+    "keyframe": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "frame",
+        "value"
+      ],
+      "properties": {
+        "frame": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "value": {},
+        "interpolation": {
+          "enum": [
+            "linear",
+            "step",
+            "bezier",
+            "hermite"
+          ]
+        },
+        "easing": {
+          "type": "string"
         }
       }
     }
