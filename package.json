@@ -24,7 +24,8 @@
     "validate:host-render": "node scripts/validate-host-render.mjs",
     "render:chart-smoke": "tsx scripts/render-chart-smoke.ts",
     "inspect:snapshot-smoke": "tsx scripts/inspect-snapshot-smoke.ts",
-    "render:showcase": "tsx scripts/render-cache-showcase.ts"
+    "render:showcase": "tsx scripts/render-cache-showcase.ts",
+    "inspect:layout-smoke": "tsx scripts/inspect-layout-smoke.ts"
   },
   "dependencies": {
     "@remotion/cli": "^4.0.0",

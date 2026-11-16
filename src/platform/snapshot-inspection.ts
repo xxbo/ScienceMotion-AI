@@ -12,16 +12,16 @@ export class SnapshotInspectionError extends Error {
 }
 const reject = (code: string, message: string): never => { throw new SnapshotInspectionError(code, message); };
 
-function chooseFrames(project: ProjectDocument, requested?: readonly number[]) {
+export function chooseInspectionFrames(project: ProjectDocument, requested?: readonly number[], maxFrames = MAX_INSPECTION_FRAMES) {
   const duration = project.sequences[0]?.durationFrames;
   if (!Number.isSafeInteger(duration) || duration < 1) reject("INSPECT_SEQUENCE_INVALID", "A bounded sequence duration is required");
   if (requested !== undefined) {
-    if (!Array.isArray(requested) || requested.length < 1 || requested.length > MAX_INSPECTION_FRAMES ||
+    if (!Array.isArray(requested) || requested.length < 1 || requested.length > maxFrames ||
       requested.some((frame) => !Number.isSafeInteger(frame) || frame < 0 || frame >= duration) || new Set(requested).size !== requested.length)
-      reject("INSPECT_FRAMES_INVALID", "Supply 1–120 unique integer frames inside the first sequence");
+      reject("INSPECT_FRAMES_INVALID", `Supply 1–${maxFrames} unique integer frames inside the first sequence`);
     return { frames: [...requested].sort((a, b) => a - b), omitted: 0 };
   }
-  if (duration <= MAX_INSPECTION_FRAMES) return { frames: Array.from({ length: duration }, (_, i) => i), omitted: 0 };
+  if (duration <= maxFrames) return { frames: Array.from({ length: duration }, (_, i) => i), omitted: 0 };
   const candidates = new Set<number>([0, duration - 1]);
   const add = (frame: number) => { if (Number.isSafeInteger(frame) && frame >= 0 && frame < duration) candidates.add(frame); };
   // Uniform probes complement scene boundaries and animation keys; this does not prove all intermediate frames.
@@ -57,8 +57,8 @@ function chooseFrames(project: ProjectDocument, requested?: readonly number[]) {
     for (const offset of [-1, 0, 1]) add(key + offset);
   }
   const sorted = [...candidates].sort((a, b) => a - b);
-  const frames = sorted.length <= MAX_INSPECTION_FRAMES ? sorted : Array.from({ length: MAX_INSPECTION_FRAMES },
-    (_, i) => sorted[Math.round(i * (sorted.length - 1) / (MAX_INSPECTION_FRAMES - 1))]);
+  const frames = sorted.length <= maxFrames ? sorted : Array.from({ length: maxFrames },
+    (_, i) => sorted[Math.round(i * (sorted.length - 1) / (maxFrames - 1))]);
   return { frames, omitted: sorted.length - frames.length };
 }
 
@@ -82,7 +82,7 @@ export function inspectProjectSnapshot(saved: ProjectSnapshot, requestedFrames?:
   if (saved.contentHash !== hashProject(project)) reject("INSPECT_SNAPSHOT_CORRUPT", "Snapshot content hash does not match its document");
   if (saved.projectId !== project.project.id || !project.revisions.at(-1)?.id)
     reject("INSPECT_SNAPSHOT_INVALID", "Snapshot project/revision identity is inconsistent");
-  const selection = chooseFrames(project, requestedFrames);
+  const selection = chooseInspectionFrames(project, requestedFrames);
   const animationWork = project.animationTracks.reduce((sum, track) => sum + 1 + track.keyframes.length, 0);
   if (selection.frames.length * Math.max(1, project.nodes.length) * (1 + animationWork) > MAX_PROJECTION_WORK)
     reject("INSPECT_WORK_LIMIT", "Inspection exceeds the model-work budget; request fewer frames");

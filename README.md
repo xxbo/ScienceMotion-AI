@@ -16,7 +16,8 @@ Main is the delivery baseline. The merged chart/scene-selection fix on `020ae447
 | P1.1-E | Multiple installed plugin versions, one active version, pins/locks, guarded switching and rollback |
 | P1.1-F | Accepted trusted local creative host; CI #43783296488 passed |
 | P1.1-G | Initial 2D tools and snapshot PNG/MP4 rendering implemented and CI-verified; chart drawing regression checks added; two-topic acceptance remains open |
-| Inspection I1 | Read-only model diagnostics, declared shape/chart bounds and exact frame coverage; browser text/layout measurement is next |
+| Inspection I1 | Read-only model diagnostics, declared shape/chart bounds and exact frame coverage |
+| Inspection I2 | Production-browser text/element measurement without image encoding; font-ready line boxes, overflow warnings and heuristic font fallback |
 | P1.1-H | Two-topic creative-loop and real AI invocation acceptance remains open |
 | P1.2+ | Isolated workers, broader tools/professional engines and general autonomous visual iteration |
 
@@ -35,7 +36,7 @@ Approved content -> AI tool calls -> Project Graph -> immutable snapshot
 
 The planned proof uses roughly 10–12 executable tools and two short, different-topic fixtures, plus a separate 300-manifest synthetic catalogue test. Reuse Remotion and the existing contracts. Marketplace/distributed infrastructure is deferred until this creative loop works.
 
-See [Development Plan](docs/PLAN.md) for sequencing and [P1.1 Acceptance](docs/P1.1-ACCEPTANCE.md) for measurable gates. These targets are not completed features.
+Next is the two-topic creation/edit/export/restart/restore scenario. The user has deferred effect review to final acceptance; it remains pending. See [Development Plan](docs/PLAN.md) for sequencing and [P1.1 Acceptance](docs/P1.1-ACCEPTANCE.md) for measurable gates. These targets are not completed features.
 
 ## Development checks
 
@@ -52,9 +53,12 @@ npm run validate:tool-manifests
 npm run validate:plugin-manifests
 npm run render:storyboard
 npm run inspect:snapshot-smoke
+npm run inspect:layout-smoke
 ```
 
 `npm run studio` and `npm run render` also generate narration and require the Python voice environment described by the repository's voice scripts and CI workflow.
+
+`inspect:layout-smoke` requires the Remotion browser, Chinese fonts and FFmpeg for its two production PNG regressions. The `inspect.layout` tool itself returns measured JSON without encoding images or calling a visual model; see [scope and evidence](docs/P1.1-G-LAYOUT.md).
 
 ## Design and documentation
 

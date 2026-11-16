@@ -1,20 +1,22 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { AbsoluteFill, useCurrentFrame } from "remotion";
 import type { ProjectDocument } from "../contracts/project";
 import { buildProjectRenderModel, type ProjectRenderModel } from "../renderers/remotion/project-render-model";
 import { ProjectChartSvg } from "./ProjectChartSvg";
+import { ProjectLayoutProbe } from "./ProjectLayoutProbe";
 
-export interface ProjectGraphProps { project: ProjectDocument; sceneId?: string }
-export const ProjectGraphComposition: React.FC<ProjectGraphProps> = ({ project, sceneId }) => {
+export interface ProjectGraphProps { project: ProjectDocument; sceneId?: string; layoutInspection?: { token: string } }
+export const ProjectGraphComposition: React.FC<ProjectGraphProps> = ({ project, sceneId, layoutInspection }) => {
   const frame = useCurrentFrame();
-  const model = buildProjectRenderModel(project, frame, sceneId);
-  return <ProjectGraphFrame model={model} />;
+  const model = useMemo(() => buildProjectRenderModel(project, frame, sceneId), [project, frame, sceneId]);
+  return <><ProjectGraphFrame model={model} />{layoutInspection &&
+    <ProjectLayoutProbe key={frame} model={model} frame={frame} token={layoutInspection.token} />}</>;
 };
 
 /** The same frame surface is used by Remotion and markup regression checks. */
 export const ProjectGraphFrame: React.FC<{ model: ProjectRenderModel }> = ({ model }) => {
   return (
-    <AbsoluteFill style={{ backgroundColor: "#07111f", color: "#f4f7fb", overflow: "hidden" }}>
+    <AbsoluteFill data-project-graph-root="true" style={{ backgroundColor: "#07111f", color: "#f4f7fb", overflow: "hidden" }}>
       {model.elements.map((element) => element.type === "chart" ? (
         <ProjectChartSvg key={element.id} element={element} />
       ) : element.type === "path" ? (

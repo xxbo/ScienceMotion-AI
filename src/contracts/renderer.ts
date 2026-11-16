@@ -1,5 +1,6 @@
 import type { EpisodePackage } from "./episode";
 import type { ProjectDocument } from "./project";
+import type { LayoutFrameMeasurement } from "./layout-inspection";
 
 export interface RendererCapabilities {
   sceneTypes: string[];
@@ -58,4 +59,5 @@ export interface ProjectGraphRenderRequest { project: ProjectDocument; revisionI
 export interface ProjectGraphPreviewRequest extends ProjectGraphRenderRequest { frame: number }
 export interface ProjectGraphVideoRequest extends ProjectGraphRenderRequest { startFrame: number; durationFrames: number }
 export interface ProjectGraphRenderOutput { bytes: Uint8Array; mediaType: "image/png" | "video/mp4"; extension: "png" | "mp4"; rendererId: string; rendererVersion: string }
-export interface ProjectGraphSnapshotRenderer { readonly id: string; readonly version: string; renderPreview(request: ProjectGraphPreviewRequest): Promise<ProjectGraphRenderOutput>; renderVideo(request: ProjectGraphVideoRequest): Promise<ProjectGraphRenderOutput> }
+export interface ProjectGraphLayoutRequest extends ProjectGraphRenderRequest { frames: number[]; signal?: AbortSignal }
+export interface ProjectGraphSnapshotRenderer { readonly id: string; readonly version: string; renderPreview(request: ProjectGraphPreviewRequest): Promise<ProjectGraphRenderOutput>; renderVideo(request: ProjectGraphVideoRequest): Promise<ProjectGraphRenderOutput>; measureLayout?(request: ProjectGraphLayoutRequest): Promise<LayoutFrameMeasurement[]> }

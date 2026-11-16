@@ -1,0 +1,449 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Snapshot browser layout inspection report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "inspector",
+    "snapshotId",
+    "snapshotHash",
+    "projectId",
+    "revisionId",
+    "sequenceId",
+    "outcome",
+    "coverage",
+    "frames",
+    "issues",
+    "issuesTruncated",
+    "omittedIssueOccurrences",
+    "cost"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "inspector": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "version"
+      ],
+      "properties": {
+        "id": {
+          "const": "remotion.browser-layout"
+        },
+        "version": {
+          "const": "1.0.0"
+        }
+      }
+    },
+    "snapshotId": {
+      "type": "string"
+    },
+    "snapshotHash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "projectId": {
+      "type": "string"
+    },
+    "revisionId": {
+      "type": "string"
+    },
+    "sequenceId": {
+      "type": "string"
+    },
+    "outcome": {
+      "enum": [
+        "issues-found",
+        "no-issues-detected"
+      ]
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "selection",
+        "mode",
+        "totalFrames",
+        "checkedFrames",
+        "omittedCandidateFrames",
+        "checks",
+        "notChecked"
+      ],
+      "properties": {
+        "selection": {
+          "enum": [
+            "automatic",
+            "explicit"
+          ]
+        },
+        "mode": {
+          "enum": [
+            "all-frames",
+            "sampled-frames"
+          ]
+        },
+        "totalFrames": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "checkedFrames": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "maxItems": 12,
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "omittedCandidateFrames": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 30,
+          "minItems": 0
+        },
+        "notChecked": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 30,
+          "minItems": 0
+        }
+      }
+    },
+    "frames": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "frame",
+          "projectId",
+          "viewport",
+          "environment",
+          "nodes"
+        ],
+        "properties": {
+          "frame": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "sceneId": {
+            "type": "string"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "viewport": {
+            "$ref": "#/definitions/rect"
+          },
+          "environment": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "userAgent",
+              "devicePixelRatio",
+              "fontsStatus"
+            ],
+            "properties": {
+              "userAgent": {
+                "type": "string"
+              },
+              "devicePixelRatio": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "fontsStatus": {
+                "const": "loaded"
+              }
+            }
+          },
+          "nodes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "nodeId",
+                "type",
+                "opacity",
+                "declared",
+                "elementBounds",
+                "contentBounds",
+                "boundsKind",
+                "viewportOverflow"
+              ],
+              "properties": {
+                "nodeId": {
+                  "type": "string"
+                },
+                "type": {
+                  "enum": [
+                    "text",
+                    "shape",
+                    "path",
+                    "chart"
+                  ]
+                },
+                "opacity": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "declared": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "width",
+                    "height"
+                  ],
+                  "properties": {
+                    "width": {
+                      "type": "number"
+                    },
+                    "height": {
+                      "type": "number"
+                    }
+                  }
+                },
+                "elementBounds": {
+                  "$ref": "#/definitions/rect"
+                },
+                "contentBounds": {
+                  "$ref": "#/definitions/rect"
+                },
+                "boundsKind": {
+                  "enum": [
+                    "text-line-boxes",
+                    "element-box"
+                  ]
+                },
+                "viewportOverflow": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "left",
+                    "top",
+                    "right",
+                    "bottom"
+                  ],
+                  "properties": {
+                    "left": {
+                      "type": "number"
+                    },
+                    "top": {
+                      "type": "number"
+                    },
+                    "right": {
+                      "type": "number"
+                    },
+                    "bottom": {
+                      "type": "number"
+                    }
+                  }
+                },
+                "text": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "lineCount",
+                    "lineBoxes",
+                    "lineBoxesTruncated",
+                    "layoutWidth",
+                    "layoutHeight",
+                    "overflowX",
+                    "overflowY",
+                    "requestedFontFamily",
+                    "computedFontFamily",
+                    "fontSize",
+                    "fontWeight",
+                    "firstFamilyStatus",
+                    "fontProbeWidths"
+                  ],
+                  "properties": {
+                    "lineCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "lineBoxes": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/definitions/rect"
+                      },
+                      "maxItems": 32,
+                      "minItems": 0
+                    },
+                    "lineBoxesTruncated": {
+                      "type": "boolean"
+                    },
+                    "layoutWidth": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "layoutHeight": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "overflowX": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "overflowY": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "requestedFontFamily": {
+                      "type": "string"
+                    },
+                    "computedFontFamily": {
+                      "type": "string"
+                    },
+                    "fontSize": {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    "fontWeight": {
+                      "type": "string"
+                    },
+                    "firstFamilyStatus": {
+                      "enum": [
+                        "generic",
+                        "available-likely",
+                        "fallback-likely",
+                        "unverified"
+                      ]
+                    },
+                    "fontProbeWidths": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      },
+                      "maxItems": 6,
+                      "minItems": 0
+                    }
+                  }
+                }
+              }
+            },
+            "maxItems": 200,
+            "minItems": 0
+          }
+        }
+      },
+      "maxItems": 12,
+      "minItems": 1
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "level",
+          "code",
+          "message",
+          "frame"
+        ],
+        "properties": {
+          "level": {
+            "enum": [
+              "warning",
+              "error"
+            ]
+          },
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "frame": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "nodeId": {
+            "type": "string"
+          },
+          "sceneId": {
+            "type": "string"
+          }
+        }
+      },
+      "maxItems": 200,
+      "minItems": 0
+    },
+    "issuesTruncated": {
+      "type": "boolean"
+    },
+    "omittedIssueOccurrences": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "cost": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "elapsedMs",
+        "browserFrames",
+        "encodedImageFrames",
+        "visualModelCalls"
+      ],
+      "properties": {
+        "elapsedMs": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "browserFrames": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12
+        },
+        "encodedImageFrames": {
+          "const": 0
+        },
+        "visualModelCalls": {
+          "const": 0
+        }
+      }
+    }
+  },
+  "definitions": {
+    "rect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "x",
+        "y",
+        "width",
+        "height"
+      ],
+      "properties": {
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "width": {
+          "type": "number",
+          "minimum": 0
+        },
+        "height": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}
