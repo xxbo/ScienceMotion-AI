@@ -67,6 +67,12 @@ jobs:
       - name: Ensure Remotion browser
         run: npx remotion browser ensure
 
+      - name: Render generic Project Graph video
+        run: npm run render:project
+
+      - name: Validate Project Graph video
+        run: npm run validate:project-render
+
       - name: Render demo video
         run: npm run render
 
@@ -81,4 +87,5 @@ jobs:
           path: |
             out/science-motion-demo.mp4
             out/cpu-cache-storyboard.svg
+            out/project-graph-demo.mp4
           if-no-files-found: error

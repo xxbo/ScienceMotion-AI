@@ -17,7 +17,9 @@
     "validate:project-patch": "node scripts/validate-project-patch.mjs",
     "test": "tsx --test src/platform/*.test.ts",
     "validate:tool-manifests": "node scripts/validate-tool-manifests.mjs",
-    "validate:plugin-manifests": "node scripts/validate-plugin-manifests.mjs"
+    "validate:plugin-manifests": "node scripts/validate-plugin-manifests.mjs",
+    "render:project": "remotion render src/index.ts ProjectGraph out/project-graph-demo.mp4",
+    "validate:project-render": "node scripts/validate-project-render.mjs out/project-graph-demo.mp4"
   },
   "dependencies": {
     "@remotion/cli": "^4.0.0",

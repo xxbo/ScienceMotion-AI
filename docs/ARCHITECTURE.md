@@ -6,7 +6,7 @@ Last updated: 2026-11-15
 
 ScienceMotion AI is an agent-facing science-video framework intended to host hundreds of composable creative tools. Editorial meaning, project state, tool execution, artifacts and rendering are distinct boundaries.
 
-P1.0 is the accepted local project foundation. P1.1 is active; A–E provide local infrastructure and F hardens execution and project/asset consistency. The execution baseline `2566bd0de8b95b27a6adeeeb188c5d854f2b73e5` passed [CI #43612600513](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43612600513). The next architectural priority remains executable tools connected to visible project-driven output. [PLAN.md](PLAN.md) owns sequencing; [P1.1-ACCEPTANCE.md](P1.1-ACCEPTANCE.md) owns exit gates; [P1.1-F.md](P1.1-F.md) and [project/asset consistency](P1.1-F-PROJECT-ASSETS.md) record implemented scope and limits.
+P1.0 is the accepted local project foundation. P1.1 is active; A–E provide local infrastructure, F is accepted as a trusted local host baseline, and G is connecting executable creative tools to generic Project Graph rendering. The execution baseline `2566bd0de8b95b27a6adeeeb188c5d854f2b73e5` passed [CI #43612600513](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43612600513). The next architectural priority remains executable tools connected to visible project-driven output. [PLAN.md](PLAN.md) owns sequencing; [P1.1-ACCEPTANCE.md](P1.1-ACCEPTANCE.md) owns exit gates; [P1.1-F.md](P1.1-F.md) and [project/asset consistency](P1.1-F-PROJECT-ASSETS.md) record implemented scope and limits.
 
 ## Current project and rendering paths
 
@@ -97,3 +97,12 @@ Patch protocol 1.3.0 now has JSON Schema coverage for scene, shot and animation 
 ### CI correction — Patch Schema strict array typing
 
 After the self-contained keyframe reference fix, all 170 platform tests passed. The next CI step then failed because the Patch 1.2.0 conditional schema constrained `patches.items` without declaring `patches.type: array`, which Ajv strictTypes rejects. Added the missing array type. The validation script now compiles the Patch Schema independently in strict mode and rejects all external `$ref` dependencies, preventing both regressions.
+
+
+## P1.1-G first Project Graph renderer slice
+
+The first data-driven 2D render path is implemented in `src/renderers/remotion/project-render-model.ts` and `src/compositions/ProjectGraphComposition.tsx`. It selects the active scene/shot, traverses scene hierarchy and composes group transforms, renders text and basic geometric primitives, and samples supported position/rotation/scale/opacity tracks. Unsupported node and animation cases produce structured diagnostics. The existing Episode/CPU-cache composition remains separately registered and unchanged.
+
+The `builtin.workspace` plugin now exposes executable `project.scene.create`, `graphics.2d.text.create`, `graphics.2d.shape.create`, `project.node.transform.set`, and `animation.keyframes.set` tools through the same scoped host/Registry/Gateway and Patch 1.3.0 boundary. A water-cycle Project Graph fixture is registered as a second Remotion composition and CI renders a 10-second 1080p/30fps MP4 with Project Schema and ffprobe validation. The host integration test creates and edits a project only through these public tools, then projects the resulting document into a render model.
+
+This is the first vertical slice, not full P1.1-G completion. Preview/video Artifact services, immutable snapshot render requests, asset import, paths/SVG, typography/layout, transitions, audio/captions, 3D and visual review remain open. See [P1.1-G first slice](P1.1-G-FIRST-SLICE.md).

@@ -45,9 +45,90 @@ export const workspacePlugin: CreativePluginFactory = {
       tool("project.snapshot.restore", "Restore a same-project snapshot as a new revision. Requires explicit destructive authorization.", ["project.write", "snapshot.restore"],
         object(strings(["snapshotId", "baseRevisionId", "message"])), async (input) => { const args = input as { snapshotId: string; baseRevisionId: string; message: string }; return ok(await services.snapshots.restore(args.snapshotId, args.baseRevisionId, args.message)); }, true),
       tool("execution.list", "Read persisted execution evidence for the bound project only.", ["execution.read"], object({}), async () => ok(await services.executions.list()), false, { type: "array", items: { type: "object" } }),
+
+      tool("project.scene.create", "Create a scene and place it on a sequence through one revisioned Patch.", ["project.read", "project.write"],
+        object({ ...strings(["sceneId", "name"]), durationFrames: { type: "integer", minimum: 1 }, sequenceId: { type: "string", minLength: 1 }, startFrame: { type: "integer", minimum: 0 } }, ["sceneId", "name", "durationFrames"]),
+        async (input) => {
+          const args = input as { sceneId: string; name: string; durationFrames: number; sequenceId?: string; startFrame?: number };
+          const current = await services.project.read();
+          if (!current) return { ok: false, diagnostics: [{ level: "error", code: "PROJECT_NOT_FOUND", message: "Create the project first" }] };
+          const sequence = current.sequences.find((item) => item.id === (args.sequenceId ?? current.sequences[0]?.id));
+          if (!sequence) throw new Error("Sequence not found");
+          const startFrame = args.startFrame ?? 0;
+          if (startFrame + args.durationFrames > sequence.durationFrames) throw new Error("Scene shot exceeds sequence duration");
+          const result = await services.project.applyPatch({ schemaVersion: "1.3.0", projectId: current.project.id,
+            baseRevisionId: current.revisions.at(-1)!.id, patches: [
+              { op: "add-scene", scene: { id: args.sceneId, name: args.name, durationFrames: args.durationFrames, rootNodeIds: [] } },
+              { op: "add-shot", sequenceId: sequence.id, shot: { id: "shot-" + args.sceneId, name: args.name, sceneId: args.sceneId, startFrame, durationFrames: args.durationFrames } },
+            ] }, "Create scene " + args.name);
+          return ok({ sceneId: args.sceneId, revisionId: result.revisionId });
+        }),
+      tool("graphics.2d.text.create", "Create renderer-neutral text in a scene. Text content is project data, not generated TSX.", ["project.read", "project.write"],
+        object({ ...strings(["sceneId", "nodeId", "text"]), x: { type: "number" }, y: { type: "number" },
+          fontSize: { type: "number", minimum: 8, maximum: 240 }, fontWeight: { type: "number", minimum: 100, maximum: 900 },
+          color: { type: "string" }, fontFamily: { type: "string" }, width: { type: "number", minimum: 1, maximum: 10000 },
+          height: { type: "number", minimum: 1, maximum: 5000 }, textAlign: { enum: ["left", "center", "right"] } },
+          ["sceneId", "nodeId", "text", "x", "y"]),
+        async (input) => {
+          const a = input as { sceneId: string; nodeId: string; text: string; x: number; y: number; fontSize?: number; fontWeight?: number; color?: string; fontFamily?: string; width?: number; height?: number; textAlign?: "left" | "center" | "right" };
+          const current = await services.project.read(); if (!current) throw new Error("Project not found");
+          const result = await services.project.applyPatch({ schemaVersion: "1.3.0", projectId: current.project.id, baseRevisionId: current.revisions.at(-1)!.id,
+            patches: [{ op: "add-node", sceneId: a.sceneId, node: { id: a.nodeId, name: a.nodeId, type: "text",
+              transform: { position: [a.x, a.y, 0], rotation: [0,0,0], scale: [1,1,1] },
+              components: [{ kind: "text", data: { text: a.text, fontSize: a.fontSize ?? 48, fontWeight: a.fontWeight ?? 600,
+                color: a.color ?? "#f4f7fb", fontFamily: a.fontFamily ?? "sans-serif", width: a.width ?? 700, height: a.height ?? 120, textAlign: a.textAlign ?? "left" } }] } }] },
+            "Create text " + a.nodeId);
+          return ok({ nodeId: a.nodeId, revisionId: result.revisionId });
+        }),
+      tool("graphics.2d.shape.create", "Create a renderer-neutral 2D primitive in a scene.", ["project.read", "project.write"],
+        object({ ...strings(["sceneId", "nodeId"]), primitive: { enum: ["rect", "circle", "ellipse", "line"] },
+          x: { type: "number" }, y: { type: "number" }, width: { type: "number", minimum: 1, maximum: 10000 },
+          height: { type: "number", minimum: 1, maximum: 10000 }, fill: { type: "string" }, stroke: { type: "string" },
+          strokeWidth: { type: "number", minimum: 0, maximum: 100 }, radius: { type: "number", minimum: 0, maximum: 1000 } },
+          ["sceneId", "nodeId", "primitive", "x", "y", "width", "height"]),
+        async (input) => {
+          const a = input as { sceneId: string; nodeId: string; primitive: "rect" | "circle" | "ellipse" | "line"; x: number; y: number; width: number; height: number; fill?: string; stroke?: string; strokeWidth?: number; radius?: number };
+          const current = await services.project.read(); if (!current) throw new Error("Project not found");
+          const result = await services.project.applyPatch({ schemaVersion: "1.3.0", projectId: current.project.id, baseRevisionId: current.revisions.at(-1)!.id,
+            patches: [{ op: "add-node", sceneId: a.sceneId, node: { id: a.nodeId, name: a.nodeId, type: "shape",
+              transform: { position: [a.x, a.y, 0], rotation: [0,0,0], scale: [1,1,1] },
+              components: [{ kind: "geometry", data: { primitive: a.primitive, width: a.width, height: a.height,
+                fill: a.fill ?? "#55d6e8", stroke: a.stroke ?? "transparent", strokeWidth: a.strokeWidth ?? 0, radius: a.radius ?? 0 } }] } }] },
+            "Create shape " + a.nodeId);
+          return ok({ nodeId: a.nodeId, revisionId: result.revisionId });
+        }),
+      tool("project.node.transform.set", "Set a node's 2D/3D transform through the canonical revisioned editing boundary.", ["project.read", "project.write"],
+        object({ ...strings(["nodeId"]), position: { type: "array", minItems: 3, maxItems: 3, items: { type: "number" } },
+          rotation: { type: "array", minItems: 3, maxItems: 3, items: { type: "number" } },
+          scale: { type: "array", minItems: 3, maxItems: 3, items: { type: "number" } } }, ["nodeId"]),
+        async (input) => {
+          const a = input as { nodeId: string; position?: [number,number,number]; rotation?: [number,number,number]; scale?: [number,number,number] };
+          if (!a.position && !a.rotation && !a.scale) throw new Error("At least one transform field is required");
+          const current = await services.project.read(); if (!current) throw new Error("Project not found");
+          const node = current.nodes.find((item) => item.id === a.nodeId); if (!node) throw new Error("Node not found");
+          const result = await services.project.applyPatch({ schemaVersion: "1.3.0", projectId: current.project.id, baseRevisionId: current.revisions.at(-1)!.id,
+            patches: [{ op: "update-node", nodeId: a.nodeId, changes: { transform: { ...node.transform,
+              ...(a.position ? { position: a.position } : {}), ...(a.rotation ? { rotation: a.rotation } : {}), ...(a.scale ? { scale: a.scale } : {}) } } }] },
+            "Transform node " + a.nodeId);
+          return ok({ nodeId: a.nodeId, revisionId: result.revisionId });
+        }),
+      tool("animation.keyframes.set", "Create or replace a supported animation track on a project node.", ["project.read", "project.write"],
+        object({ ...strings(["trackId", "targetNodeId"]), targetProperty: { enum: ["transform.position", "transform.rotation", "transform.scale", "opacity"] },
+          keyframes: { type: "array", minItems: 1, items: { type: "object", required: ["frame", "value"], properties: {
+            frame: { type: "integer", minimum: 0 }, value: {}, interpolation: { enum: ["linear", "step", "bezier"] }, easing: { type: "string" }
+          }, additionalProperties: false } }, loop: { type: "boolean" }, enabled: { type: "boolean" } },
+          ["trackId", "targetNodeId", "targetProperty", "keyframes"]),
+        async (input) => {
+          const a = input as { trackId: string; targetNodeId: string; targetProperty: string; keyframes: Array<{ frame: number; value: unknown; interpolation?: "linear" | "step" | "bezier"; easing?: string }>; loop?: boolean; enabled?: boolean };
+          const current = await services.project.read(); if (!current) throw new Error("Project not found");
+          const result = await services.project.applyPatch({ schemaVersion: "1.3.0", projectId: current.project.id, baseRevisionId: current.revisions.at(-1)!.id,
+            patches: [{ op: "put-animation-track", track: { id: a.trackId, targetNodeId: a.targetNodeId, targetProperty: a.targetProperty,
+              keyframes: a.keyframes, ...(a.loop !== undefined ? { loop: a.loop } : {}), ...(a.enabled !== undefined ? { enabled: a.enabled } : {}) } }] }, "Set animation " + a.trackId);
+          return ok({ trackId: a.trackId, revisionId: result.revisionId });
+        }),
     ];
     return { manifest: { id: "builtin.workspace", version: "1.0.0", name: "Local workspace tools",
-      description: "Revisioned project operations, retained snapshots and execution inspection behind scoped host services.",
+      description: "Revisioned project editing, 2D text/shapes, animation, snapshots and execution inspection behind scoped host services.",
       toolIds: tools.map((entry) => entry.manifest.id), projectSchemaVersions: ["1.1.0"], lifecycle: "beta",
       permissions: ["project.read", "project.write", "project.delete", "artifact.read", "snapshot.read", "snapshot.write", "snapshot.restore", "execution.read"] }, tools };
   },

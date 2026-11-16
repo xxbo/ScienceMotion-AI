@@ -7,6 +7,7 @@ import type { CreativeHost, CreativeInvocation, CreativePluginFactory, CreativeS
 import type { ProjectDocument } from "../contracts/project";
 import type { ArtifactRecord } from "../contracts/artifact";
 import { openCreativeHost } from "./creative-host";
+import { buildProjectRenderModel } from "../renderers/remotion/project-render-model";
 
 let counter = 0;
 const call = (s: CreativeSession, id: string, input: unknown = {}, extra: Partial<CreativeInvocation> = {}) => s.invoke({ toolId: id, toolVersion: "1.0.0", input,
@@ -109,5 +110,29 @@ test("production host: plugin artifact, project revision and retained snapshot s
     const snapshot = await call(read, "project.snapshot.inspect", { snapshotId: "research-snapshot" }); assert.equal(snapshot.ok, true);
     const gc = await host.maintenance.collectGarbage(0); assert.equal(gc.deleted.includes(artifactId), false);
     const hash = artifactId.slice(7); assert.equal((await readFile(join(root, "artifacts", "blobs", hash.slice(0,2), hash))).toString(), "reference data");
+  } finally { await host?.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+
+test("production host: real creative tools mutate Project Graph and the generic renderer consumes the result", async () => {
+  const root = await directory(); let host: CreativeHost | undefined;
+  try {
+    host = await openCreativeHost({ directory: root });
+    const session = host.createSession({ projectId: "p", permissions: ["project.read", "project.write"],
+      toolIds: ["project.create", "project.scene.create", "graphics.2d.text.create", "graphics.2d.shape.create",
+        "project.node.transform.set", "animation.keyframes.set", "project.inspect"] });
+    assert.equal((await call(session, "project.create", { name: "Water cycle", episodeId: "approved-water-cycle" })).ok, true);
+    assert.equal((await call(session, "project.scene.create", { sceneId: "water", name: "Water", durationFrames: 240 })).ok, true);
+    assert.equal((await call(session, "graphics.2d.text.create", { sceneId: "water", nodeId: "title", text: "The water cycle", x: 120, y: 80, fontSize: 64, color: "#ffffff" })).ok, true);
+    assert.equal((await call(session, "graphics.2d.shape.create", { sceneId: "water", nodeId: "ocean", primitive: "rect", x: 100, y: 650, width: 1200, height: 200, fill: "#167ca6" })).ok, true);
+    assert.equal((await call(session, "project.node.transform.set", { nodeId: "ocean", position: [140, 620, 0] })).ok, true);
+    assert.equal((await call(session, "animation.keyframes.set", { trackId: "ocean-opacity", targetNodeId: "ocean", targetProperty: "opacity",
+      keyframes: [{ frame: 0, value: 0.2 }, { frame: 120, value: 1, interpolation: "bezier", easing: "ease-in-out" }] })).ok, true);
+    const project = (await call(session, "project.inspect")).output as ProjectDocument;
+    const frame = buildProjectRenderModel(project, 60);
+    assert.equal(frame.sceneId, "water");
+    assert.ok(frame.elements.some((element) => element.id === "title" && element.text === "The water cycle"));
+    assert.ok(frame.elements.some((element) => element.id === "ocean" && element.opacity > 0.2));
+    assert.equal(project.revisions.length, 6);
   } finally { await host?.close(); await rm(root, { recursive: true, force: true }); }
 });

@@ -1,6 +1,6 @@
 # Development Plan
 
-Last updated: 2026-11-15
+Last updated: 2026-11-16
 
 ## Product goal and planning correction
 
@@ -46,9 +46,9 @@ Acceptance means the local data/editing/snapshot baseline. Its original Patch co
 
 P1.1-D baseline: [CI #43405266507](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43405266507). P1.1-E implementation boundaries are in [P1.1-E.md](P1.1-E.md); its full baseline CI is recorded above. Keep these delivered capabilities; expand them only when the creative acceptance path requires it.
 
-### P1.1-F — Bounded reliability and editing integration (implementation complete; awaiting integrated CI acceptance)
+### P1.1-F — Bounded reliability and editing integration (accepted local baseline)
 
-Execution reliability is described in [P1.1-F.md](P1.1-F.md). The second local slice is in [P1.1-F-PROJECT-ASSETS.md](P1.1-F-PROJECT-ASSETS.md), including publication/recovery ordering, ownership, protocol compatibility and failure tests. F as a whole remains open.
+Execution reliability is described in [P1.1-F.md](P1.1-F.md). The second local slice is in [P1.1-F-PROJECT-ASSETS.md](P1.1-F-PROJECT-ASSETS.md), including publication/recovery ordering, ownership, protocol compatibility and failure tests. The complete local host composition and Patch 1.3 schema passed [CI #43783296488](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43783296488), including 170 platform tests, schema validation and the legacy video render. This closes the F implementation/CI gate for the trusted single-writer local host; it does not claim distributed transactions or third-party sandboxing.
 
 - [x] Atomically reserve idempotency identity and check input hashes for both pending and completed calls; cover concurrent same-key/different-input requests and rejection cleanup.
 - [x] Persist local execution evidence, distinguish cancellation/timeout/failure outcomes and verify execution-store restart behavior. Interrupted/uncertain work is retained for explicit reconciliation, not silently replayed as success or blindly re-executed.
@@ -63,10 +63,12 @@ Execution reliability is described in [P1.1-F.md](P1.1-F.md). The second local s
 
 Exit: focused failure/race/recovery tests pass and the creative host uses the tested local boundaries. No claim of a transaction spanning every external tool effect or distributed exactly-once execution. Detailed cases remain in Gate R; F is not a distributed database or plugin ecosystem project.
 
-### P1.1-G — Executable tools and Project Snapshot rendering
+### P1.1-G — Executable tools and Project Snapshot rendering (active; first vertical slice implemented, awaiting CI)
 
-- [ ] Implement an initial set of roughly 10–12 real tools using Plugin → Registry → Gateway → the canonical repository/editing boundary. Proposed tool names and required behaviors are in the acceptance document.
-- [ ] Add a generic 2D renderer adapter consuming immutable project snapshots: text, basic shapes, grouping, transforms, opacity and explicitly supported animation. Preserve approved editorial content; surface unsupported-capability diagnostics.
+- [x] Add the first real tools for scene/shot creation, 2D text and shape creation, node transforms and keyframe editing through the scoped Plugin → Registry → Gateway boundary.
+- [x] Add a deterministic Project Graph 2D render projection and Remotion composition for text, basic shapes, group transforms, opacity and supported keyframe sampling; keep the Episode renderer independent.
+- [x] Add a water-cycle Project Graph fixture and CI MP4/ffprobe validation for the generic composition.
+- [ ] Expand the first creative family to roughly 10–12 executable tools through Plugin → Registry → Gateway → the canonical repository/editing boundary. Current executable creative tools: scene create, text create, shape create, transform set and keyframes set.
 - [ ] Produce a frame/short-shot preview and a short final video as validated Artifacts. Record the project revision/snapshot hash, tool/plugin selections, render profile and output hashes.
 - [ ] Create two short, different-topic fixtures through public tool calls; do not add topic-specific TSX scenes. Demonstrate a targeted edit changes the intended rendered content while unrelated project state remains intact.
 - [ ] Validate dynamic discovery/invocation with 300 synthetic manifests, separately from the executable-tool count. Test a new plugin tool without changing gateway/registry/orchestration core.

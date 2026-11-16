@@ -1,0 +1,335 @@
+{
+  "project": {
+    "schemaVersion": "1.1.0",
+    "project": {
+      "id": "demo-water-cycle",
+      "name": "水循环示意",
+      "createdAt": "2026-11-16T00:00:00.000Z",
+      "updatedAt": "2026-11-16T00:00:00.000Z",
+      "units": "pixel",
+      "coordinateSystem": "screen-y-down",
+      "timebase": {
+        "fps": 30,
+        "ticksPerFrame": 1
+      },
+      "colorSpace": "srgb"
+    },
+    "editorial": {
+      "episodeId": "water-cycle-approved-content",
+      "creativeBrief": "用简洁的二维图形解释蒸发、凝结和降水。"
+    },
+    "sequences": [
+      {
+        "id": "sequence-main",
+        "name": "Main Sequence",
+        "durationFrames": 300,
+        "fps": 30,
+        "width": 1920,
+        "height": 1080,
+        "shotIds": [
+          "shot-water-cycle"
+        ]
+      }
+    ],
+    "scenes": [
+      {
+        "id": "scene-water-cycle",
+        "name": "水循环",
+        "durationFrames": 300,
+        "rootNodeIds": [
+          "title",
+          "subtitle",
+          "ocean",
+          "sun",
+          "cloud",
+          "water-drop"
+        ]
+      }
+    ],
+    "nodes": [
+      {
+        "id": "title",
+        "name": "水循环",
+        "type": "text",
+        "transform": {
+          "position": [
+            140,
+            95,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "components": [
+          {
+            "kind": "text",
+            "data": {
+              "text": "水循环：水如何不断旅行？",
+              "fontSize": 64,
+              "fontWeight": 800,
+              "color": "#f4f7fb",
+              "width": 1500,
+              "height": 100
+            }
+          }
+        ]
+      },
+      {
+        "id": "subtitle",
+        "name": "水循环说明",
+        "type": "text",
+        "transform": {
+          "position": [
+            145,
+            190,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "components": [
+          {
+            "kind": "text",
+            "data": {
+              "text": "太阳提供能量，水在地表、大气与云层之间循环。",
+              "fontSize": 30,
+              "fontWeight": 500,
+              "color": "#a9bbcf",
+              "width": 1500,
+              "height": 80
+            }
+          }
+        ]
+      },
+      {
+        "id": "ocean",
+        "name": "海洋",
+        "type": "shape",
+        "transform": {
+          "position": [
+            100,
+            750,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "components": [
+          {
+            "kind": "geometry",
+            "data": {
+              "primitive": "rect",
+              "width": 1720,
+              "height": 230,
+              "fill": "#167ca6",
+              "radius": 26
+            }
+          }
+        ]
+      },
+      {
+        "id": "sun",
+        "name": "太阳",
+        "type": "shape",
+        "transform": {
+          "position": [
+            1450,
+            270,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "components": [
+          {
+            "kind": "geometry",
+            "data": {
+              "primitive": "circle",
+              "width": 150,
+              "height": 150,
+              "fill": "#ffb45e"
+            }
+          }
+        ]
+      },
+      {
+        "id": "cloud",
+        "name": "云层",
+        "type": "shape",
+        "transform": {
+          "position": [
+            850,
+            350,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "components": [
+          {
+            "kind": "geometry",
+            "data": {
+              "primitive": "ellipse",
+              "width": 390,
+              "height": 150,
+              "fill": "#d9e9f5"
+            }
+          }
+        ]
+      },
+      {
+        "id": "water-drop",
+        "name": "降水",
+        "type": "shape",
+        "transform": {
+          "position": [
+            1020,
+            560,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "components": [
+          {
+            "kind": "geometry",
+            "data": {
+              "primitive": "circle",
+              "width": 42,
+              "height": 42,
+              "fill": "#55d6e8"
+            }
+          }
+        ]
+      }
+    ],
+    "animationTracks": [
+      {
+        "id": "drop-rise",
+        "targetNodeId": "water-drop",
+        "targetProperty": "transform.position",
+        "keyframes": [
+          {
+            "frame": 0,
+            "value": [
+              1020,
+              610,
+              0
+            ]
+          },
+          {
+            "frame": 150,
+            "value": [
+              1020,
+              490,
+              0
+            ],
+            "interpolation": "bezier",
+            "easing": "ease-in-out"
+          },
+          {
+            "frame": 299,
+            "value": [
+              1020,
+              610,
+              0
+            ]
+          }
+        ]
+      },
+      {
+        "id": "drop-opacity",
+        "targetNodeId": "water-drop",
+        "targetProperty": "opacity",
+        "keyframes": [
+          {
+            "frame": 0,
+            "value": 0.25
+          },
+          {
+            "frame": 80,
+            "value": 1,
+            "interpolation": "bezier",
+            "easing": "ease-out"
+          },
+          {
+            "frame": 299,
+            "value": 0.35
+          }
+        ]
+      }
+    ],
+    "shots": [
+      {
+        "id": "shot-water-cycle",
+        "name": "水循环主镜头",
+        "sceneId": "scene-water-cycle",
+        "startFrame": 0,
+        "durationFrames": 300
+      }
+    ],
+    "clips": [],
+    "tracks": [],
+    "assets": [],
+    "prefabs": [],
+    "constraints": [],
+    "dependencies": [],
+    "revisions": [
+      {
+        "id": "revision-initial",
+        "createdAt": "2026-11-16T00:00:00.000Z",
+        "message": "Create water cycle project",
+        "author": "ScienceMotion"
+      }
+    ]
+  },
+  "sceneId": "scene-water-cycle"
+}

@@ -1,4 +1,5 @@
 import type { EpisodePackage } from "./episode";
+import type { ProjectDocument } from "./project";
 
 export interface RendererCapabilities {
   sceneTypes: string[];
@@ -32,4 +33,21 @@ export interface EpisodeRenderer {
   readonly supportedSchemaVersions: string[];
   readonly capabilities: RendererCapabilities;
   render(request: RenderRequest): Promise<RenderResult>;
+}
+
+
+/** Renderer contract for immutable Project Graph snapshots; editorial generation stays upstream. */
+export interface ProjectRenderRequest {
+  project: ProjectDocument; revisionId: string; snapshotHash: string; outputPath: string;
+  sceneId?: string; startFrame: number; durationFrames: number;
+  profile?: { width: number; height: number; fps?: number };
+}
+export interface ProjectRenderResult {
+  rendererId: string; rendererVersion: string; projectId: string; revisionId: string;
+  snapshotHash: string; outputPath: string;
+  diagnostics: Array<{ level: "info" | "warning" | "error"; code: string; message: string }>;
+}
+export interface ProjectGraphRenderer {
+  readonly id: string; readonly version: string; readonly supportedProjectSchemaVersions: string[];
+  render(request: ProjectRenderRequest): Promise<ProjectRenderResult>;
 }

@@ -12,10 +12,12 @@ Reviewed baseline: `26f20bab6b56a6aa8774c80e5da25db84d00fefb`, with successful [
 | P1.0 | Accepted local Project Graph, node patches/revisions, prefab/animation data and snapshots |
 | P1.1-A–D | Local discovery/gateway, plugin lifecycle, execution records, content-addressed artifacts and references |
 | P1.1-E | Multiple installed plugin versions, one active version, pins/locks, guarded switching and rollback |
-| P1.1-F | Local reliability, project editing, animation semantics and scoped creative host implementation; integrated CI acceptance pending |\n| P1.1-G/H | Next: real creative tools, generic Project Snapshot rendering and creative-loop acceptance |
+| P1.1-F | Accepted trusted local creative host; CI #43783296488 passed |
+| P1.1-G | First scene/text/shape/transform/animation tools and generic Remotion Project Graph composition implemented; CI pending |
+| P1.1-H | Two-topic creative-loop and real AI invocation acceptance remains open |
 | P1.2+ | Isolated workers, broader tools/professional engines and general autonomous visual iteration |
 
-The built-in workspace plugin provides project/snapshot operations; it is not yet the graphics/animation/render tool suite. Current geometry JSON manifests are catalogue fixtures. The working CPU-cache video consumes an Episode package with topic-specific components; generic Project Snapshot rendering is planned, not already delivered.
+The built-in workspace plugin now includes initial scene, text, shape, transform and keyframe tools. The generic Project Graph composition is a first 2D slice; the CPU-cache Episode renderer remains separate. Preview/video Artifact services and the full creative loop are still in progress.
 
 ## Next milestone
 
@@ -52,4 +54,4 @@ npm run render:storyboard
 
 Content generation and rendering remain independent. Creative tools share the canonical Project Graph; renderers interpret approved data without rewriting meaning. Track executable tools, catalogue entries and visually verified outputs separately.
 
-Read [Platform Vision](docs/PLATFORM_VISION.md), [Architecture](docs/ARCHITECTURE.md), and [P1.1-E implementation notes](docs/P1.1-E.md). This roadmap update changes documentation, not runtime behavior.
+Read [Platform Vision](docs/PLATFORM_VISION.md), [Architecture](docs/ARCHITECTURE.md), and [P1.1-E implementation notes](docs/P1.1-E.md). The Project Graph now has an initial generic Remotion 2D composition and executable scene/text/shape/transform/animation tools. The CPU-cache Episode renderer remains a separate regression composition.
