@@ -106,3 +106,8 @@ The first data-driven 2D render path is implemented in `src/renderers/remotion/p
 The `builtin.workspace` plugin now exposes executable `project.scene.create`, `graphics.2d.text.create`, `graphics.2d.shape.create`, `project.node.transform.set`, and `animation.keyframes.set` tools through the same scoped host/Registry/Gateway and Patch 1.3.0 boundary. A water-cycle Project Graph fixture is registered as a second Remotion composition and CI renders a 10-second 1080p/30fps MP4 with Project Schema and ffprobe validation. The host integration test creates and edits a project only through these public tools, then projects the resulting document into a render model.
 
 This is the first vertical slice, not full P1.1-G completion. Preview/video Artifact services, immutable snapshot render requests, asset import, paths/SVG, typography/layout, transitions, audio/captions, 3D and visual review remain open. See [P1.1-G first slice](P1.1-G-FIRST-SLICE.md).
+
+
+## P1.1-G first vertical slice — CI verified
+
+Commit `c826aa56c1c0d9c6ff977e97f0ae724d1e9310cb` passed [CI #43786811086](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43786811086): 175/175 platform tests, Project Patch/tool/plugin validation, a generic Project Graph MP4 render (H.264, 1920×1080, 30 FPS, 10.00s), and the separate legacy Episode/CPU-cache render with audio validation. The generic render uses the data-driven water-cycle fixture and the new Remotion Project Graph composition. The full P1.1 creative-loop gates remain open: tool-created project rendering through a retained snapshot, render Artifact services, second-topic reuse, visual review, 300-entry discovery scale and a real AI invocation trial.
