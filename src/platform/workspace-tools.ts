@@ -2,7 +2,8 @@ import type { AgentTool, AgentToolManifest, ToolResult } from "../contracts/agen
 import type { CreativePermission, CreativePluginFactory, CreativeServices } from "../contracts/creative-host";
 import type { ProjectPatchDocument } from "../contracts/project-patch";
 import { createEmptyProject } from "./empty-project";
-import patchSchema from "../../schemas/project-patch.schema.json";\nimport { isSafeSvgPathData } from "../renderers/remotion/project-render-model";
+import patchSchema from "../../schemas/project-patch.schema.json";
+import { isSafeSvgPathData } from "../renderers/remotion/project-render-model";
 
 const strings = (names: string[]) => Object.fromEntries(names.map((name) => [name, { type: "string", minLength: 1 }]));
 const object = (properties: Record<string, unknown>, required = Object.keys(properties)): Record<string, unknown> => ({ type: "object", additionalProperties: false, properties, required });

@@ -33,7 +33,8 @@ export function isSafeSvgPathData(value: string): boolean {
   const stripped = value.replace(/[MmLlHhVvCcSsQqTtAaZz]|[-+]?(?:\d*\.\d+|\d+\.?\d*)(?:[eE][-+]?\d+)?|[\s,]+/g, "");
   return stripped.length === 0;
 }
-\nconst component = (node: SceneNode, kind: string) => node.components.find((item) => item.kind === kind)?.data;
+
+const component = (node: SceneNode, kind: string) => node.components.find((item) => item.kind === kind)?.data;
 const safeDimension = (value: unknown, fallback: number): number => Math.max(0, Math.min(10000, finite(value, fallback)));
 
 function animatedTransform(project: ProjectDocument, node: SceneNode, frame: number, diagnostics: ProjectRenderModel["diagnostics"]) {
