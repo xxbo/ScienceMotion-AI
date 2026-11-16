@@ -1,6 +1,7 @@
 import type { ProjectDocument, SceneNode } from "../contracts/project";
 import type { ProjectPatchDocument, ProjectPatchResult } from "../contracts/project-patch";
 import { assertAssetReferences, assertAssetRemovable, assertProjectAsset } from "./project-assets";
+import { applyCreativeOperation, assertCreativeDocument, assertFiniteJson, isCreativeOperation, type CreativeChanges } from "./project-creative-edits";
 
 function clone<T>(value: T): T { return structuredClone(value); }
 function assertUniqueNodeIds(nodes: SceneNode[]): void {
@@ -44,7 +45,7 @@ export function applyProjectPatch(
   patch: ProjectPatchDocument,
   options: { currentRevisionId: string; newRevisionId: string; createdAt: string; message: string }
 ): ProjectPatchResult {
-  if (source.schemaVersion !== "1.1.0" || !["1.1.0", "1.2.0"].includes(patch.schemaVersion)) throw new Error("Unsupported patch/project schema version");
+  if (source.schemaVersion !== "1.1.0" || !["1.1.0", "1.2.0", "1.3.0"].includes(patch.schemaVersion)) throw new Error("Unsupported patch/project schema version");
   if (!patch.patches.length || !options.newRevisionId.trim()) throw new Error("Patch operations and a new revision ID are required");
   if (patch.projectId !== source.project.id) throw new Error("Patch targets a different project");
   const actualRevisionId = source.revisions[source.revisions.length - 1]?.id;
@@ -53,11 +54,23 @@ export function applyProjectPatch(
   }
   if (patch.baseRevisionId !== actualRevisionId) throw new Error("Revision conflict: project has changed since patch was created");
   if (source.revisions.some((revision) => revision.id === options.newRevisionId)) throw new Error(`Revision already exists: ${options.newRevisionId}`);
+  if (patch.schemaVersion === "1.3.0") {
+    assertFiniteJson(patch);
+    if (!Number.isFinite(Date.parse(options.createdAt))) throw new Error("Invalid revision timestamp");
+    for (const operation of patch.patches) if (operation.op === "update-node") {
+      const allowed = ["name", "type", "transform", "components", "metadata", "prefabId"];
+      if (Object.keys(operation.changes).some((key) => !allowed.includes(key))) throw new Error("Unsupported node changes; use explicit hierarchy operations");
+    }
+  }
   const project = clone(source);
+  const creative: CreativeChanges = { scenes: new Set(), shots: new Set(), animations: new Set() };
   const changed = new Set<string>(); const changedAssets = new Set<string>();
   for (const operation of patch.patches) {
-    if (operation.op === "add-asset" || operation.op === "replace-asset" || operation.op === "remove-asset") {
-      if (patch.schemaVersion !== "1.2.0") throw new Error("Asset operations require Patch Schema 1.2.0");
+    if (isCreativeOperation(operation)) {
+      if (patch.schemaVersion !== "1.3.0") throw new Error("Creative operations require Patch Schema 1.3.0");
+      applyCreativeOperation(project, operation, creative);
+    } else if (operation.op === "add-asset" || operation.op === "replace-asset" || operation.op === "remove-asset") {
+      if (patch.schemaVersion === "1.1.0") throw new Error("Asset operations require Patch Schema 1.2.0");
       if (operation.op === "add-asset") {
         assertProjectAsset(operation.asset);
         if (project.assets.some((asset) => asset.id === operation.asset.id)) throw new Error(`Asset already exists: ${operation.asset.id}`);
@@ -111,6 +124,7 @@ export function applyProjectPatch(
       for (const item of project.nodes) item.childIds = (item.childIds ?? []).filter((id) => !removeIds.has(id));
       for (const prefab of project.prefabs) prefab.rootNodeIds = prefab.rootNodeIds.filter((id) => !removeIds.has(id));
       project.constraints = project.constraints.filter((constraint) => !removeIds.has(constraint.sourceNodeId) && !removeIds.has(constraint.targetNodeId));
+      for (const track of project.animationTracks) if (removeIds.has(track.targetNodeId)) creative.animations.add(track.id);
       project.animationTracks = project.animationTracks.filter((track) => !removeIds.has(track.targetNodeId));
       project.dependencies = project.dependencies.filter((dependency) =>
         !(dependency.fromType === "node" && removeIds.has(dependency.fromId)) && !(dependency.toType === "node" && removeIds.has(dependency.toId)));
@@ -126,7 +140,8 @@ export function applyProjectPatch(
       const oldParentId = node.parentId; detachFromParent(project.nodes, node);
       if (oldParentId) changed.add(oldParentId);
       for (const item of project.scenes) item.rootNodeIds = item.rootNodeIds.filter((id) => id !== node.id);
-      node.parentId = operation.newParentId;
+      if (operation.newParentId === undefined) delete node.parentId;
+      else node.parentId = operation.newParentId;
       if (operation.newParentId) {
         const parent = project.nodes.find((item) => item.id === operation.newParentId)!;
         parent.childIds = [...(parent.childIds ?? []), node.id]; changed.add(parent.id);
@@ -136,7 +151,8 @@ export function applyProjectPatch(
   }
   assertUniqueNodeIds(project.nodes); assertNoHierarchyCycles(project.nodes);
   if (changedAssets.size) assertAssetReferences(project);
+  if (patch.schemaVersion === "1.3.0") assertCreativeDocument(project);
   project.project.updatedAt = options.createdAt;
   project.revisions.push({ id: options.newRevisionId, parentRevisionId: options.currentRevisionId, createdAt: options.createdAt, message: options.message, author: "ScienceMotion Agent" });
-  return { project, changedNodeIds: [...changed], ...(changedAssets.size ? { changedAssetIds: [...changedAssets] } : {}), revisionId: options.newRevisionId };
+  return { project, changedNodeIds: [...changed], ...(changedAssets.size ? { changedAssetIds: [...changedAssets] } : {}), ...(creative.scenes.size ? { changedSceneIds: [...creative.scenes] } : {}), ...(creative.shots.size ? { changedShotIds: [...creative.shots] } : {}), ...(creative.animations.size ? { changedAnimationTrackIds: [...creative.animations] } : {}), revisionId: options.newRevisionId };
 }

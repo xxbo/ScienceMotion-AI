@@ -46,7 +46,7 @@ Acceptance means the local data/editing/snapshot baseline. Its original Patch co
 
 P1.1-D baseline: [CI #43405266507](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43405266507). P1.1-E implementation boundaries are in [P1.1-E.md](P1.1-E.md); its full baseline CI is recorded above. Keep these delivered capabilities; expand them only when the creative acceptance path requires it.
 
-### P1.1-F — Bounded reliability and editing integration (active)
+### P1.1-F — Bounded reliability and editing integration (implementation complete; awaiting integrated CI acceptance)
 
 Execution reliability is described in [P1.1-F.md](P1.1-F.md). The second local slice is in [P1.1-F-PROJECT-ASSETS.md](P1.1-F-PROJECT-ASSETS.md), including publication/recovery ordering, ownership, protocol compatibility and failure tests. F as a whole remains open.
 
@@ -57,9 +57,9 @@ Execution reliability is described in [P1.1-F.md](P1.1-F.md). The second local s
 - [x] Reject removal of assets used by clips/dependencies/component asset references. Protect retained-snapshot dependencies across live asset removal, GC and reopen/restore; no automatic cascade.
 - [x] Repair changed-content references using both asset role and artifact identity. Reject URI/hash conflicts and verify bytes, preserving old evidence on missing/corrupt dependencies.
 - [x] Add asset operations through Patch protocol 1.2.0 with schema compatibility checks; keep ProjectDocument 1.1.0 and old node patches working.
-- [ ] Add only the remaining scene/animation operations needed by the first tool set through the common revisioned editing boundary.
-- [ ] Make animation semantics explicit: implement supported interpolation correctly and diagnose unsupported curves/easing rather than silently treating them as linear.
-- [ ] Compose the first creative host using the workspace, shared lifecycle and explicit least-privilege Gateway permissions/call limits. Do not expose raw deletion or independent reference writers. Destructive/high-cost paths require host authorization; a general budget service is not a prerequisite.
+- [x] Add scene/shot/animation operations needed by the first tool set through the common revisioned editing boundary (Patch protocol 1.3.0; ProjectDocument remains 1.1.0).
+- [x] Make animation semantics explicit: implement supported interpolation correctly and diagnose unsupported curves/easing rather than silently treating them as linear.
+- [x] Compose the local creative host using the filesystem workspace, shared artifact lifecycle, persistent execution ledger, version-pinned plugins, Registry and Gateway. Bind sessions to one project and explicit tool/permission grants; enforce service-level authorization, byte/operation/concurrency/deadline limits, snapshot ownership and graceful drain.
 
 Exit: focused failure/race/recovery tests pass and the creative host uses the tested local boundaries. No claim of a transaction spanning every external tool effect or distributed exactly-once execution. Detailed cases remain in Gate R; F is not a distributed database or plugin ecosystem project.
 

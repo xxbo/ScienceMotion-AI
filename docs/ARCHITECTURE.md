@@ -12,7 +12,7 @@ P1.0 is the accepted local project foundation. P1.1 is active; A–E provide loc
 
 Project Schema v1.1 models sequences, scenes, nodes/transforms/components, shots/tracks/clips, assets, prefabs, animation tracks, constraints, dependencies and revisions. The Episode package independently represents editorial content.
 
-Patch protocol 1.1.0 preserves node add/update/remove/reparent operations. Protocol 1.2.0 adds asset add/replace/remove without changing ProjectDocument 1.1.0. Batches clone state and check revisions; asset removal rejects declared consumers. The in-memory repository supplies local CAS, and the optional filesystem workspace persists canonical documents and retained snapshots through a conservative reference protocol. Scene/animation editing and complete graph-to-render integration remain open.
+Patch protocol 1.1.0 preserves node add/update/remove/reparent operations. Protocol 1.2.0 adds asset add/replace/remove without changing ProjectDocument 1.1.0. Batches clone state and check revisions; asset removal rejects declared consumers. The in-memory repository supplies local CAS, and the optional filesystem workspace persists canonical documents and retained snapshots through a conservative reference protocol. Scene/shot/animation editing is implemented through Patch protocol 1.3.0; complete graph-to-render integration remains open.
 
 The working Remotion video and SVG storyboard consume Episode data. CPU-cache scene types map to topic-specific components containing layout/animation and some text. The Project Graph fixture is validated separately; editing it is not yet the generic route to changing the rendered video.
 
@@ -79,3 +79,16 @@ Existing successful metadata checks establish streams, dimensions/FPS and durati
 Historical P1.0 evidence: [CI #43390347025](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43390347025). P1.1-D evidence: [CI #43405266507](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43405266507). Plugin version tests cover the domain manager, real Registry/Gateway and schemas. F tests cover execution admission/restart, revisioned edits, workspace/reference publication failures, snapshot retention and local store reopen. Documentation identity tests protect README, PLAN and ARCHITECTURE from accidental source-code or cross-document replacement.
 
 Keep current behavior, target design and gate evidence separate. New runtime capabilities require tests and scoped documentation; the generic creative bridge remains planned work.
+
+
+## P1.1-F creative host — implemented local composition
+
+`openCreativeHost()` is the single trusted application entry point for the local host. It acquires an exclusive workspace lock, opens the filesystem project workspace, shared artifact/reference lifecycle and persistent execution ledger, validates and activates exact plugin versions, then composes Registry and Gateway. Startup recovery completes before sessions are admitted.
+
+The host exposes project-bound sessions. Each session receives an explicit tool allow-list and permission grant; omitted permissions/tools mean none. Tool discovery is filtered by the grant. Invocation requires the exact discovered tool version and is scoped to the session project. Service operations independently require the session grant, plugin declaration and tool declaration. Destructive operations additionally require explicit host approval and a destructive tool declaration. Input, project, patch, artifact, session, concurrency and timeout limits are bounded by host policy.
+
+The built-in `builtin.workspace` plugin exposes project create/inspect, revisioned patch apply, separately approved removal, snapshot save/inspect/restore and execution-history inspection. It is a workspace/validation tool family, not the P1.1-G graphics/animation/render tool suite. Plugin code receives scoped services rather than raw stores or filesystem paths. Artifact reads verify project/invocation ownership and actual bytes; snapshot dependencies are pinned to the invocation. The host owns GC and snapshot release.
+
+Shutdown stops new admission, drains Gateway work and queued service operations, closes persistent resources, then releases the exclusive lock. Startup validation failures close acquired resources. A corrupt authoritative workspace fails closed rather than silently resetting project data. This is a trusted in-process, single-writer local host; it is not a third-party sandbox or distributed transaction system.
+
+Patch protocol 1.3.0 now has JSON Schema coverage for scene, shot and animation operations. ProjectDocument remains 1.1.0; its animation-track schema explicitly requires `targetNodeId` and permits `enabled`, matching the TypeScript model. The existing Episode/CPU-cache renderer remains independent; Project Snapshot rendering is still P1.1-G.

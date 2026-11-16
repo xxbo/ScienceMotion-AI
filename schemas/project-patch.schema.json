@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://xxbo.github.io/ScienceMotion-AI/schemas/project-patch.schema.json",
   "title": "ScienceMotion Project Patch",
-  "$comment": "Patch 1.1.0 preserves node operations; 1.2.0 adds asset operations for ProjectDocument 1.1.0. Patch and project versions are independent.",
+  "$comment": "Patch 1.1.0 preserves node operations; 1.2.0 adds asset operations; 1.3.0 adds scene, shot and animation editing. ProjectDocument remains 1.1.0.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -15,7 +15,8 @@
     "schemaVersion": {
       "enum": [
         "1.1.0",
-        "1.2.0"
+        "1.2.0",
+        "1.3.0"
       ]
     },
     "projectId": {
@@ -262,6 +263,291 @@
                 "type": "string"
               }
             }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "op",
+              "scene"
+            ],
+            "properties": {
+              "op": {
+                "const": "add-scene"
+              },
+              "scene": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "id",
+                  "name",
+                  "durationFrames",
+                  "rootNodeIds"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "durationFrames": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "rootNodeIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "metadata": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "op",
+              "sceneId",
+              "changes"
+            ],
+            "properties": {
+              "op": {
+                "const": "update-scene"
+              },
+              "sceneId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "changes": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "durationFrames": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "metadata": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "op",
+              "sceneId"
+            ],
+            "properties": {
+              "op": {
+                "const": "remove-scene"
+              },
+              "sceneId": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "op",
+              "sequenceId",
+              "shot"
+            ],
+            "properties": {
+              "op": {
+                "const": "add-shot"
+              },
+              "sequenceId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "shot": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "id",
+                  "name",
+                  "sceneId",
+                  "startFrame",
+                  "durationFrames"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "sceneId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "startFrame": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "durationFrames": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "transitionIn": {
+                    "type": "string"
+                  },
+                  "transitionOut": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "op",
+              "shotId",
+              "changes"
+            ],
+            "properties": {
+              "op": {
+                "const": "update-shot"
+              },
+              "shotId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "changes": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "sceneId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "startFrame": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "durationFrames": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "transitionIn": {
+                    "type": "string"
+                  },
+                  "transitionOut": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "op",
+              "shotId"
+            ],
+            "properties": {
+              "op": {
+                "const": "remove-shot"
+              },
+              "shotId": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "op",
+              "track"
+            ],
+            "properties": {
+              "op": {
+                "const": "put-animation-track"
+              },
+              "track": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "id",
+                  "targetNodeId",
+                  "targetProperty",
+                  "keyframes"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "targetNodeId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "targetProperty": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "keyframes": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "$ref": "https://xxbo.github.io/ScienceMotion-AI/schemas/project.schema.json#/definitions/keyframe"
+                    }
+                  },
+                  "loop": {
+                    "type": "boolean"
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "op",
+              "trackId"
+            ],
+            "properties": {
+              "op": {
+                "const": "remove-animation-track"
+              },
+              "trackId": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
           }
         ]
       }
@@ -289,6 +575,40 @@
                     "update-node",
                     "remove-node",
                     "reparent-node"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "schemaVersion": {
+            "const": "1.2.0"
+          }
+        },
+        "required": [
+          "schemaVersion"
+        ]
+      },
+      "then": {
+        "properties": {
+          "patches": {
+            "items": {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "enum": [
+                    "add-node",
+                    "update-node",
+                    "remove-node",
+                    "reparent-node",
+                    "add-asset",
+                    "replace-asset",
+                    "remove-asset"
                   ]
                 }
               }

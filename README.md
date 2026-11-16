@@ -12,10 +12,10 @@ Reviewed baseline: `26f20bab6b56a6aa8774c80e5da25db84d00fefb`, with successful [
 | P1.0 | Accepted local Project Graph, node patches/revisions, prefab/animation data and snapshots |
 | P1.1-A–D | Local discovery/gateway, plugin lifecycle, execution records, content-addressed artifacts and references |
 | P1.1-E | Multiple installed plugin versions, one active version, pins/locks, guarded switching and rollback |
-| P1.1-F/G/H | Next: bounded reliability fixes, real tools, project-driven 2D rendering and creative-loop acceptance |
+| P1.1-F | Local reliability, project editing, animation semantics and scoped creative host implementation; integrated CI acceptance pending |\n| P1.1-G/H | Next: real creative tools, generic Project Snapshot rendering and creative-loop acceptance |
 | P1.2+ | Isolated workers, broader tools/professional engines and general autonomous visual iteration |
 
-Current geometry JSON manifests are catalogue fixtures. The working CPU-cache video consumes an Episode package with topic-specific components; generic Project Snapshot rendering is planned, not already delivered.
+The built-in workspace plugin provides project/snapshot operations; it is not yet the graphics/animation/render tool suite. Current geometry JSON manifests are catalogue fixtures. The working CPU-cache video consumes an Episode package with topic-specific components; generic Project Snapshot rendering is planned, not already delivered.
 
 ## Next milestone
 
