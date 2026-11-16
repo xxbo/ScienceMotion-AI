@@ -12,7 +12,7 @@ import type { SnapshotInspectionReport } from "../src/contracts/inspection";
 import type { SnapshotLayoutInspectionReport } from "../src/contracts/layout-inspection";
 import { openCreativeHost } from "../src/platform/creative-host";
 import { canonicalProjectJson, hashProject, type ProjectSnapshot } from "../src/platform/project-snapshots";
-import { approvedBriefPlugin } from "./fixtures/approved-brief-plugin";
+import { approvedBriefPlugin, createApprovedBriefPlugin } from "./fixtures/approved-brief-plugin";
 import { creativeLoopTopics, type CreativeLoopTopic } from "./fixtures/creative-loop-topics";
 
 const width=960,height=540,fps=30,durationFrames=360;
@@ -25,6 +25,18 @@ const tools=["project.create","project.scene.create","graphics.2d.text.create","
   "animation.keyframes.set","project.patch.apply","project.inspect","project.snapshot.save","project.snapshot.inspect","project.snapshot.restore",
   "inspect.snapshot","inspect.layout","render.preview","render.video","execution.list","acceptance.brief.attach"];
 const traces:unknown[]=[];
+const pluginTransitions:unknown[]=[];
+const briefUpgrade=createApprovedBriefPlugin("2.0.0");
+async function activate(s:CreativeSession,version:string,stage:string,expected=true){
+  const before=host!.plugins.exportLock(),beforeManifest=await s.manifest("acceptance.brief.attach"),started=performance.now();
+  const result=await host!.plugins.activate("acceptance.brief",version),after=host!.plugins.exportLock();
+  const afterManifest=await s.manifest("acceptance.brief.attach");
+  assert.equal(result.ok,expected,JSON.stringify(result));
+  if(!expected){assert.equal(result.diagnostics[0].code,"PLUGIN_HEALTH_CHECK_FAILED");assert.deepEqual(after,before);assert.deepEqual(afterManifest,beforeManifest);}
+  else assert.equal(afterManifest!.version,version);
+  const evidence={stage,pluginId:"acceptance.brief",version,result,before,after,beforeManifest,afterManifest,elapsedMs:performance.now()-started};
+  pluginTransitions.push(evidence);return evidence;
+}
 const sha=(bytes:Uint8Array|string)=>createHash("sha256").update(bytes).digest("hex");
 function session(projectId:string){
   return host!.createSession({projectId,toolIds:tools,allowDestructive:true,
@@ -135,15 +147,20 @@ const states:Array<{topic:CreativeLoopTopic;baseline:ProjectSnapshot;edited:Proj
   initial:Awaited<ReturnType<typeof render>>;editPatch:ProjectPatchDocument;baselineInspection:Awaited<ReturnType<typeof inspect>>;evidence:Record<string,unknown>}>=[];
 try {
   await mkdir(output,{recursive:true});host=await openCreativeHost({directory:root,plugins:[approvedBriefPlugin]});
+  assert.ok(host.plugins.install(briefUpgrade).ok);
+  assert.ok(host.plugins.install(createApprovedBriefPlugin("3.0.0",false)).ok);
   const catalogueOnly=(await readdir("tools/manifests")).filter(p=>p.endsWith(".json")).length;
   const inventory={builtInExecutableTools:host.status().tools-1,acceptanceExtensionTools:1,catalogueOnlyManifests:catalogueOnly,syntheticScaleEntries:0};
   assert.equal(inventory.builtInExecutableTools,19);
   for(const topic of creativeLoopTopics){
-    const s=session(topic.id),catalogue=await s.discover({limit:100});
+    const s=session(topic.id);
+    if(host.plugins.exportLock().plugins["acceptance.brief"]!=="1.0.0")await activate(s,"1.0.0",`${topic.id}-baseline-selection`);
+    const catalogue=await s.discover({limit:100});
     assert.ok(tools.every(id=>catalogue.tools.some(t=>t.id===id)));
     await writeFile(join(output,`${topic.id}-manifests.json`),JSON.stringify(catalogue.tools,null,2)+"\n");
     await call(s,"project.create",{name:topic.name,episodeId:topic.id,width,height,fps,durationFrames});
-    await call(s,"acceptance.brief.attach",{text:topic.brief});
+    const attached=await call(s,"acceptance.brief.attach",{text:topic.brief});
+    assert.equal((attached.output as {implementationVersion:string}).implementationVersion,"1.0.0");
     for(const operation of topic.calls)await call(s,operation.toolId,operation.input);
     const motion=track(topic);
     await call(s,"animation.keyframes.set",{trackId:motion.id,targetNodeId:motion.targetNodeId,targetProperty:motion.targetProperty,keyframes:motion.keyframes});
@@ -172,7 +189,11 @@ try {
     const repaired=await call(s,"project.patch.apply",editPatch,`${topic.id}-approved-edit`);
     const once=await project(s),replay=await call(s,"project.patch.apply",editPatch,`${topic.id}-approved-edit`);
     assert.deepEqual(replay.output,repaired.output);assert.deepEqual(await project(s),once,"Idempotent replay must not append a revision");
-    await call(s,"acceptance.brief.attach",{text:topic.revisedBrief});
+    const upgrade=await activate(s,"2.0.0",`${topic.id}-upgrade`);
+    const failedUpgrade=await activate(s,"3.0.0",`${topic.id}-failed-upgrade`,false);
+    assert.deepEqual(await project(s),once,"Plugin administration must not mutate project content");
+    const replacement=await call(s,"acceptance.brief.attach",{text:topic.revisedBrief});
+    assert.equal((replacement.output as {implementationVersion:string}).implementationVersion,"2.0.0","The usable version must execute after a failed upgrade");
     const edited=await save(s,`${topic.id}-edited`),editedInspection=await inspect(s,edited.id);clean(editedInspection);
     assert.deepEqual(edited.document.nodes.filter(n=>n.id!=="detail"),baseline.document.nodes.filter(n=>n.id!=="detail"));
     assert.deepEqual(edited.document.animationTracks.filter(t=>t.id!=="moving-position"),baseline.document.animationTracks.filter(t=>t.id!=="moving-position"));
@@ -194,12 +215,15 @@ try {
       initialInspection:baselineInspection,seededInspection:defects,editedInspection,
       seededDefects:{count:2,detected:2,missed:0,domains:["marker viewport exit","text allocation overflow"],scope:"These two seeded defects only; not general defect recall"},
       baseline:initial.evidence,edited:revised.evidence,failedMutation:failed.diagnostics,idempotentReplayBeforeRestart:true,
+      pluginSwitch:{upgrade,failedUpgrade,usableImplementationAfterFailure:"2.0.0"},
       assetHashes:{baseline:baselineAsset,edited:editedAsset},targetedPixels:{oldCenter,newCenter,textPixelsChanged,unrelatedHeadingPixelsChanged:0},
       unrelatedNodesAndTracksUnchanged:true,manifests:catalogue.tools.map((m:AgentToolManifest)=>({id:m.id,version:m.version,pluginId:m.pluginId})),historyBeforeRestart:history.length}});
     console.log(`PASS ${topic.id}: public creation, both inspectors, seeded repair, isolated text/motion pixels, 12s MP4 and idempotent retry`);
   }
 
-  await host.close();host=await openCreativeHost({directory:root,plugins:[approvedBriefPlugin]});
+  const selectedPlugins=host.plugins.exportLock(),pluginStatuses=host.plugins.list();
+  await host.close();host=await openCreativeHost({directory:root,plugins:[briefUpgrade]});
+  assert.deepEqual(host.plugins.exportLock(),selectedPlugins,"The application must explicitly reopen with its selected exact factories");
   for(const state of states){
     const {topic,baseline,edited}=state,s=session(topic.id);
     assert.deepEqual(await project(s),edited.document);
@@ -230,9 +254,11 @@ try {
   }
   await writeFile(join(output,"evidence.json"),JSON.stringify({sourceCommit:process.env.GITHUB_SHA??null,
     scenario:"Two-topic public creative loop on one unchanged host/renderer",inventory,fixtures:states.map(s=>s.evidence),
+    plugins:{selectedPlugins,pluginStatuses,pluginTransitions,reopenedWithExplicitFactorySelection:true},
     limitations:{narration:"These technical fixtures are silent",humanReview:"pending by user request",realAITrial:false,
-      pluginVersionSwitch:"Not integrated into this host workflow yet",syntheticCatalogueScale:"Not exercised here",restoration:"Decoded-frame tolerances within this CI environment, not cross-platform MP4 byte identity"}},null,2)+"\n");
+      pluginVersionSwitch:"Trusted administrator pauses/drains calls; health checks cannot terminate non-cooperative code",syntheticCatalogueScale:"Separate catalogue-scale-evidence.json scenario",restoration:"Decoded-frame tolerances within this CI environment, not cross-platform MP4 byte identity"}},null,2)+"\n");
 } finally {
   await mkdir(output,{recursive:true});await writeFile(join(output,"tool-calls.json"),JSON.stringify(traces,null,2)+"\n");
+  await writeFile(join(output,"plugin-transitions.json"),JSON.stringify(pluginTransitions,null,2)+"\n");
   await host?.close();await rm(root,{recursive:true,force:true});
 }

@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { createHash } from "node:crypto";
-import type { AgentToolPlugin } from "../contracts/agent-plugin";
+import type { AgentToolPlugin, PluginOperationResult } from "../contracts/agent-plugin";
 import type { AgentToolGateway, AgentToolManifest, AgentToolRegistry, ToolCallContext, ToolExecutionRecord, ToolResult } from "../contracts/agent-tool";
 import type { ArtifactRecord, ArtifactStore } from "../contracts/artifact";
 import { CREATIVE_PERMISSIONS, type CreativeHost, type CreativeHostLimits, type CreativeInvocation,
@@ -44,6 +44,7 @@ export interface CreativeHostRuntime {
   validatePatch(patch: ProjectPatchDocument): void;
   validatePlugin(plugin: AgentToolPlugin): void;
   configurePlugins(plugins: AgentToolPlugin[]): Promise<AgentToolRegistry>;
+  plugins: Omit<CreativeHost["plugins"], "install"> & { install(plugin: AgentToolPlugin): PluginOperationResult };
   gateway(grant: CreativeSessionGrant, limits: CreativeHostLimits): AgentToolGateway & { shutdown(): Promise<void> };
   close(): Promise<void>;
 }
@@ -120,6 +121,7 @@ export async function assembleCreativeHost(runtime: CreativeHostRuntime, factori
   const gateways = new Set<ReturnType<CreativeHostRuntime["gateway"]>>();
   let tail: Promise<void> = Promise.resolve();
   let closePromise: Promise<void> | undefined;
+  let transition: Promise<PluginOperationResult> | undefined;
   const serial = <T>(work: () => Promise<T>): Promise<T> => {
     const result = tail.then(work); tail = result.then(() => undefined, () => undefined); return result;
   };
@@ -361,25 +363,34 @@ export async function assembleCreativeHost(runtime: CreativeHostRuntime, factori
 
   let registry: AgentToolRegistry;
   const catalogue = new Map<string, AgentToolManifest>();
-  try {
-    const ids = new Set<string>(); const toolIds = new Set<string>();
-    const plugins = factories.map((factory) => {
+  let catalogueGeneration = 0;
+  const installed = new Map<string, AgentToolPlugin>();
+  const activePlugins = new Map<string, AgentToolPlugin>();
+  const toolOwners = new Map<string, string>();
+  const pluginKey = (id: string, version: string) => JSON.stringify([id, version]);
+  const preparePlugin = (factory: CreativePluginFactory): AgentToolPlugin => {
       identity(factory.id); identity(factory.version);
-      if (ids.has(factory.id)) fail("HOST_PLUGIN_DUPLICATE", "Select one exact version for each plugin at boot"); ids.add(factory.id);
       const plugin = factory.create(services); runtime.validatePlugin(plugin);
       if (plugin.manifest.id !== factory.id || plugin.manifest.version !== factory.version) fail("HOST_PLUGIN_IDENTITY", "Plugin factory differs from the configured exact identity");
       const pluginPermissions = permissions(plugin.manifest.permissions ?? []);
+      const toolIds = new Set<string>();
       return { manifest: structuredClone(plugin.manifest), healthCheck: plugin.healthCheck?.bind(plugin), tools: plugin.tools.map((tool) => {
         if (tool.manifest.pluginId && tool.manifest.pluginId !== factory.id) fail("HOST_PLUGIN_IDENTITY", "Tool declares another plugin owner");
         const declared = permissions(tool.manifest.execution.permissions ?? []);
         if ([...declared].some((p) => !pluginPermissions.has(p))) fail("HOST_PLUGIN_PERMISSION", "Tool permissions exceed plugin declarations");
         if (toolIds.has(tool.manifest.id)) fail("HOST_TOOL_DUPLICATE", "Tool IDs must be unique across selected plugins"); toolIds.add(tool.manifest.id);
+        const owner = toolOwners.get(tool.manifest.id);
+        if (owner && owner !== factory.id) fail("HOST_TOOL_DUPLICATE", "Tool ID belongs to a different installed plugin");
+        for (const prior of installed.values()) {
+          if (prior.manifest.id === factory.id && prior.manifest.version !== factory.version &&
+              prior.tools.some((t) => t.manifest.id === tool.manifest.id && t.manifest.version === tool.manifest.version))
+            fail("HOST_TOOL_VERSION_REUSED", "Use a distinct tool version for each installed plugin implementation so stale calls and retries cannot select different code");
+        }
         if (!tool.manifest.projectSchemaVersions?.includes("1.1.0")) fail("HOST_TOOL_COMPATIBILITY", "Host tools must explicitly support ProjectDocument 1.1.0");
         const manifest = frozen(structuredClone({ ...tool.manifest, pluginId: factory.id,
           execution: { ...tool.manifest.execution,
             maxConcurrency: Math.min(tool.manifest.execution.maxConcurrency ?? limits.defaultToolConcurrency, limits.defaultToolConcurrency),
             timeoutMs: Math.min(tool.manifest.execution.timeoutMs ?? limits.maxTimeoutMs, limits.maxTimeoutMs) } }));
-        catalogue.set(manifest.id, manifest);
         const execute = tool.execute.bind(tool);
         return { manifest, execute: async (input: unknown, context: ToolCallContext): Promise<ToolResult> => {
           const session = calls.getStore();
@@ -413,8 +424,23 @@ export async function assembleCreativeHost(runtime: CreativeHostRuntime, factori
           });
         } };
       }) };
+  };
+  const remember = (plugin: AgentToolPlugin): void => {
+    installed.set(pluginKey(plugin.manifest.id, plugin.manifest.version), plugin);
+    for (const tool of plugin.tools) toolOwners.set(tool.manifest.id, plugin.manifest.id);
+  };
+  const refreshCatalogue = (): void => {
+    catalogue.clear();
+    for (const plugin of activePlugins.values()) for (const tool of plugin.tools) catalogue.set(tool.manifest.id, tool.manifest);
+    catalogueGeneration++;
+  };
+  try {
+    const plugins = factories.map((factory) => {
+      if (activePlugins.has(factory.id)) fail("HOST_PLUGIN_DUPLICATE", "Select one exact version for each plugin at boot");
+      const plugin = preparePlugin(factory); remember(plugin); activePlugins.set(factory.id, plugin); return plugin;
     });
     registry = await runtime.configurePlugins(plugins);
+    refreshCatalogue();
   } catch (error) {
     state = "failed"; await tail;
     try { await runtime.close(); } catch (cleanup) { throw new AggregateError([error, cleanup], "Host startup and cleanup failed"); }
@@ -425,8 +451,13 @@ export async function assembleCreativeHost(runtime: CreativeHostRuntime, factori
     (!manifest.execution.destructive || session.grant.allowDestructive === true) &&
     (manifest.execution.cost !== "high" || session.grant.allowHighCost === true);
   const admitted = (session?: SessionState): void => {
+    if (state === "switching") fail("HOST_PLUGIN_SWITCHING", "Plugin transition is draining calls or checking the candidate; retry after it completes");
     if (state !== "ready") fail("HOST_CLOSED", "Host is not accepting calls");
     if (session?.abort.signal.aborted) fail("HOST_SESSION_REVOKED", "Session has been revoked");
+  };
+  const administrative = (): void => {
+    admitted();
+    if (calls.getStore() || scopes.getStore()) fail("HOST_PLUGIN_ADMIN_SCOPE", "Plugin administration cannot run inside a tool invocation");
   };
   const host: CreativeHost = {
     createSession: (input) => {
@@ -444,6 +475,7 @@ export async function assembleCreativeHost(runtime: CreativeHostRuntime, factori
         manifest: async (id) => { admitted(session); const m = catalogue.get(id); return m && available(session, m) ? structuredClone(m) : undefined; },
         discover: async (input = {}) => {
           admitted(session); const query = jsonCopy(input, limits.maxInputBytes);
+          const generation = catalogueGeneration;
           exactKeys(query, ["text", "namespaces", "categories", "tags", "capabilities", "engines", "projectSchemaVersion", "includeDeprecated", "limit", "offset"]);
           if (query.text !== undefined && typeof query.text !== "string") fail("HOST_INPUT_INVALID", "Invalid search text");
           for (const values of [query.namespaces, query.categories, query.tags, query.capabilities, query.engines]) {
@@ -459,7 +491,9 @@ export async function assembleCreativeHost(runtime: CreativeHostRuntime, factori
             found.push(...result.tools.filter((m) => available(session, m)));
             if (page + result.tools.length >= result.total || !result.tools.length) break;
           }
-          admitted(session); return { tools: structuredClone(found.slice(offset, offset + limit)), total: found.length, limit, offset };
+          admitted(session);
+          if (generation !== catalogueGeneration) fail("HOST_CATALOGUE_CHANGED", "Plugin selection changed during discovery; repeat the query");
+          return { tools: structuredClone(found.slice(offset, offset + limit)), total: found.length, limit, offset };
         },
         invoke: async (request) => {
           try {
@@ -474,7 +508,7 @@ export async function assembleCreativeHost(runtime: CreativeHostRuntime, factori
             const controller = new AbortController(); const signals = [session.abort.signal, request.signal].filter((s): s is AbortSignal => s !== undefined);
             const abort = () => controller.abort(new Error("Creative session/caller cancelled"));
             for (const signal of signals) { signal.addEventListener("abort", abort, { once: true }); if (signal.aborted) abort(); }
-            try { return await calls.run(session, () => gateway.invoke(request.toolId, input, {
+            try { return await calls.run(session, () => session.gateway.invoke(request.toolId, input, {
               projectId: grant.projectId, runId: request.runId, callId: request.callId,
               idempotencyKey: request.idempotencyKey, signal: controller.signal,
             })); } finally { for (const signal of signals) signal.removeEventListener("abort", abort); }
@@ -484,6 +518,43 @@ export async function assembleCreativeHost(runtime: CreativeHostRuntime, factori
       };
       return Object.freeze(api);
     },
+    plugins: Object.freeze({
+      install: (factory: CreativePluginFactory) => {
+        administrative(); const plugin = preparePlugin(factory);
+        const result = runtime.plugins.install(plugin);
+        if (result.ok) remember(plugin);
+        return result;
+      },
+      list: () => { administrative(); return runtime.plugins.list(); },
+      exportLock: () => { administrative(); return runtime.plugins.exportLock(); },
+      activate: async (pluginId: string, version: string) => {
+        administrative(); identity(pluginId); identity(version);
+        const candidate = installed.get(pluginKey(pluginId, version));
+        if (!candidate) fail("HOST_PLUGIN_NOT_INSTALLED", "Install the exact trusted plugin version first");
+        state = "switching";
+        transition = (async () => {
+          try {
+            // Shutdown drains actual work, including tools that already returned a timeout.
+            await Promise.all([...gateways].map((g) => g.shutdown())); await tail;
+            if (state !== "switching") fail("HOST_CLOSED", "Host closed before plugin activation");
+            const result = await runtime.plugins.activate(pluginId, version);
+            if (result.ok) { activePlugins.set(pluginId, candidate); refreshCatalogue(); }
+            if (state === "switching") {
+              gateways.clear();
+              for (const session of sessions) if (!session.abort.signal.aborted) {
+                session.gateway = runtime.gateway(session.grant, limits); gateways.add(session.gateway);
+              }
+              state = "ready";
+            }
+            return result;
+          } catch (error) {
+            if (state === "switching") state = "failed";
+            throw error;
+          }
+        })();
+        return transition;
+      },
+    }),
     maintenance: Object.freeze({
       collectGarbage: (olderThanMs?: number) => {
         admitted();
@@ -503,7 +574,7 @@ export async function assembleCreativeHost(runtime: CreativeHostRuntime, factori
       if (!closePromise) {
         state = "draining";
         closePromise = (async () => {
-          try { await Promise.all([...gateways].map((g) => g.shutdown())); await tail; await runtime.close(); state = "closed"; }
+          try { await transition?.catch(() => undefined); await Promise.all([...gateways].map((g) => g.shutdown())); await tail; await runtime.close(); state = "closed"; }
           catch (error) { state = "failed"; throw error; }
         })();
       }

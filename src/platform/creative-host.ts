@@ -115,6 +115,22 @@ export async function openCreativeHost(options: OpenCreativeHostOptions): Promis
         for (const id of byId.keys()) await activate(id);
         return registry;
       },
+      plugins: {
+        install: (plugin) => manager.install(plugin),
+        list: () => manager.list(),
+        exportLock: () => manager.exportLock(),
+        activate: async (pluginId, version) => {
+          const previous = manager.getStatus(pluginId);
+          const unpinned = manager.unpin(pluginId);
+          if (!unpinned.ok) return unpinned;
+          const result = await manager.activate(pluginId, version);
+          // The host serializes transitions; no other administrator can change this pin mid-switch.
+          const pin = result.ok ? manager.pin(pluginId, version)
+            : previous?.pinned ? manager.pin(pluginId, previous.version) : undefined;
+          if (pin && !pin.ok) throw new Error(`Could not restore plugin pin: ${JSON.stringify(pin.diagnostics)}`);
+          return { ...result, status: manager.getStatus(pluginId, version) ?? result.status };
+        },
+      },
       gateway: (grant, policy) => new LocalAgentToolGateway(registry, {
         executionStore: evidence, allowedPermissions: grant.permissions,
         allowDestructive: grant.allowDestructive === true, allowHighCost: grant.allowHighCost === true,
