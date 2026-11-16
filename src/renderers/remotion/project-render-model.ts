@@ -2,7 +2,8 @@ import type { ProjectDocument, SceneNode } from "../../contracts/project";
 import { sampleAnimationTrack } from "../../platform/animation";
 
 export interface ProjectRenderElement {
-  id: string; type: "text" | "shape" | "path"; text?: string; pathData?: string; fillRule?: "nonzero" | "evenodd";
+  id: string; type: "text" | "shape" | "path" | "chart"; text?: string; pathData?: string; fillRule?: "nonzero" | "evenodd";
+  chartType?: "bar" | "line"; chartData?: Array<{ label: string; value: number }>;
   primitive?: "rect" | "circle" | "ellipse" | "line";
   width: number; height: number; fill: string; stroke: string; strokeWidth: number; radius: number;
   color: string; fontSize: number; fontFamily: string; fontWeight: number;
@@ -104,16 +105,38 @@ export function buildProjectRenderModel(project: ProjectDocument, frame: number,
       });
     } else if (node.type === "shape") {
       const data = component(node, "geometry") ?? {};
-      const primitive = ["rect", "circle", "ellipse", "line"].includes(String(data.primitive)) ? data.primitive as ProjectRenderElement["primitive"] : "rect";
-      result.elements.push({
-        id: node.id, type: "shape", primitive,
-        width: safeDimension(data.width, primitive === "circle" ? 100 : 240),
-        height: safeDimension(data.height, primitive === "circle" ? 100 : 140),
-        fill: color(data.fill, "#55d6e8"), stroke: color(data.stroke, "transparent"),
-        strokeWidth: safeDimension(data.strokeWidth, 0), radius: safeDimension(data.radius, 0),
-        color: "#f4f7fb", fontSize: 0, fontFamily: "sans-serif", fontWeight: 400,
-        textAlign: "left", opacity, transform: "matrix(" + matrix.join(",") + ")",
-      });
+      if (data.primitive === "chart") {
+        const chartType = data.chartType === "bar" || data.chartType === "line" ? data.chartType : undefined;
+        const chartData = Array.isArray(data.chartData) ? data.chartData : [];
+        const validData = chartData.length >= 2 && chartData.length <= 24 && chartData.every((point) =>
+          point && typeof point.label === "string" && point.label.trim().length > 0 && point.label.length <= 48 &&
+          typeof point.value === "number" && Number.isFinite(point.value));
+        if (!chartType || !validData) {
+          diagnostics.push({ level: "error", code: "RENDER_INVALID_CHART_DATA", message: "Chart node " + node.id + " has invalid chart type or data" });
+        } else {
+          result.elements.push({
+            id: node.id, type: "chart", chartType,
+            chartData: chartData.map((point) => ({ label: point.label, value: point.value })),
+            width: safeDimension(data.width, 640), height: safeDimension(data.height, 360),
+            fill: color(data.fill, "#55d6e8"), stroke: color(data.stroke, "#9fb3c8"),
+            strokeWidth: safeDimension(data.strokeWidth, 2), radius: 0,
+            color: color(data.labelColor, "#dbe7f3"), fontSize: safeDimension(data.fontSize, 16),
+            fontFamily: "sans-serif", fontWeight: 500, textAlign: "center",
+            opacity, transform: "matrix(" + matrix.join(",") + ")",
+          });
+        }
+      } else {
+        const primitive = ["rect", "circle", "ellipse", "line"].includes(String(data.primitive)) ? data.primitive as ProjectRenderElement["primitive"] : "rect";
+        result.elements.push({
+          id: node.id, type: "shape", primitive,
+          width: safeDimension(data.width, primitive === "circle" ? 100 : 240),
+          height: safeDimension(data.height, primitive === "circle" ? 100 : 140),
+          fill: color(data.fill, "#55d6e8"), stroke: color(data.stroke, "transparent"),
+          strokeWidth: safeDimension(data.strokeWidth, 0), radius: safeDimension(data.radius, 0),
+          color: "#f4f7fb", fontSize: 0, fontFamily: "sans-serif", fontWeight: 400,
+          textAlign: "left", opacity, transform: "matrix(" + matrix.join(",") + ")",
+        });
+      }
     } else if (node.type === "path") {
       const data = component(node, "geometry") ?? {};
       const pathData = typeof data.pathData === "string" ? data.pathData : "";
