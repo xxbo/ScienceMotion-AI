@@ -67,6 +67,9 @@ jobs:
           python3 -m venv .venv
           .venv/bin/pip install -r requirements-voice.txt
 
+      - name: Validate published 30-second capability sample
+        run: python3 scripts/validate-showcase.py
+
       - name: Ensure Remotion browser
         run: npx remotion browser ensure
 

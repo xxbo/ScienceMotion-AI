@@ -4,6 +4,8 @@ An extensible science-video creation framework for AI agents: discover typed too
 
 ## Current status
 
+Watch the [30-second CPU-cache capability sample](docs/showcase/cpu-cache-30s.mp4) ([download MP4](https://raw.githubusercontent.com/xxbo/ScienceMotion-AI/main/docs/showcase/cpu-cache-30s.mp4)). It combines four scenes, text, shapes, paths, keyframes and a data-driven chart using the current public tools. Mandarin narration is added by a separate finishing script. [Reproduction, evidence and limits](docs/showcase/README.md).
+
 Main is the delivery baseline. The merged chart/scene-selection fix on `020ae447bb81a6e727872188689407a14abac60c` passed [CI #43801547940](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43801547940) with 185 tests and render/pixel checks. Recorded SHAs are historical evidence; current source is main HEAD. **P1.1 remains active.**
 
 | Stage | Implemented scope |
