@@ -73,11 +73,49 @@ test("inspection service enforces plugin/tool rights independently of the sessio
       name: "Bypass", description: "Missing service grants", category: "test", inputSchema: { type: "object" }, outputSchema: { type: "object" },
       projectSchemaVersions: ["1.1.0"],
       execution: { deterministic: true, stateful: false, destructive: false, cost: "low", idempotent: true, permissions: [] } },
-      execute: async () => ({ ok: true, output: await services.inspect.snapshot("source"), diagnostics: [] }) }],
+      execute: async (input) => ({ ok: true, output: (input as {mode?:string}).mode === "layout"
+        ? await services.inspect.layout("source",[0]) : await services.inspect.snapshot("source"), diagnostics: [] }) }],
   }) };
   try {
     host = await openCreativeHost({ directory: root, plugins: [plugin] }); await source(host);
     const session = host.createSession({ projectId: "owner", permissions: ["snapshot.read"], toolIds: ["test.inspector.bypass"] });
     assert.equal((await call(session, "test.inspector.bypass")).diagnostics[0].code, "HOST_PERMISSION_DENIED");
+    assert.equal((await call(session, "test.inspector.bypass", {mode:"layout"})).diagnostics[0].code, "HOST_PERMISSION_DENIED");
   } finally { await host?.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test("layout permission, ownership and frame checks run before any browser work; old renderers fail explicitly", async () => {
+  const root=await mkdtemp(join(tmpdir(),"layout-grants-")); let host:CreativeHost|undefined; let browserCalls=0;
+  const renderer={id:"layout-grants",version:"1",async renderPreview():Promise<never>{throw new Error("Unexpected PNG");},
+    async renderVideo():Promise<never>{throw new Error("Unexpected MP4");},async measureLayout(){browserCalls++;return [];}};
+  try {
+    host=await openCreativeHost({directory:root,renderer});await source(host);
+    const read=(projectId="owner",permissions:["snapshot.read"]|[]= ["snapshot.read"])=>host!.createSession({projectId,permissions,toolIds:["inspect.layout"]});
+    assert.equal((await call(read("owner",[]),"inspect.layout",{snapshotId:"source"})).ok,false);
+    assert.equal((await call(read("other"),"inspect.layout",{snapshotId:"source"})).diagnostics[0].code,"HOST_SNAPSHOT_DENIED");
+    for(const frames of [[],[0,0],[60],Array.from({length:13},(_,i)=>i)])
+      assert.equal((await call(read(),"inspect.layout",{snapshotId:"source",frames})).ok,false);
+    assert.equal(browserCalls,0);
+    await host.close();
+    const {measureLayout:_,...oldRenderer}=renderer;
+    host=await openCreativeHost({directory:root,renderer:oldRenderer});
+    assert.equal((await call(read(),"inspect.layout",{snapshotId:"source",frames:[0]})).diagnostics[0].code,"HOST_LAYOUT_UNAVAILABLE");
+  } finally {await host?.close();await rm(root,{recursive:true,force:true});}
+});
+
+test("revoking layout inspection cancels the browser and host close drains its work", async () => {
+  const root=await mkdtemp(join(tmpdir(),"layout-cancel-"));let host:CreativeHost|undefined;
+  let started!:()=>void;const admitted=new Promise<void>(resolve=>{started=resolve;});let cancelled=false;
+  const renderer={id:"layout-cancel",version:"1",async renderPreview():Promise<never>{throw new Error("Unexpected PNG");},
+    async renderVideo():Promise<never>{throw new Error("Unexpected MP4");},
+    async measureLayout(request:import("../contracts/renderer").ProjectGraphLayoutRequest){
+      assert.ok(request.signal);started();
+      await new Promise<void>(resolve=>request.signal!.addEventListener("abort",()=>{cancelled=true;resolve();},{once:true}));return [];
+    }};
+  try {
+    host=await openCreativeHost({directory:root,renderer});await source(host);
+    const read=host.createSession({projectId:"owner",permissions:["snapshot.read"],toolIds:["inspect.layout"]});
+    const result=call(read,"inspect.layout",{snapshotId:"source",frames:[0]});
+    await admitted;read.revoke();assert.equal((await result).ok,false);await host.close();assert.equal(cancelled,true);
+  } finally {await host?.close();await rm(root,{recursive:true,force:true});}
 });

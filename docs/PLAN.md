@@ -29,20 +29,23 @@ Recorded baselines are historical evidence, not aliases for main HEAD. [PR #1](h
 | P1.1 A–E platform | Discovery, Gateway, execution evidence, artifacts/references, version pins and guarded switching | 300-entry synthetic test and executable extension acceptance |
 | P1.1-F host | Trusted in-process single-writer host, scoped grants/limits, recovery and Patch 1.3.0 | Isolation and distributed guarantees belong to later phases |
 | P1.1-G creation/render | Scene/text/shape/path/chart/transform/keyframe tools; snapshot PNG/MP4; chart SVG/pixel regressions | Two-topic creation, targeted text/animation edits and integrated restore evidence |
-| Inspection I1 | Read-only model diagnostics, declared shape/chart bounds and exact frame coverage | Browser layout and final visual quality remain unchecked |
+| Inspection I1 | Read-only model diagnostics, declared shape/chart bounds and exact frame coverage | Final visual quality remains unchecked |
+| Inspection I2 | Production-browser text lines, actual element boxes, viewport overflow and heuristic font fallback; no screenshot/video encoding | Exact glyph fonts/ink, occlusion, cross-session evidence caching and visual quality remain open |
 | P1.1-H AI acceptance | Deterministic host scenarios and a discoverable tool surface | Complete integrated scenario, real-AI trial and human visual review |
 
-The built-in workspace catalogue has 18 executable tools including inspection and administrative operations. This does not mean 18 distinct creative capabilities. Geometry JSON catalogue fixtures and future synthetic entries are counted separately. `assets.import` is still planned.
+The built-in workspace catalogue has 19 executable tools including inspection and administrative operations. This does not mean 19 distinct creative capabilities. Geometry JSON catalogue fixtures and future synthetic entries are counted separately. `assets.import` is still planned.
 
 ## Next delivery sequence
 
-Current product checkpoint: review the [30-second CPU-cache sample](showcase/README.md) before adding more infrastructure. It demonstrates existing generic 2D tools with external narration finishing. The authoring script and fixed video provide an observable baseline; they do not close the two-topic, restore, real-AI or human-review gates. Prioritize the user's feedback on clarity, pacing and visible animation when selecting the next increment.
+Current checkpoint decision (2026-11-16): continue engineering and defer the user's effect review to the final acceptance. Keep the [30-second CPU-cache sample](showcase/README.md) as the comparison baseline. Automated checks remain required for every increment. The sample does not close the two-topic, restore, real-AI or human-review gates.
+
+P1.1 is still active. I1 and the bounded I2 measurement path are implemented; the next increment is the two-topic creation/edit/export/restart/restore scenario. Final visual review stays an explicit pending gate, not a prerequisite for continuing that engineering work.
 
 | Order | Increment | Completion evidence |
 | --- | --- | --- |
-| 1 | Inspection I1: expose model checks through the public host | Typed report; permission/hash/frame/work limits; repair/recheck/restart scenario with zero render/vision calls; CI and main integration |
-| 2 | Inspection I2: measure actual browser layout | Text metrics after fonts load, viewport/crop evidence, node/frame identities and seeded overflow cases in the production composition |
-| 3 | Two-topic creation and restoration | Two 10–30 second briefs use the same public tools/renderer; inspect, revise, preview, export, restart and restore |
+| 1 — implemented | Inspection I1: expose model checks through the public host | Typed report; permission/hash/frame/work limits; repair/recheck/restart scenario with zero render/vision calls |
+| 2 — implemented | Inspection I2: measure actual browser layout | Font-ready line/element boxes; scoped reports; seeded text/motion/font cases; repair/recheck/restart and production-pixel correspondence |
+| 3 — next | Two-topic creation and restoration | Two 10–30 second briefs use the same public tools/renderer; inspect, revise, preview, export, restart and restore |
 | 4 | Extension and real-AI trial | 300 synthetic manifests, one executable extension, and a model using discovered schemas/diagnostics with recorded calls and interventions |
 | 5 | P1.1 closure | Gates R/I/C/Q/X/A mapped to one integrated commit/CI run and reviewed outputs |
 
@@ -71,14 +74,17 @@ Derived measurements are evidence attached to the canonical snapshot, not anothe
 
 Details: [Snapshot inspection](P1.1-G-INSPECTION.md). Tool success means inspection executed. `no-issues-detected` is restricted to named checks and frames; it is not a final-video pass.
 
-### I2 — Actual layout measurements, next
+### I2 — Bounded browser layout measurements, implemented
 
-- Use the production Remotion/browser composition with the same snapshot. Wait for fonts before measuring actual text lines and boxes.
-- Return measured versus declared bounds, overflow/crop amounts, node IDs and frame ranges. Label measured, estimated and unsupported results.
-- Make clipping/overlap policy explicit. Intentional overlap, transparent padding and offscreen transitions are not unconditional errors.
-- Include scene/animation boundaries and motion samples. Adaptive refinement/analytic extrema need their own evidence; endpoint checks do not cover intermediate motion.
-- Add seeded overflow, font fallback and renderer-default mismatch cases. Retain pixel regressions to detect faults in the measurement/render bridge.
-- Reuse unchanged evidence when snapshot, measurement version and environment identities match. Broader cache infrastructure stays later.
+- `inspect.layout({ snapshotId, frames? })` requires only `snapshot.read`, runs the same production `ProjectGraph` composition, waits for fonts and reads DOM/Range geometry. Remotion `imageFormat: none` skips screenshot/video encoding; a nonvisual Artifact returns JSON measurements.
+- Versioned reports bind measured versus declared boxes, line counts, overflow amounts, node/scene/frame identities and browser metadata to the immutable snapshot hash. The host rejects wrong frame/scene/viewport/node identities.
+- Clipping and text-size excess are warnings: offscreen movement or a larger text block can be intentional. Overlap/occlusion is not evaluated.
+- Auto sampling uses boundaries, animation keys and uniform probes, capped at 12 frames. Explicit requests are validated; omitted candidates and unsampled frames are disclosed. Per-frame/node/text/model limits bound browser work.
+- A missing-font width probe is explicitly heuristic. Computed CSS font-family alone is not proof of the exact font or glyph fallback. Exact glyph fonts, glyph ink and SVG path extents remain unchecked.
+- CI seeds text overflow, an intermediate-frame exit and a missing font, edits through tools, rechecks old/new snapshots after restart, and compares measured line boxes with production PNG ink. Two regression PNGs are separate from the zero-image-encoding inspection path.
+- Reports carry browser/user-agent, pixel ratio and font probe measurements. Cross-session evidence reuse is deferred until font-environment identity can be verified reliably; no cache hit or font fingerprint guarantee is claimed.
+
+Details and executable evidence: [Browser layout inspection](P1.1-G-LAYOUT.md).
 
 ### Quality and cost evidence
 

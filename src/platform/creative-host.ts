@@ -74,6 +74,7 @@ export async function openCreativeHost(options: OpenCreativeHostOptions): Promis
       projects, artifacts,
       renderPreview: (request) => renderer.renderPreview(request),
       renderVideo: (request) => renderer.renderVideo(request),
+      ...(renderer.measureLayout ? { measureLayout: renderer.measureLayout.bind(renderer) } : {}),
       references: (id) => references.list({ artifactId: id }),
       retain: async (ref) => {
         if (ref.ownerType !== "tool-run") throw new Error("Unsupported host retention owner");

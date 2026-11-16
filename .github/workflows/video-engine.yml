@@ -73,6 +73,9 @@ jobs:
       - name: Ensure Remotion browser
         run: npx remotion browser ensure
 
+      - name: Measure production browser layout and repair text without image encoding
+        run: npm run inspect:layout-smoke
+
       - name: Render generic Project Graph video
         run: npm run render:project
 
@@ -110,4 +113,7 @@ jobs:
             out/charts-video.mp4
             out/chart-render-evidence.json
             out/snapshot-inspection-evidence.json
+            out/layout-inspection-evidence.json
+            out/layout-before.png
+            out/layout-after.png
           if-no-files-found: error

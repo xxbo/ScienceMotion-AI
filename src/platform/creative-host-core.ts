@@ -15,6 +15,9 @@ import { projectArtifactBindings } from "./project-assets";
 import { hashProject } from "./project-snapshots";
 import type { ProjectGraphRenderOutput, ProjectGraphRenderRequest } from "../contracts/renderer";
 import { inspectProjectSnapshot, SnapshotInspectionError } from "./snapshot-inspection";
+import { finishLayoutInspection, prepareLayoutInspection } from "./snapshot-layout-inspection";
+import type { ProjectGraphLayoutRequest } from "../contracts/renderer";
+import type { LayoutFrameMeasurement } from "../contracts/layout-inspection";
 
 type Revision = { newRevisionId: string; createdAt: string; message: string };
 type Reference = { artifactId: string; ownerType: string; ownerId: string; role: string };
@@ -33,6 +36,7 @@ export interface CreativeHostRuntime {
   artifacts: Pick<ArtifactStore, "put" | "get" | "read">;
   renderPreview(request: ProjectGraphRenderRequest & { frame: number }): Promise<ProjectGraphRenderOutput>;
   renderVideo(request: ProjectGraphRenderRequest & { startFrame: number; durationFrames: number }): Promise<ProjectGraphRenderOutput>;
+  measureLayout?(request: ProjectGraphLayoutRequest): Promise<LayoutFrameMeasurement[]>;
   references(id: string): Promise<Reference[]>;
   retain(reference: Reference): Promise<void>;
   listExecutions(projectId: string): Promise<ToolExecutionRecord[]>;
@@ -311,6 +315,25 @@ export async function assembleCreativeHost(runtime: CreativeHostRuntime, factori
       }),
     },
     inspect: {
+      layout: (snapshotId: string, frames?: readonly number[]) => {
+        const selected = frames === undefined ? undefined : structuredClone(frames);
+        return task(["snapshot.read"], async (scope) => {
+          const started = performance.now();
+          const saved = await snapshot(scope, snapshotId);
+          try {
+            const prepared = prepareLayoutInspection(saved, selected);
+            if (!runtime.measureLayout) fail("HOST_LAYOUT_UNAVAILABLE", "The selected renderer does not support browser layout inspection");
+            const measured = await runtime.measureLayout({ project: structuredClone(saved.document), snapshotHash: saved.contentHash,
+              revisionId: saved.document.revisions.at(-1)!.id, frames: prepared.frames,
+              signal: AbortSignal.any([scope.session.abort.signal, ...(scope.context.signal ? [scope.context.signal] : [])]) });
+            check(scope, ["snapshot.read"]);
+            return jsonCopy(finishLayoutInspection(saved, prepared, measured, performance.now() - started), limits.maxProjectBytes);
+          } catch (error) {
+            if (error instanceof SnapshotInspectionError) fail(error.code, error.message);
+            throw error;
+          }
+        });
+      },
       snapshot: (snapshotId: string, frames?: readonly number[]) => {
         // Copy before queued service execution; plugins cannot change the selected frames after admission.
         const selected = frames === undefined ? undefined : structuredClone(frames);

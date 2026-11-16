@@ -6,6 +6,8 @@ import patchSchema from "../../schemas/project-patch.schema.json";
 import { isSafeSvgPathData } from "../renderers/remotion/project-render-model";
 import { MAX_INSPECTION_FRAMES } from "./snapshot-inspection";
 import inspectionSchema from "../../schemas/snapshot-inspection.schema.json";
+import layoutInspectionSchema from "../../schemas/snapshot-layout-inspection.schema.json";
+import { MAX_LAYOUT_FRAMES } from "./snapshot-layout-inspection";
 
 const strings = (names: string[]) => Object.fromEntries(names.map((name) => [name, { type: "string", minLength: 1 }]));
 const object = (properties: Record<string, unknown>, required = Object.keys(properties)): Record<string, unknown> => ({ type: "object", additionalProperties: false, properties, required });
@@ -21,7 +23,7 @@ export const workspacePlugin: CreativePluginFactory = {
       const manifest: AgentToolManifest = { id, version: "1.0.0", namespace: id.slice(0, id.lastIndexOf(".")),
         name: id, description, category: "workspace", inputSchema, outputSchema, pluginId: "builtin.workspace", lifecycle: "beta",
         projectSchemaVersions: ["1.1.0"], execution: { deterministic: false, stateful: true, destructive,
-          cost: "low", idempotent: true, supportsCancellation: true, permissions: rights, maxConcurrency: 2, timeoutMs: 30_000 } };
+          cost: id === "inspect.layout" ? "medium" : "low", idempotent: true, supportsCancellation: true, permissions: rights, maxConcurrency: 2, timeoutMs: 30_000 } };
       return { manifest, execute };
     };
     const ok = (output: unknown): ToolResult => ({ ok: true, output, diagnostics: [] });
@@ -58,6 +60,16 @@ export const workspacePlugin: CreativePluginFactory = {
               ...(issue.nodeId ? { nodeId: issue.nodeId } : {}), ...(issue.trackId ? { trackId: issue.trackId } : {}),
               ...(issue.sceneId ? { sceneId: issue.sceneId } : {}) } })) };
         }, false, inspectionSchema),
+      tool("inspect.layout", "Measure production browser text and element boxes after fonts load, without encoding screenshots or video. Reports text overflow, viewport crop and heuristic font fallback with node/frame identities. Occlusion, final pixels, exact glyph fonts and artistic quality are not checked.", ["snapshot.read"],
+        object({ snapshotId: { type: "string", minLength: 1, maxLength: 256 },
+          frames: { type: "array", minItems: 1, maxItems: MAX_LAYOUT_FRAMES, uniqueItems: true, items: { type: "integer", minimum: 0 } } }, ["snapshotId"]),
+        async (input) => {
+          const args = input as { snapshotId: string; frames?: number[] };
+          const report = await services.inspect.layout(args.snapshotId, args.frames);
+          return { ok: true, output: report, diagnostics: report.issues.map((issue) => ({ level: issue.level, code: issue.code,
+            message: issue.message, details: { frame: issue.frame, ...(issue.nodeId ? { nodeId: issue.nodeId } : {}),
+              ...(issue.sceneId ? { sceneId: issue.sceneId } : {}) } })) };
+        }, false, layoutInspectionSchema),
       tool("render.preview", "Render one frame from a project-owned immutable snapshot and return a retained PNG Artifact.", ["snapshot.read", "artifact.write"],
         object({ snapshotId: { type: "string", minLength: 1 }, frame: { type: "integer", minimum: 0 }, sceneId: { type: "string", minLength: 1 } }, ["snapshotId", "frame"]),
         async (input) => {
