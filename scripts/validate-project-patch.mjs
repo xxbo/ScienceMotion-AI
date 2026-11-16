@@ -1,13 +1,17 @@
 import Ajv from "ajv";
 import { readFile } from "node:fs/promises";
 
-const [patchText, projectText] = await Promise.all([
-  readFile("schemas/project-patch.schema.json", "utf8"),
-  readFile("schemas/project.schema.json", "utf8"),
-]);
+const patchSchema = JSON.parse(await readFile("schemas/project-patch.schema.json", "utf8"));
+const collectRefs = (value, refs = []) => {
+  if (!value || typeof value !== "object") return refs;
+  if (typeof value.$ref === "string") refs.push(value.$ref);
+  for (const child of Object.values(value)) collectRefs(child, refs);
+  return refs;
+};
+const externalRefs = collectRefs(patchSchema).filter((ref) => !ref.startsWith("#/"));
+if (externalRefs.length) throw new Error(`Patch Schema must be self-contained; found external refs: ${externalRefs.join(", ")}`);
 const ajv = new Ajv({ allErrors: true, strict: true });
-ajv.addSchema(JSON.parse(projectText));
-const validate = ajv.compile(JSON.parse(patchText));
+const validate = ajv.compile(patchSchema);
 const base = { projectId: "project-schema-test", baseRevisionId: "revision-initial" };
 const node = { op: "add-node", sceneId: "scene-main", node: {
   id: "node-test", name: "Test shape", type: "shape",

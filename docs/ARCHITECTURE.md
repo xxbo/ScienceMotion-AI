@@ -92,3 +92,8 @@ The built-in `builtin.workspace` plugin exposes project create/inspect, revision
 Shutdown stops new admission, drains Gateway work and queued service operations, closes persistent resources, then releases the exclusive lock. Startup validation failures close acquired resources. A corrupt authoritative workspace fails closed rather than silently resetting project data. This is a trusted in-process, single-writer local host; it is not a third-party sandbox or distributed transaction system.
 
 Patch protocol 1.3.0 now has JSON Schema coverage for scene, shot and animation operations. ProjectDocument remains 1.1.0; its animation-track schema explicitly requires `targetNodeId` and permits `enabled`, matching the TypeScript model. The existing Episode/CPU-cache renderer remains independent; Project Snapshot rendering is still P1.1-G.
+
+
+### CI correction — Patch Schema strict array typing
+
+After the self-contained keyframe reference fix, all 170 platform tests passed. The next CI step then failed because the Patch 1.2.0 conditional schema constrained `patches.items` without declaring `patches.type: array`, which Ajv strictTypes rejects. Added the missing array type. The validation script now compiles the Patch Schema independently in strict mode and rejects all external `$ref` dependencies, preventing both regressions.
