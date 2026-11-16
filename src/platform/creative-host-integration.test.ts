@@ -198,4 +198,20 @@ test("render tools reject foreign snapshots and out-of-range frames", async () =
     assert.equal(outOfRange.diagnostics[0].code, "HOST_RENDER_FRAME_INVALID");
   } finally { await host?.close(); await rm(root, { recursive: true, force: true }); }
 });
-\n\ntest("creative host exposes safe SVG path creation as a structured tool", async () => {\n  const root = await directory(); let host: CreativeHost | undefined;\n  try {\n    host = await openCreativeHost({ directory: root });\n    const session = host.createSession({ projectId: "path-project", permissions: ["project.read", "project.write"], toolIds: ["project.create", "project.scene.create", "graphics.2d.path.create", "project.inspect"] });\n    assert.equal((await call(session, "project.create", { name: "Path project", episodeId: "path-fixture" })).ok, true);\n    assert.equal((await call(session, "project.scene.create", { sceneId: "path-scene", name: "Path", durationFrames: 90 })).ok, true);\n    const created = await call(session, "graphics.2d.path.create", { sceneId: "path-scene", nodeId: "curve", pathData: "M 0 50 C 20 0 80 0 100 50 S 80 100 50 100 Z", x: 100, y: 120, width: 100, height: 100, fill: "#55d6e8" });\n    assert.equal(created.ok, true, JSON.stringify(created));\n    const project = (await call(session, "project.inspect")).output as ProjectDocument;\n    assert.equal(project.nodes.find((node) => node.id === "curve")?.type, "path");\n    const rejected = await call(session, "graphics.2d.path.create", { sceneId: "path-scene", nodeId: "unsafe", pathData: "<svg onload=alert(1)>", x: 0, y: 0, width: 10, height: 10 });\n    assert.equal(rejected.ok, false);\n  } finally { await host?.close(); await rm(root, { recursive: true, force: true }); }\n});\n
+
+
+test("creative host exposes safe SVG path creation as a structured tool", async () => {
+  const root = await directory(); let host: CreativeHost | undefined;
+  try {
+    host = await openCreativeHost({ directory: root });
+    const session = host.createSession({ projectId: "path-project", permissions: ["project.read", "project.write"], toolIds: ["project.create", "project.scene.create", "graphics.2d.path.create", "project.inspect"] });
+    assert.equal((await call(session, "project.create", { name: "Path project", episodeId: "path-fixture" })).ok, true);
+    assert.equal((await call(session, "project.scene.create", { sceneId: "path-scene", name: "Path", durationFrames: 90 })).ok, true);
+    const created = await call(session, "graphics.2d.path.create", { sceneId: "path-scene", nodeId: "curve", pathData: "M 0 50 C 20 0 80 0 100 50 S 80 100 50 100 Z", x: 100, y: 120, width: 100, height: 100, fill: "#55d6e8" });
+    assert.equal(created.ok, true, JSON.stringify(created));
+    const project = (await call(session, "project.inspect")).output as ProjectDocument;
+    assert.equal(project.nodes.find((node) => node.id === "curve")?.type, "path");
+    const rejected = await call(session, "graphics.2d.path.create", { sceneId: "path-scene", nodeId: "unsafe", pathData: "<svg onload=alert(1)>", x: 0, y: 0, width: 10, height: 10 });
+    assert.equal(rejected.ok, false);
+  } finally { await host?.close(); await rm(root, { recursive: true, force: true }); }
+});

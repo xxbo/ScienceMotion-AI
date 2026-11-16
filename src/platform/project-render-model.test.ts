@@ -34,4 +34,18 @@ test("unsupported node types produce diagnostics without crashing the whole fram
   const model = buildProjectRenderModel(changed, 0);
   assert.ok(model.diagnostics.some((d) => d.code === "RENDER_UNSUPPORTED_NODE_TYPE"));
 });
-\n\ntest("project renderer supports structured SVG paths and rejects markup payloads", () => {\n  const changed = structuredClone(project);\n  changed.nodes.push({ id: "orbit-path", name: "Orbit", type: "path", transform: { position: [10,20,0], rotation: [0,0,0], scale: [1,1,1] }, components: [{ kind: "geometry", data: { pathData: "M 0 50 C 20 0 80 0 100 50 S 80 100 50 100 Z", width: 100, height: 100, fill: "#55d6e8", stroke: "#ffffff", strokeWidth: 3 } }] });\n  changed.scenes[0].rootNodeIds.push("orbit-path");\n  const model = buildProjectRenderModel(changed, 0);\n  const path = model.elements.find((element) => element.id === "orbit-path");\n  assert.equal(path?.type, "path");\n  assert.ok(path?.pathData?.startsWith("M 0 50"));\n  const invalid = structuredClone(changed);\n  invalid.nodes.find((node) => node.id === "orbit-path")!.components[0].data.pathData = "<svg onload=alert(1)>";\n  const rejected = buildProjectRenderModel(invalid, 0);\n  assert.ok(rejected.diagnostics.some((entry) => entry.code === "RENDER_INVALID_PATH_DATA"));\n});\n
+
+
+test("project renderer supports structured SVG paths and rejects markup payloads", () => {
+  const changed = structuredClone(project);
+  changed.nodes.push({ id: "orbit-path", name: "Orbit", type: "path", transform: { position: [10,20,0], rotation: [0,0,0], scale: [1,1,1] }, components: [{ kind: "geometry", data: { pathData: "M 0 50 C 20 0 80 0 100 50 S 80 100 50 100 Z", width: 100, height: 100, fill: "#55d6e8", stroke: "#ffffff", strokeWidth: 3 } }] });
+  changed.scenes[0].rootNodeIds.push("orbit-path");
+  const model = buildProjectRenderModel(changed, 0);
+  const path = model.elements.find((element) => element.id === "orbit-path");
+  assert.equal(path?.type, "path");
+  assert.ok(path?.pathData?.startsWith("M 0 50"));
+  const invalid = structuredClone(changed);
+  invalid.nodes.find((node) => node.id === "orbit-path")!.components[0].data.pathData = "<svg onload=alert(1)>";
+  const rejected = buildProjectRenderModel(invalid, 0);
+  assert.ok(rejected.diagnostics.some((entry) => entry.code === "RENDER_INVALID_PATH_DATA"));
+});
