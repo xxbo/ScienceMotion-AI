@@ -73,6 +73,12 @@ jobs:
       - name: Validate Project Graph video
         run: npm run validate:project-render
 
+      - name: Render through Creative Host snapshot tools
+        run: npm run render:host-smoke
+
+      - name: Validate Creative Host render Artifacts
+        run: npm run validate:host-render
+
       - name: Render demo video
         run: npm run render
 
@@ -88,4 +94,6 @@ jobs:
             out/science-motion-demo.mp4
             out/cpu-cache-storyboard.svg
             out/project-graph-demo.mp4
+            out/project-graph-host-preview.png
+            out/project-graph-host-video.mp4
           if-no-files-found: error

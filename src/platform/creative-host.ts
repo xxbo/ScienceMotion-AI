@@ -11,6 +11,8 @@ import { InMemoryPluginManager } from "./plugin-manager";
 import { InMemoryAgentToolRegistry, LocalAgentToolGateway } from "./tool-registry";
 import { assembleCreativeHost, resolveCreativeLimits, type CreativeHostRuntime } from "./creative-host-core";
 import { workspacePlugin } from "./workspace-tools";
+import type { ProjectGraphRenderer } from "../contracts/renderer";
+import { RemotionProjectGraphRenderer } from "../renderers/remotion/remotion-project-graph-renderer";
 import projectSchema from "../../schemas/project.schema.json";
 import patchSchema from "../../schemas/project-patch.schema.json";
 import toolSchema from "../../schemas/tool-manifest.schema.json";
@@ -21,6 +23,8 @@ export interface OpenCreativeHostOptions {
   directory: string;
   plugins?: readonly CreativePluginFactory[];
   limits?: Partial<CreativeHostLimits>;
+  renderer?: ProjectGraphRenderer;
+  renderEntryPoint?: string;
 }
 function assertValid(validate: ValidateFunction, value: unknown, label: string): void {
   if (!validate(value)) throw new Error(`${label}: ${JSON.stringify(validate.errors)}`);
@@ -65,8 +69,11 @@ export async function openCreativeHost(options: OpenCreativeHostOptions): Promis
     const projects = workspace, evidence = executions;
     const registry = new InMemoryAgentToolRegistry();
     const manager = new InMemoryPluginManager(registry, { projectSchemaVersion: "1.1.0", healthCheckTimeoutMs: Math.min(limits.maxTimeoutMs, 5000) });
+    const renderer = options.renderer ?? new RemotionProjectGraphRenderer(options.renderEntryPoint ?? resolve("src/index.ts"));
     const runtime: CreativeHostRuntime = {
       projects, artifacts,
+      renderPreview: (request) => renderer.renderPreview(request),
+      renderVideo: (request) => renderer.renderVideo(request),
       references: (id) => references.list({ artifactId: id }),
       retain: async (ref) => {
         if (ref.ownerType !== "tool-run") throw new Error("Unsupported host retention owner");

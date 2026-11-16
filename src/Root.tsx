@@ -6,6 +6,10 @@ import projectDemo from "../examples/project-graph-demo.props.json";
 
 const ProjectGraphForRemotion: React.FC<Record<string, unknown>> = (props) =>
   <ProjectGraphComposition {...(props as unknown as ProjectGraphProps)} />;
+const projectGraphMetadata = ({ props }: { props: Record<string, unknown> }) => {
+  const sequence = (props as unknown as ProjectGraphProps).project.sequences[0];
+  return { durationInFrames: sequence.durationFrames, fps: sequence.fps, width: sequence.width, height: sequence.height };
+};
 
 export const RemotionRoot: React.FC = () => (
   <>
@@ -15,6 +19,6 @@ export const RemotionRoot: React.FC = () => (
     <Composition id="ProjectGraph" component={ProjectGraphForRemotion}
       durationInFrames={projectDemo.project.sequences[0].durationFrames}
       fps={projectDemo.project.sequences[0].fps} width={projectDemo.project.sequences[0].width}
-      height={projectDemo.project.sequences[0].height} defaultProps={projectDemo as unknown as Record<string, unknown>} />
+      height={projectDemo.project.sequences[0].height} defaultProps={projectDemo as unknown as Record<string, unknown>} calculateMetadata={projectGraphMetadata} />
   </>
 );

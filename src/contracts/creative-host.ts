@@ -4,6 +4,7 @@ import type { ArtifactRecord, ArtifactStore } from "./artifact";
 import type { ProjectDocument } from "./project";
 import type { ProjectPatchDocument, ProjectPatchResult } from "./project-patch";
 import type { ProjectSnapshot } from "../platform/project-snapshots";
+import type { ProjectGraphRenderOutput, ProjectGraphRenderRequest } from "./renderer";
 
 export const CREATIVE_PERMISSIONS = [
   "project.read", "project.write", "project.delete", "snapshot.read", "snapshot.write",
@@ -29,6 +30,7 @@ export interface CreativeServices {
     put(input: ArtifactUpload): Promise<ArtifactRecord>;
     read(artifactId: string, snapshotId?: string): Promise<{ record: ArtifactRecord; bytes: Uint8Array }>;
   };
+  render: { preview(snapshotId: string, frame: number, sceneId?: string): Promise<ArtifactRecord>; video(snapshotId: string, startFrame: number, durationFrames: number, sceneId?: string): Promise<ArtifactRecord> };
   executions: { list(): Promise<ToolExecutionRecord[]> };
 }
 export interface CreativePluginFactory {

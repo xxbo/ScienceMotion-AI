@@ -12,6 +12,8 @@ import type { ProjectSnapshot } from "./project-snapshots";
 import { applyProjectPatch } from "./project-patches";
 import { assertCreativeDocument, assertFiniteJson } from "./project-creative-edits";
 import { projectArtifactBindings } from "./project-assets";
+import { hashProject } from "./project-snapshots";
+import type { ProjectGraphRenderOutput, ProjectGraphRenderRequest } from "../contracts/renderer";
 
 type Revision = { newRevisionId: string; createdAt: string; message: string };
 type Reference = { artifactId: string; ownerType: string; ownerId: string; role: string };
@@ -28,6 +30,8 @@ export interface CreativeHostRuntime {
     collectGarbage(options?: { olderThanMs?: number }): ReturnType<CreativeHost["maintenance"]["collectGarbage"]>;
   };
   artifacts: Pick<ArtifactStore, "put" | "get" | "read">;
+  renderPreview(request: ProjectGraphRenderRequest & { frame: number }): Promise<ProjectGraphRenderOutput>;
+  renderVideo(request: ProjectGraphRenderRequest & { startFrame: number; durationFrames: number }): Promise<ProjectGraphRenderOutput>;
   references(id: string): Promise<Reference[]>;
   retain(reference: Reference): Promise<void>;
   listExecutions(projectId: string): Promise<ToolExecutionRecord[]>;
@@ -187,6 +191,18 @@ export async function assembleCreativeHost(runtime: CreativeHostRuntime, factori
     document(saved.document); bound(saved.document, scope);
     return saved;
   };
+  const publishRenderArtifact = async (scope: Scope, output: ProjectGraphRenderOutput, metadata: Record<string, unknown>): Promise<ArtifactRecord> => {
+    if (!(output.bytes instanceof Uint8Array) || output.bytes.byteLength < 8 || output.bytes.byteLength > limits.maxArtifactBytes) fail("HOST_RENDER_OUTPUT_INVALID", "Renderer returned empty or oversized output bytes");
+    const expected = output.mediaType === "image/png" ? { kind: "image" as const, extension: "png" } : output.mediaType === "video/mp4" ? { kind: "video" as const, extension: "mp4" } : undefined;
+    if (!expected || output.extension !== expected.extension || !output.rendererId || !output.rendererVersion) fail("HOST_RENDER_OUTPUT_INVALID", "Renderer returned an unsupported or inconsistent output declaration");
+    scope.writesStarted = true;
+    const stored = await runtime.artifacts.put({ bytes: new Uint8Array(output.bytes), kind: expected.kind, mediaType: output.mediaType, extension: expected.extension,
+      metadata: { ...metadata, rendererId: output.rendererId, rendererVersion: output.rendererVersion },
+      provenance: { projectId: scope.context.projectId, runId: scope.context.runId, callId: scope.context.callId, toolId: scope.manifest.id,
+        toolVersion: scope.manifest.version, pluginId: scope.manifest.pluginId, parametersHash: createHash("sha256").update(JSON.stringify(metadata)).digest("hex") } });
+    if (stored.kind !== expected.kind || stored.mediaType !== expected.mediaType) fail("HOST_ARTIFACT_TYPE_CONFLICT", "Render artifact content hash collides with another media declaration");
+    scope.produced.add(stored.id); return scopedRecord(scope, stored);
+  };
   const services: CreativeServices = frozen({
     project: {
       read: () => task(["project.read"], async (scope) => {
@@ -257,6 +273,37 @@ export async function assembleCreativeHost(runtime: CreativeHostRuntime, factori
           projectArtifactBindings(saved.document).forEach((b) => scope.snapshotAssets.add(b.artifactId));
         }
         const content = await checkedArtifact(scope, id); await retainOutput(scope, id, "host-input"); return content;
+      }),
+    },
+    render: {
+      preview: (snapshotId: string, frame: number, sceneId?: string) => task(["snapshot.read", "artifact.write"], async (scope) => {
+        identity(snapshotId);
+        if (!Number.isSafeInteger(frame) || frame < 0) fail("HOST_RENDER_FRAME_INVALID", "Preview frame must be a non-negative integer");
+        const saved = await snapshot(scope, snapshotId);
+        if (hashProject(saved.document) !== saved.contentHash) fail("HOST_SNAPSHOT_CORRUPT", "Snapshot content hash does not match its immutable document");
+        const sequence = saved.document.sequences[0];
+        if (!sequence || frame >= sequence.durationFrames) fail("HOST_RENDER_FRAME_INVALID", "Preview frame is outside the sequence");
+        const revisionId = saved.document.revisions.at(-1)?.id;
+        if (!revisionId) fail("HOST_SNAPSHOT_INVALID", "Snapshot has no revision identity");
+        const output = await runtime.renderPreview({ project: structuredClone(saved.document), revisionId, snapshotHash: saved.contentHash,
+          sceneId, frame, profile: { width: sequence.width, height: sequence.height, fps: sequence.fps } });
+        return publishRenderArtifact(scope, output, { snapshotId, revisionId, snapshotHash: saved.contentHash, frame, sceneId,
+          width: sequence.width, height: sequence.height, fps: sequence.fps });
+      }),
+      video: (snapshotId: string, startFrame: number, durationFrames: number, sceneId?: string) => task(["snapshot.read", "artifact.write"], async (scope) => {
+        identity(snapshotId);
+        if (!Number.isSafeInteger(startFrame) || startFrame < 0 || !Number.isSafeInteger(durationFrames) || durationFrames < 1 || durationFrames > 900)
+          fail("HOST_RENDER_RANGE_INVALID", "Video render range must be 1–900 frames with a non-negative start");
+        const saved = await snapshot(scope, snapshotId);
+        if (hashProject(saved.document) !== saved.contentHash) fail("HOST_SNAPSHOT_CORRUPT", "Snapshot content hash does not match its immutable document");
+        const sequence = saved.document.sequences[0];
+        if (!sequence || startFrame + durationFrames > sequence.durationFrames) fail("HOST_RENDER_RANGE_INVALID", "Video render range exceeds the sequence");
+        const revisionId = saved.document.revisions.at(-1)?.id;
+        if (!revisionId) fail("HOST_SNAPSHOT_INVALID", "Snapshot has no revision identity");
+        const output = await runtime.renderVideo({ project: structuredClone(saved.document), revisionId, snapshotHash: saved.contentHash,
+          sceneId, startFrame, durationFrames, profile: { width: sequence.width, height: sequence.height, fps: sequence.fps } });
+        return publishRenderArtifact(scope, output, { snapshotId, revisionId, snapshotHash: saved.contentHash, startFrame, durationFrames, sceneId,
+          width: sequence.width, height: sequence.height, fps: sequence.fps });
       }),
     },
     executions: { list: () => task(["execution.read"], async (scope) => {

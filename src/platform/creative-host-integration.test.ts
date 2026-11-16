@@ -7,6 +7,7 @@ import type { CreativeHost, CreativeInvocation, CreativePluginFactory, CreativeS
 import type { ProjectDocument } from "../contracts/project";
 import type { ArtifactRecord } from "../contracts/artifact";
 import { openCreativeHost } from "./creative-host";
+import type { ProjectGraphRenderer } from "../contracts/renderer";
 import { buildProjectRenderModel } from "../renderers/remotion/project-render-model";
 
 let counter = 0;
@@ -134,5 +135,66 @@ test("production host: real creative tools mutate Project Graph and the generic 
     assert.ok(frame.elements.some((element) => element.id === "title" && element.text === "The water cycle"));
     assert.ok(frame.elements.some((element) => element.id === "ocean" && element.opacity > 0.2));
     assert.equal(project.revisions.length, 6);
+  } finally { await host?.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+
+test("production host: snapshot preview/video tools return retained, traceable Artifacts", async () => {
+  const root = await directory(); let host: CreativeHost | undefined;
+  const calls: Array<{ mode: string; revisionId: string; snapshotHash: string }> = [];
+  const renderer: ProjectGraphRenderer = {
+    id: "test.project-graph", version: "test-1",
+    async renderPreview(request) {
+      calls.push({ mode: "preview", revisionId: request.revisionId, snapshotHash: request.snapshotHash });
+      return { bytes: new Uint8Array([137,80,78,71,13,10,26,10,1]), mediaType: "image/png", extension: "png", rendererId: this.id, rendererVersion: this.version };
+    },
+    async renderVideo(request) {
+      calls.push({ mode: "video", revisionId: request.revisionId, snapshotHash: request.snapshotHash });
+      return { bytes: new Uint8Array([0,0,0,24,102,116,121,112,109,112,52,50]), mediaType: "video/mp4", extension: "mp4", rendererId: this.id, rendererVersion: this.version };
+    },
+  };
+  try {
+    host = await openCreativeHost({ directory: root, renderer });
+    const session = host.createSession({ projectId: "p", permissions: ["project.read", "project.write", "snapshot.write", "snapshot.read", "artifact.write"],
+      toolIds: ["project.create", "project.inspect", "project.snapshot.save", "render.preview", "render.video"] });
+    assert.equal((await call(session, "project.create", { name: "Snapshot render", episodeId: "render-fixture", durationFrames: 120 })).ok, true);
+    const project = (await call(session, "project.inspect")).output as ProjectDocument;
+    assert.equal((await call(session, "project.snapshot.save", { snapshotId: "render-source", revisionId: project.revisions.at(-1)!.id })).ok, true);
+    const preview = await call(session, "render.preview", { snapshotId: "render-source", frame: 12 });
+    assert.equal(preview.ok, true, JSON.stringify(preview));
+    assert.equal(preview.artifacts?.[0]?.mediaType, "image/png");
+    assert.equal((preview.output as { metadata: Record<string, unknown> }).metadata.snapshotId, "render-source");
+    const video = await call(session, "render.video", { snapshotId: "render-source", startFrame: 0, durationFrames: 60 });
+    assert.equal(video.ok, true, JSON.stringify(video));
+    assert.equal(video.artifacts?.[0]?.mediaType, "video/mp4");
+    assert.equal((video.output as { metadata: Record<string, unknown> }).metadata.snapshotHash, calls[0].snapshotHash);
+    assert.deepEqual(calls.map((entry) => entry.mode), ["preview", "video"]);
+    assert.equal(calls[0].revisionId, project.revisions.at(-1)!.id);
+  } finally { await host?.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test("render tools reject foreign snapshots and out-of-range frames", async () => {
+  const root = await directory(); let host: CreativeHost | undefined;
+  const renderer: ProjectGraphRenderer = {
+    id: "test.project-graph", version: "test-1",
+    async renderPreview() { return { bytes: new Uint8Array([137,80,78,71,13,10,26,10,1]), mediaType: "image/png", extension: "png", rendererId: this.id, rendererVersion: this.version }; },
+    async renderVideo() { return { bytes: new Uint8Array([0,0,0,24,102,116,121,112,109,112,52,50]), mediaType: "video/mp4", extension: "mp4", rendererId: this.id, rendererVersion: this.version }; },
+  };
+  try {
+    host = await openCreativeHost({ directory: root, renderer });
+    const grant = { permissions: ["project.read", "project.write", "snapshot.write", "snapshot.read", "artifact.write"],
+      toolIds: ["project.create", "project.inspect", "project.snapshot.save", "render.preview"] };
+    const owner = host.createSession({ ...grant, projectId: "owner" });
+    assert.equal((await call(owner, "project.create", { name: "Owner", episodeId: "owner", durationFrames: 30 })).ok, true);
+    const ownerProject = (await call(owner, "project.inspect")).output as ProjectDocument;
+    await call(owner, "project.snapshot.save", { snapshotId: "owner-snapshot", revisionId: ownerProject.revisions.at(-1)!.id });
+    const stranger = host.createSession({ ...grant, projectId: "stranger" });
+    assert.equal((await call(stranger, "project.create", { name: "Stranger", episodeId: "stranger", durationFrames: 30 })).ok, true);
+    const foreign = await call(stranger, "render.preview", { snapshotId: "owner-snapshot", frame: 0 });
+    assert.equal(foreign.ok, false);
+    assert.equal(foreign.diagnostics[0].code, "HOST_SNAPSHOT_DENIED");
+    const outOfRange = await call(owner, "render.preview", { snapshotId: "owner-snapshot", frame: 30 });
+    assert.equal(outOfRange.ok, false);
+    assert.equal(outOfRange.diagnostics[0].code, "HOST_RENDER_FRAME_INVALID");
   } finally { await host?.close(); await rm(root, { recursive: true, force: true }); }
 });

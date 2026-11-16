@@ -44,6 +44,23 @@ export const workspacePlugin: CreativePluginFactory = {
         object(strings(["snapshotId"])), async (input) => ok(await services.snapshots.read((input as { snapshotId: string }).snapshotId))),
       tool("project.snapshot.restore", "Restore a same-project snapshot as a new revision. Requires explicit destructive authorization.", ["project.write", "snapshot.restore"],
         object(strings(["snapshotId", "baseRevisionId", "message"])), async (input) => { const args = input as { snapshotId: string; baseRevisionId: string; message: string }; return ok(await services.snapshots.restore(args.snapshotId, args.baseRevisionId, args.message)); }, true),
+      tool("render.preview", "Render one frame from a project-owned immutable snapshot and return a retained PNG Artifact.", ["snapshot.read", "artifact.write"],
+        object({ snapshotId: { type: "string", minLength: 1 }, frame: { type: "integer", minimum: 0 }, sceneId: { type: "string", minLength: 1 } }, ["snapshotId", "frame"]),
+        async (input) => {
+          const a = input as { snapshotId: string; frame: number; sceneId?: string };
+          const artifact = await services.render.preview(a.snapshotId, a.frame, a.sceneId);
+          return { ok: true, output: { artifactId: artifact.id, uri: artifact.uri, mediaType: artifact.mediaType, contentHash: artifact.contentHash, metadata: artifact.metadata },
+            artifacts: [{ id: artifact.id, uri: artifact.uri, mediaType: artifact.mediaType, contentHash: artifact.contentHash }], diagnostics: [] };
+        }, false, { type: "object" }),
+      tool("render.video", "Render a bounded frame range from an immutable snapshot and return a retained MP4 Artifact.", ["snapshot.read", "artifact.write"],
+        object({ snapshotId: { type: "string", minLength: 1 }, startFrame: { type: "integer", minimum: 0 },
+          durationFrames: { type: "integer", minimum: 1, maximum: 900 }, sceneId: { type: "string", minLength: 1 } }, ["snapshotId", "startFrame", "durationFrames"]),
+        async (input) => {
+          const a = input as { snapshotId: string; startFrame: number; durationFrames: number; sceneId?: string };
+          const artifact = await services.render.video(a.snapshotId, a.startFrame, a.durationFrames, a.sceneId);
+          return { ok: true, output: { artifactId: artifact.id, uri: artifact.uri, mediaType: artifact.mediaType, contentHash: artifact.contentHash, metadata: artifact.metadata },
+            artifacts: [{ id: artifact.id, uri: artifact.uri, mediaType: artifact.mediaType, contentHash: artifact.contentHash }], diagnostics: [] };
+        }, false, { type: "object" }),
       tool("execution.list", "Read persisted execution evidence for the bound project only.", ["execution.read"], object({}), async () => ok(await services.executions.list()), false, { type: "array", items: { type: "object" } }),
 
       tool("project.scene.create", "Create a scene and place it on a sequence through one revisioned Patch.", ["project.read", "project.write"],
@@ -128,8 +145,8 @@ export const workspacePlugin: CreativePluginFactory = {
         }),
     ];
     return { manifest: { id: "builtin.workspace", version: "1.0.0", name: "Local workspace tools",
-      description: "Revisioned project editing, 2D text/shapes, animation, snapshots and execution inspection behind scoped host services.",
+      description: "Revisioned project editing, 2D text/shapes, animation, snapshot-based preview/video rendering and execution inspection behind scoped host services.",
       toolIds: tools.map((entry) => entry.manifest.id), projectSchemaVersions: ["1.1.0"], lifecycle: "beta",
-      permissions: ["project.read", "project.write", "project.delete", "artifact.read", "snapshot.read", "snapshot.write", "snapshot.restore", "execution.read"] }, tools };
+      permissions: ["project.read", "project.write", "project.delete", "artifact.read", "artifact.write", "snapshot.read", "snapshot.write", "snapshot.restore", "execution.read"] }, tools };
   },
 };

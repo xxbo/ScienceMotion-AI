@@ -51,3 +51,11 @@ export interface ProjectGraphRenderer {
   readonly id: string; readonly version: string; readonly supportedProjectSchemaVersions: string[];
   render(request: ProjectRenderRequest): Promise<ProjectRenderResult>;
 }
+
+
+/** Immutable Project Graph render contract; renderers never rewrite editorial meaning. */
+export interface ProjectGraphRenderRequest { project: ProjectDocument; revisionId: string; snapshotHash: string; sceneId?: string; profile?: { width: number; height: number; fps?: number } }
+export interface ProjectGraphPreviewRequest extends ProjectGraphRenderRequest { frame: number }
+export interface ProjectGraphVideoRequest extends ProjectGraphRenderRequest { startFrame: number; durationFrames: number }
+export interface ProjectGraphRenderOutput { bytes: Uint8Array; mediaType: "image/png" | "video/mp4"; extension: "png" | "mp4"; rendererId: string; rendererVersion: string }
+export interface ProjectGraphRenderer { readonly id: string; readonly version: string; renderPreview(request: ProjectGraphPreviewRequest): Promise<ProjectGraphRenderOutput>; renderVideo(request: ProjectGraphVideoRequest): Promise<ProjectGraphRenderOutput> }

@@ -69,7 +69,9 @@ Exit: focused failure/race/recovery tests pass and the creative host uses the te
 - [x] Add a deterministic Project Graph 2D render projection and Remotion composition for text, basic shapes, group transforms, opacity and supported keyframe sampling; keep the Episode renderer independent.
 - [x] Add a water-cycle Project Graph fixture and CI MP4/ffprobe validation for the generic composition. Verified by [CI #43786811086](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43786811086): 175/175 platform tests passed, generic Project Graph MP4 passed 1080p/30fps/10s checks, and the legacy CPU-cache MP4/audio checks passed.
 - [ ] Expand the first creative family to roughly 10–12 executable tools through Plugin → Registry → Gateway → the canonical repository/editing boundary. Current executable creative tools: scene create, text create, shape create, transform set and keyframes set.
-- [ ] Produce a frame/short-shot preview and a short final video as validated Artifacts. Record the project revision/snapshot hash, tool/plugin selections, render profile and output hashes.
+- [x] Add a snapshot-bound Remotion render service for PNG frame previews and bounded MP4 frame ranges. Validate snapshot ownership/hash, frame bounds, byte limits and renderer output declarations; publish content-addressed Artifacts with revision/snapshot/renderer provenance.
+- [x] Expose render.preview and render.video through the built-in plugin and Gateway, with explicit snapshot.read + artifact.write permissions. Return Artifact references to the AI caller.
+- [ ] Expand the host render service with durable render-job progress/cancellation and richer evidence once worker isolation is introduced.
 - [ ] Create two short, different-topic fixtures through public tool calls; do not add topic-specific TSX scenes. Demonstrate a targeted edit changes the intended rendered content while unrelated project state remains intact.
 - [ ] Validate dynamic discovery/invocation with 300 synthetic manifests, separately from the executable-tool count. Test a new plugin tool without changing gateway/registry/orchestration core.
 

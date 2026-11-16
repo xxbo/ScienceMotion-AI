@@ -111,3 +111,12 @@ This is the first vertical slice, not full P1.1-G completion. Preview/video Arti
 ## P1.1-G first vertical slice — CI verified
 
 Commit `c826aa56c1c0d9c6ff977e97f0ae724d1e9310cb` passed [CI #43786811086](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43786811086): 175/175 platform tests, Project Patch/tool/plugin validation, a generic Project Graph MP4 render (H.264, 1920×1080, 30 FPS, 10.00s), and the separate legacy Episode/CPU-cache render with audio validation. The generic render uses the data-driven water-cycle fixture and the new Remotion Project Graph composition. The full P1.1 creative-loop gates remain open: tool-created project rendering through a retained snapshot, render Artifact services, second-topic reuse, visual review, 300-entry discovery scale and a real AI invocation trial.
+
+
+## P1.1-G snapshot render services
+
+render.preview and render.video are invocation-scoped Gateway tools. They accept only a project-owned immutable snapshot ID and bounded frame/range parameters; no filesystem path or arbitrary entrypoint is supplied by the AI. The host verifies snapshot ownership and canonical content hash, validates the frame range against the snapshot sequence, and delegates to the configured ProjectGraphRenderer adapter. The default local implementation uses Remotion's programmatic bundler/renderer to render a PNG still or H.264 MP4 from the same generic ProjectGraph composition.
+
+Rendered bytes are size-checked and stored in the content-addressed ArtifactStore. Artifact metadata records snapshot ID/hash, source revision, frame/range, dimensions/FPS and renderer identity/version; provenance binds the result to project/run/call/tool. The tool returns the Artifact reference, and the host validates/retains that reference before completing the invocation. Access requires snapshot.read and artifact.write in the session, plugin and tool declarations. Snapshot ownership/hash and sequence bounds are enforced before renderer work begins.
+
+The renderer is injectable through trusted host configuration for deterministic tests; AI tool input cannot choose or replace the renderer implementation. This is a synchronous local render path with bounded duration, not yet a persistent background job queue. See [P1.1-G render services](P1.1-G-RENDER-SERVICES.md).
