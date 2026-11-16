@@ -63,14 +63,14 @@ Execution reliability is described in [P1.1-F.md](P1.1-F.md). The second local s
 
 Exit: focused failure/race/recovery tests pass and the creative host uses the tested local boundaries. No claim of a transaction spanning every external tool effect or distributed exactly-once execution. Detailed cases remain in Gate R; F is not a distributed database or plugin ecosystem project.
 
-### P1.1-G — Executable tools and Project Snapshot rendering (active; first vertical slice CI-verified)
+### P1.1-G — Executable tools and Project Snapshot rendering (active; snapshot render services CI-verified)
 
 - [x] Add the first real tools for scene/shot creation, 2D text and shape creation, node transforms and keyframe editing through the scoped Plugin → Registry → Gateway boundary.
 - [x] Add a deterministic Project Graph 2D render projection and Remotion composition for text, basic shapes, group transforms, opacity and supported keyframe sampling; keep the Episode renderer independent.
 - [x] Add a water-cycle Project Graph fixture and CI MP4/ffprobe validation for the generic composition. Verified by [CI #43786811086](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43786811086): 175/175 platform tests passed, generic Project Graph MP4 passed 1080p/30fps/10s checks, and the legacy CPU-cache MP4/audio checks passed.
 - [ ] Expand the first creative family to roughly 10–12 executable tools through Plugin → Registry → Gateway → the canonical repository/editing boundary. Current executable creative tools: scene create, text create, shape create, transform set and keyframes set.
 - [x] Add a snapshot-bound Remotion render service for PNG frame previews and bounded MP4 frame ranges. Validate snapshot ownership/hash, frame bounds, byte limits and renderer output declarations; publish content-addressed Artifacts with revision/snapshot/renderer provenance.
-- [x] Expose render.preview and render.video through the built-in plugin and Gateway, with explicit snapshot.read + artifact.write permissions. Return Artifact references to the AI caller.
+- [x] Expose render.preview and render.video through the built-in plugin and Gateway, with explicit snapshot.read + artifact.write permissions. Return Artifact references to the AI caller. Verified by [CI #43788856539](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43788856539): 177/177 platform tests passed; production Creative Host rendered a PNG and a 3-second MP4 from a saved snapshot, and ffprobe verified the MP4 stream, 1080p, 30 FPS and duration. The existing Episode render/audio checks also passed.
 - [ ] Expand the host render service with durable render-job progress/cancellation and richer evidence once worker isolation is introduced.
 - [ ] Create two short, different-topic fixtures through public tool calls; do not add topic-specific TSX scenes. Demonstrate a targeted edit changes the intended rendered content while unrelated project state remains intact.
 - [ ] Validate dynamic discovery/invocation with 300 synthetic manifests, separately from the executable-tool count. Test a new plugin tool without changing gateway/registry/orchestration core.

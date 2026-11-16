@@ -17,7 +17,7 @@ Reviewed baseline: `26f20bab6b56a6aa8774c80e5da25db84d00fefb`, with successful [
 | P1.1-H | Two-topic creative-loop and real AI invocation acceptance remains open |
 | P1.2+ | Isolated workers, broader tools/professional engines and general autonomous visual iteration |
 
-The built-in workspace plugin now includes initial scene, text, shape, transform and keyframe tools. The generic Project Graph composition is a first 2D slice; the CPU-cache Episode renderer remains separate. Snapshot-based PNG preview and MP4 render tools are implemented behind the Creative Host; the production Remotion smoke test is awaiting CI. Two-topic creative-loop acceptance and broader tool families remain in progress.
+The built-in workspace plugin now includes initial scene, text, shape, transform and keyframe tools. The generic Project Graph composition is a first 2D slice; the CPU-cache Episode renderer remains separate. Snapshot-based PNG preview and MP4 render tools are implemented behind the Creative Host; the production Remotion host smoke test passed CI #43788856539 (177/177 tests). Two-topic creative-loop acceptance and broader tool families remain in progress.
 
 ## Next milestone
 
