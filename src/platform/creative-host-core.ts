@@ -201,13 +201,17 @@ export async function assembleCreativeHost(runtime: CreativeHostRuntime, factori
     const expected = output.mediaType === "image/png" ? { kind: "image" as const, extension: "png" } : output.mediaType === "video/mp4" ? { kind: "video" as const, extension: "mp4" } : undefined;
     if (!expected || output.extension !== expected.extension || !output.rendererId || !output.rendererVersion) fail("HOST_RENDER_OUTPUT_INVALID", "Renderer returned an unsupported or inconsistent output declaration");
     scope.writesStarted = true;
+    const renderMetadata = { ...metadata, rendererId: output.rendererId, rendererVersion: output.rendererVersion };
+    const provenance = { projectId: scope.context.projectId, runId: scope.context.runId, callId: scope.context.callId, toolId: scope.manifest.id,
+      toolVersion: scope.manifest.version, pluginId: scope.manifest.pluginId, parametersHash: createHash("sha256").update(JSON.stringify(metadata)).digest("hex") };
     const stored = await runtime.artifacts.put({ bytes: new Uint8Array(output.bytes), kind: expected.kind, mediaType: output.mediaType, extension: expected.extension,
-      metadata: { ...metadata, rendererId: output.rendererId, rendererVersion: output.rendererVersion },
-      provenance: { projectId: scope.context.projectId, runId: scope.context.runId, callId: scope.context.callId, toolId: scope.manifest.id,
-        toolVersion: scope.manifest.version, pluginId: scope.manifest.pluginId, parametersHash: createHash("sha256").update(JSON.stringify(metadata)).digest("hex") } });
+      metadata: renderMetadata, provenance });
     check(scope, ["snapshot.read", "artifact.write"]);
     if (stored.kind !== expected.kind || stored.mediaType !== output.mediaType) fail("HOST_ARTIFACT_TYPE_CONFLICT", "Render artifact content hash collides with another media declaration");
-    scope.produced.add(stored.id); return scopedRecord(scope, stored);
+    scope.produced.add(stored.id);
+    // Blob identity is shared; render evidence belongs to this invocation, even for identical pixels.
+    // Preserve immutable first-writer storage metadata and redact foreign metadata before returning.
+    return { ...scopedRecord(scope, stored), metadata: structuredClone(renderMetadata), provenance: structuredClone(provenance) };
   };
   const services: CreativeServices = frozen({
     project: {
@@ -294,7 +298,7 @@ export async function assembleCreativeHost(runtime: CreativeHostRuntime, factori
         if (!revisionId) fail("HOST_SNAPSHOT_INVALID", "Snapshot has no revision identity");
         const output = await runtime.renderPreview({ project: structuredClone(saved.document), revisionId, snapshotHash: saved.contentHash,
           sceneId, frame, profile: { width: sequence.width, height: sequence.height, fps: sequence.fps } });
-        return publishRenderArtifact(scope, output, { snapshotId, revisionId, snapshotHash: saved.contentHash, frame, sceneId,
+        return publishRenderArtifact(scope, output, { snapshotId, revisionId, snapshotHash: saved.contentHash, frame, ...(sceneId ? { sceneId } : {}),
           width: sequence.width, height: sequence.height, fps: sequence.fps });
       }),
       video: (snapshotId: string, startFrame: number, durationFrames: number, sceneId?: string) => task(["snapshot.read", "artifact.write"], async (scope) => {
@@ -310,7 +314,7 @@ export async function assembleCreativeHost(runtime: CreativeHostRuntime, factori
         if (!revisionId) fail("HOST_SNAPSHOT_INVALID", "Snapshot has no revision identity");
         const output = await runtime.renderVideo({ project: structuredClone(saved.document), revisionId, snapshotHash: saved.contentHash,
           sceneId, startFrame, durationFrames, profile: { width: sequence.width, height: sequence.height, fps: sequence.fps } });
-        return publishRenderArtifact(scope, output, { snapshotId, revisionId, snapshotHash: saved.contentHash, startFrame, durationFrames, sceneId,
+        return publishRenderArtifact(scope, output, { snapshotId, revisionId, snapshotHash: saved.contentHash, startFrame, durationFrames, ...(sceneId ? { sceneId } : {}),
           width: sequence.width, height: sequence.height, fps: sequence.fps });
       }),
     },

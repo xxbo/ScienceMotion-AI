@@ -32,6 +32,8 @@ export interface CreativeServices {
     put(input: ArtifactUpload): Promise<ArtifactRecord>;
     read(artifactId: string, snapshotId?: string): Promise<{ record: ArtifactRecord; bytes: Uint8Array }>;
   };
+  /** Returns a render receipt: shared blob identity plus this invocation's metadata/provenance.
+   * The content-addressed store retains its immutable first-writer record. */
   render: { preview(snapshotId: string, frame: number, sceneId?: string): Promise<ArtifactRecord>; video(snapshotId: string, startFrame: number, durationFrames: number, sceneId?: string): Promise<ArtifactRecord> };
   inspect: { snapshot(snapshotId: string, frames?: readonly number[]): Promise<SnapshotInspectionReport>;
     layout(snapshotId: string, frames?: readonly number[]): Promise<SnapshotLayoutInspectionReport> };
