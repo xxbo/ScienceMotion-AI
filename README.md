@@ -13,11 +13,13 @@ Reviewed baseline: `26f20bab6b56a6aa8774c80e5da25db84d00fefb`, with successful [
 | P1.1-A–D | Local discovery/gateway, plugin lifecycle, execution records, content-addressed artifacts and references |
 | P1.1-E | Multiple installed plugin versions, one active version, pins/locks, guarded switching and rollback |
 | P1.1-F | Accepted trusted local creative host; CI #43783296488 passed |
-| P1.1-G | First scene/text/shape/transform/animation tools and generic Remotion Project Graph composition implemented; CI pending |
+| P1.1-G | Initial 2D tools and snapshot PNG/MP4 rendering implemented and CI-verified; chart drawing regression checks added; two-topic acceptance remains open |
 | P1.1-H | Two-topic creative-loop and real AI invocation acceptance remains open |
 | P1.2+ | Isolated workers, broader tools/professional engines and general autonomous visual iteration |
 
 The built-in workspace plugin now includes initial scene, text, shape, transform and keyframe tools. The generic Project Graph composition is a first 2D slice; the CPU-cache Episode renderer remains separate. Snapshot-based PNG preview and MP4 render tools are implemented behind the Creative Host; the production Remotion host smoke test passed CI #43788856539 (177/177 tests). Two-topic creative-loop acceptance and broader tool families remain in progress.
+
+Structured SVG paths and bar/line charts use the same Project Graph composition. Chart validation now covers the final SVG drawing and production-host PNG/MP4 pixels, including a targeted data edit; see [chart implementation and evidence](docs/P1.1-G-CHARTS.md). A passing data-projection test alone does not establish visible chart output.
 
 ## Next milestone
 

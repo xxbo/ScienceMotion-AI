@@ -1,6 +1,6 @@
 # Architecture
 
-Last updated: 2026-11-15
+Last updated: 2026-11-16
 
 ## Direction and current boundaries
 
@@ -14,17 +14,17 @@ Project Schema v1.1 models sequences, scenes, nodes/transforms/components, shots
 
 Patch protocol 1.1.0 preserves node add/update/remove/reparent operations. Protocol 1.2.0 adds asset add/replace/remove without changing ProjectDocument 1.1.0. Batches clone state and check revisions; asset removal rejects declared consumers. The in-memory repository supplies local CAS, and the optional filesystem workspace persists canonical documents and retained snapshots through a conservative reference protocol. Scene/shot/animation editing is implemented through Patch protocol 1.3.0; complete graph-to-render integration remains open.
 
-The working Remotion video and SVG storyboard consume Episode data. CPU-cache scene types map to topic-specific components containing layout/animation and some text. The Project Graph fixture is validated separately; editing it is not yet the generic route to changing the rendered video.
+The legacy Remotion video and SVG storyboard consume Episode data; CPU-cache scene types map to topic-specific components. The generic Project Graph composition is a separate working route: public tools edit the canonical project, immutable snapshots supply render inputs, and the Creative Host returns PNG/MP4 Artifacts. Its initial 2D subset includes text, shapes, paths, charts and supported transform/opacity keyframes.
 
 ```text
-Current working render: Episode -> CPU-cache components -> MP4 / storyboard
-Current platform:      Registry/Gateway + Project Graph + Artifact lifecycle
-Next bridge:           executable tools -> project snapshot -> generic 2D renderer
+Legacy regression: Episode -> CPU-cache components -> MP4 / storyboard
+Creative path:     Registry/Gateway tools -> Project Graph -> immutable snapshot
+                   -> generic 2D Remotion composition -> PNG / MP4 Artifacts
 ```
 
-## Planned creative bridge — P1.1-G
+## Initial creative bridge — P1.1-G
 
-This section is target design, not implemented status.
+The initial tools and snapshot render path are implemented. Full two-topic, targeted-animation-edit, restart/restore and AI-invocation acceptance remains open; see PLAN and P1.1-ACCEPTANCE.
 
 Approved research/script/narration/caption content remains upstream. Agent planning uses discovered schemas to perform revisioned project edits. The host resolves approved content and pinned artifact dependencies into immutable render inputs. One canonical scene/timeline representation drives output; do not maintain an independent, conflicting timeline in the adapter.
 
@@ -42,7 +42,7 @@ The Gateway owns JSON Schema, permission/risk policy and configured Artifact che
 
 ToolExecutionStore uses reserve/finish ownership instead of independent save/update calls. Memory and optional exclusive-writer filesystem adapters implement this contract. The small local filesystem ledger has version/integrity validation, staged synced publication, conservative write-error handling and restart recovery of unfinished records to interrupted. Only confirmed success is replayed; uncertain effects require reconciliation. Records are retained rather than silently expired. The backend and stale-lock recovery procedure are scoped in P1.1-F.md.
 
-Gateway defaults grant no declared permissions, block destructive/high-cost operations without explicit host authorization and bound invocation concurrency/deadlines. The future creative host must configure its policy explicitly. Hooks are observational; hook failures cannot rewrite committed outcomes. Shutdown stops admission and drains actual underlying work before store closure.
+Gateway defaults grant no declared permissions, block destructive/high-cost operations without explicit host authorization and bound invocation concurrency/deadlines. The creative host configures its policy explicitly. Hooks are observational; hook failures cannot rewrite committed outcomes. Shutdown stops admission and drains actual underlying work before store closure.
 
 Timeouts and AbortSignal remain cooperative controls, not process isolation. Timed-out work keeps its concurrency slot until it settles and cannot later overwrite its terminal evidence. Forced termination and distributed guarantees belong to workers. Cancellation during storage admission is observed before starting the tool after storage settles. Project publication and execution evidence are separate ledgers: callers reconcile persisted revisions after uncertain outcomes; no universal exactly-once side-effect guarantee is implied.
 
@@ -78,7 +78,7 @@ Existing successful metadata checks establish streams, dimensions/FPS and durati
 
 Historical P1.0 evidence: [CI #43390347025](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43390347025). P1.1-D evidence: [CI #43405266507](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43405266507). Plugin version tests cover the domain manager, real Registry/Gateway and schemas. F tests cover execution admission/restart, revisioned edits, workspace/reference publication failures, snapshot retention and local store reopen. Documentation identity tests protect README, PLAN and ARCHITECTURE from accidental source-code or cross-document replacement.
 
-Keep current behavior, target design and gate evidence separate. New runtime capabilities require tests and scoped documentation; the generic creative bridge remains planned work.
+Keep current behavior, target design and gate evidence separate. New runtime capabilities require tests and scoped documentation; full creative-loop acceptance remains open.
 
 
 ## P1.1-F creative host — implemented local composition
@@ -105,7 +105,7 @@ The first data-driven 2D render path is implemented in `src/renderers/remotion/p
 
 The `builtin.workspace` plugin now exposes executable `project.scene.create`, `graphics.2d.text.create`, `graphics.2d.shape.create`, `project.node.transform.set`, and `animation.keyframes.set` tools through the same scoped host/Registry/Gateway and Patch 1.3.0 boundary. A water-cycle Project Graph fixture is registered as a second Remotion composition and CI renders a 10-second 1080p/30fps MP4 with Project Schema and ffprobe validation. The host integration test creates and edits a project only through these public tools, then projects the resulting document into a render model.
 
-This is the first vertical slice, not full P1.1-G completion. Preview/video Artifact services, immutable snapshot render requests, asset import, paths/SVG, typography/layout, transitions, audio/captions, 3D and visual review remain open. See [P1.1-G first slice](P1.1-G-FIRST-SLICE.md).
+This was the first vertical slice, not full P1.1-G completion. Subsequent snapshot render services, paths and charts are described below. Asset import, rich typography/layout, transitions, audio/captions, 3D and full visual acceptance remain open. See [P1.1-G first slice](P1.1-G-FIRST-SLICE.md).
 
 
 ## P1.1-G first vertical slice — CI verified
@@ -125,3 +125,5 @@ The renderer is injectable through trusted host configuration for deterministic 
 ## Data-driven chart capability
 
 The built-in workspace plugin exposes `graphics.2d.chart.create` for bar and line charts. The tool accepts 2–24 labelled finite numeric values and explicit geometry/style settings, then commits a normal shape node whose geometry component stores the chart type and data. The Project Graph render projection validates the chart payload and produces a renderer-neutral chart element. The Remotion adapter draws axes, grid lines, labels, bars or line points from the data at render time. No chart-specific TSX composition or external charting runtime is required. Invalid chart data produces a structured diagnostic rather than a malformed frame.
+
+The final `ProjectGraphFrame` dispatches chart elements to the reusable `ProjectChartSvg` drawing component. Regression checks cover that dispatch as well as actual host-rendered PNG/MP4 pixels, since a valid projected chart element can still be drawn incorrectly. [Chart notes](P1.1-G-CHARTS.md) describe signed/zero scaling, dense-label limits and targeted-edit evidence.
