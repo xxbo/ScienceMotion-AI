@@ -47,7 +47,7 @@ export interface ProjectRenderResult {
   snapshotHash: string; outputPath: string;
   diagnostics: Array<{ level: "info" | "warning" | "error"; code: string; message: string }>;
 }
-export interface ProjectGraphSnapshotRenderer {
+export interface ProjectGraphRenderer {
   readonly id: string; readonly version: string; readonly supportedProjectSchemaVersions: string[];
   render(request: ProjectRenderRequest): Promise<ProjectRenderResult>;
 }
@@ -58,4 +58,4 @@ export interface ProjectGraphRenderRequest { project: ProjectDocument; revisionI
 export interface ProjectGraphPreviewRequest extends ProjectGraphRenderRequest { frame: number }
 export interface ProjectGraphVideoRequest extends ProjectGraphRenderRequest { startFrame: number; durationFrames: number }
 export interface ProjectGraphRenderOutput { bytes: Uint8Array; mediaType: "image/png" | "video/mp4"; extension: "png" | "mp4"; rendererId: string; rendererVersion: string }
-export interface ProjectGraphRenderer { readonly id: string; readonly version: string; renderPreview(request: ProjectGraphPreviewRequest): Promise<ProjectGraphRenderOutput>; renderVideo(request: ProjectGraphVideoRequest): Promise<ProjectGraphRenderOutput> }
+export interface ProjectGraphSnapshotRenderer { readonly id: string; readonly version: string; renderPreview(request: ProjectGraphPreviewRequest): Promise<ProjectGraphRenderOutput>; renderVideo(request: ProjectGraphVideoRequest): Promise<ProjectGraphRenderOutput> }

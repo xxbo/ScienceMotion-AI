@@ -175,14 +175,14 @@ test("production host: snapshot preview/video tools return retained, traceable A
 
 test("render tools reject foreign snapshots and out-of-range frames", async () => {
   const root = await directory(); let host: CreativeHost | undefined;
-  const renderer: ProjectGraphRenderer = {
+  const renderer: ProjectGraphSnapshotRenderer = {
     id: "test.project-graph", version: "test-1",
     async renderPreview() { return { bytes: new Uint8Array([137,80,78,71,13,10,26,10,1]), mediaType: "image/png", extension: "png", rendererId: this.id, rendererVersion: this.version }; },
     async renderVideo() { return { bytes: new Uint8Array([0,0,0,24,102,116,121,112,109,112,52,50]), mediaType: "video/mp4", extension: "mp4", rendererId: this.id, rendererVersion: this.version }; },
   };
   try {
     host = await openCreativeHost({ directory: root, renderer });
-    const grant: CreativeSessionGrant = { permissions: ["project.read", "project.write", "snapshot.write", "snapshot.read", "artifact.write"],
+    const grant: Omit<CreativeSessionGrant, "projectId"> = { permissions: ["project.read", "project.write", "snapshot.write", "snapshot.read", "artifact.write"],
       toolIds: ["project.create", "project.inspect", "project.snapshot.save", "render.preview"] };
     const owner = host.createSession({ ...grant, projectId: "owner" });
     assert.equal((await call(owner, "project.create", { name: "Owner", episodeId: "owner", durationFrames: 30 })).ok, true);
