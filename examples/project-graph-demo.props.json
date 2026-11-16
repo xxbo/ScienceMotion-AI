@@ -6,7 +6,7 @@
       "name": "水循环示意",
       "createdAt": "2026-11-16T00:00:00.000Z",
       "updatedAt": "2026-11-16T00:00:00.000Z",
-      "units": "pixel",
+      "units": "unitless",
       "coordinateSystem": "screen-y-down",
       "timebase": {
         "fps": 30,
