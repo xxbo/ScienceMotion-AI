@@ -4,7 +4,7 @@ import demo from "../../examples/project-graph-demo.props.json";
 import { buildProjectRenderModel } from "../renderers/remotion/project-render-model";
 import type { ProjectDocument } from "../contracts/project";
 
-const project = demo.project as ProjectDocument;
+const project = demo.project as unknown as ProjectDocument;
 
 test("project renderer selects shot scene and maps text and shape nodes", () => {
   const model = buildProjectRenderModel(project, 40);
