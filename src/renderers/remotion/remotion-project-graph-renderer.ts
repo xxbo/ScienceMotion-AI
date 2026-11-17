@@ -1,49 +1,88 @@
 import { bundle } from "@remotion/bundler";
 import { makeCancelSignal, renderFrames, renderMedia, renderStill, selectComposition } from "@remotion/renderer";
 import { randomUUID } from "node:crypto";
-import type { LayoutFrameMeasurement } from "../../contracts/layout-inspection";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import type { ProjectGraphLayoutRequest, ProjectGraphPreviewRequest, ProjectGraphSnapshotRenderer, ProjectGraphRenderOutput, ProjectGraphVideoRequest } from "../../contracts/renderer";
+import type { LayoutFrameMeasurement } from "../../contracts/layout-inspection";
+import type { ProjectGraphLayoutRequest, ProjectGraphPreviewRequest, ProjectGraphRenderProgress, ProjectGraphRenderRequest,
+  ProjectGraphSnapshotRenderer, ProjectGraphRenderOutput, ProjectGraphVideoRequest } from "../../contracts/renderer";
+
 export class RemotionProjectGraphRenderer implements ProjectGraphSnapshotRenderer {
- readonly id="remotion.project-graph";readonly version="1.0.0";private serveUrlPromise?:Promise<string>;
- constructor(private readonly entryPoint=resolve("src/index.ts")){}
- private serveUrl():Promise<string>{if(!this.serveUrlPromise)this.serveUrlPromise=bundle({entryPoint:this.entryPoint}).catch(e=>{this.serveUrlPromise=undefined;throw e;});return this.serveUrlPromise;}
- async measureLayout(request:ProjectGraphLayoutRequest):Promise<LayoutFrameMeasurement[]>{
-  request.signal?.throwIfAborted();
-  const serveUrl=await this.serveUrl(), token=randomUUID();
-  const inputProps={project:structuredClone(request.project),sceneId:undefined,layoutInspection:{token}};
-  const composition=await selectComposition({serveUrl,id:"ProjectGraph",inputProps});
-  const measurements=new Map<number,LayoutFrameMeasurement>();
-  const {cancelSignal,cancel}=makeCancelSignal();
-  request.signal?.addEventListener("abort",cancel,{once:true});
-  try {
-   request.signal?.throwIfAborted();
-   await renderFrames({composition,serveUrl,inputProps,frames:request.frames,imageFormat:"none",outputDir:null,
-    concurrency:1,muted:true,cancelSignal,timeoutInMilliseconds:20000,
-    onStart:()=>{},onFrameUpdate:()=>{},
-    onArtifact:(artifact)=>{
-     if(!artifact.filename.startsWith(`layout-${token}-`))return;
-     if(!request.frames.includes(artifact.frame)||measurements.has(artifact.frame)||typeof artifact.content!=="string"||artifact.content.length>4*1024*1024)
-      throw new Error("Unexpected, duplicate or oversized browser layout evidence");
-     measurements.set(artifact.frame,JSON.parse(artifact.content) as LayoutFrameMeasurement);
-    }});
-   if(measurements.size!==request.frames.length)throw new Error("Browser layout instrumentation did not return every requested frame");
-   return request.frames.map((frame)=>measurements.get(frame)!);
-  } finally { request.signal?.removeEventListener("abort",cancel); }
- }
- async renderPreview(request:ProjectGraphPreviewRequest):Promise<ProjectGraphRenderOutput>{
-  const serveUrl=await this.serveUrl();const inputProps={project:structuredClone(request.project),sceneId:request.sceneId};
-  const composition=await selectComposition({serveUrl,id:"ProjectGraph",inputProps});const dir=await mkdtemp(join(tmpdir(),"sciencemotion-preview-"));const output=join(dir,"preview.png");
-  try{await renderStill({composition,serveUrl,output,frame:request.frame,inputProps});return{bytes:new Uint8Array(await readFile(output)),mediaType:"image/png",extension:"png",rendererId:this.id,rendererVersion:this.version};}
-  finally{await rm(dir,{recursive:true,force:true});}
- }
- async renderVideo(request:ProjectGraphVideoRequest):Promise<ProjectGraphRenderOutput>{
-  const serveUrl=await this.serveUrl();const inputProps={project:structuredClone(request.project),sceneId:request.sceneId};
-  const composition=await selectComposition({serveUrl,id:"ProjectGraph",inputProps});const dir=await mkdtemp(join(tmpdir(),"sciencemotion-video-"));const output=join(dir,"render.mp4");
-  try{await renderMedia({composition,serveUrl,codec:"h264",outputLocation:output,inputProps,frameRange:[request.startFrame,request.startFrame+request.durationFrames-1],pixelFormat:"yuv420p"});
-   return{bytes:new Uint8Array(await readFile(output)),mediaType:"video/mp4",extension:"mp4",rendererId:this.id,rendererVersion:this.version};}
-  finally{await rm(dir,{recursive:true,force:true});}
- }
+  readonly id = "remotion.project-graph"; readonly version = "1.0.0";
+  private serveUrlPromise?: Promise<string>;
+  constructor(private readonly entryPoint = resolve("src/index.ts")) {}
+  private serveUrl(): Promise<string> {
+    if (!this.serveUrlPromise) this.serveUrlPromise = bundle({ entryPoint: this.entryPoint }).catch(error => { this.serveUrlPromise = undefined; throw error; });
+    return this.serveUrlPromise;
+  }
+  private report(request: ProjectGraphRenderRequest, phase: ProjectGraphRenderProgress["phase"], fraction?: number) {
+    // Remotion can invoke progress from stream callbacks: cancellation must not throw there.
+    if (request.signal?.aborted) return;
+    try { request.onProgress?.({ phase, ...(fraction === undefined ? {} : { fraction: Math.max(0, Math.min(1, fraction)) }) }); } catch { /* Observers cannot change rendering. */ }
+  }
+  private stage(request: ProjectGraphRenderRequest, phase: ProjectGraphRenderProgress["phase"], fraction?: number) {
+    request.signal?.throwIfAborted();
+    this.report(request, phase, fraction);
+    request.signal?.throwIfAborted();
+  }
+  private cancellation(request: ProjectGraphRenderRequest) {
+    const { cancelSignal, cancel } = makeCancelSignal();
+    request.signal?.addEventListener("abort", cancel, { once: true });
+    return { cancelSignal, dispose: () => request.signal?.removeEventListener("abort", cancel) };
+  }
+  async measureLayout(request: ProjectGraphLayoutRequest): Promise<LayoutFrameMeasurement[]> {
+    const cancellation = this.cancellation(request);
+    try {
+      this.stage(request, "bundling");
+      const serveUrl = await this.serveUrl(), token = randomUUID();
+      const inputProps = { project: structuredClone(request.project), sceneId: undefined, layoutInspection: { token } };
+      this.stage(request, "selecting");
+      const composition = await selectComposition({ serveUrl, id: "ProjectGraph", inputProps });
+      const measurements = new Map<number, LayoutFrameMeasurement>();
+      this.stage(request, "rendering", 0);
+      await renderFrames({ composition, serveUrl, inputProps, frames: request.frames, imageFormat: "none", outputDir: null,
+        concurrency: 1, muted: true, cancelSignal: cancellation.cancelSignal, timeoutInMilliseconds: 20000,
+        onStart: () => {}, onFrameUpdate: count => this.report(request, "rendering", count / request.frames.length),
+        onArtifact: artifact => {
+          if (!artifact.filename.startsWith(`layout-${token}-`)) return;
+          if (!request.frames.includes(artifact.frame) || measurements.has(artifact.frame) || typeof artifact.content !== "string" || artifact.content.length > 4 * 1024 * 1024)
+            throw new Error("Unexpected, duplicate or oversized browser layout evidence");
+          measurements.set(artifact.frame, JSON.parse(artifact.content) as LayoutFrameMeasurement);
+        } });
+      request.signal?.throwIfAborted();
+      if (measurements.size !== request.frames.length) throw new Error("Browser layout instrumentation did not return every requested frame");
+      return request.frames.map(frame => measurements.get(frame)!);
+    } finally { cancellation.dispose(); }
+  }
+  async renderPreview(request: ProjectGraphPreviewRequest): Promise<ProjectGraphRenderOutput> {
+    const cancellation = this.cancellation(request); let directory: string | undefined;
+    try {
+      this.stage(request, "bundling");
+      const serveUrl = await this.serveUrl(), inputProps = { project: structuredClone(request.project), sceneId: request.sceneId };
+      this.stage(request, "selecting");
+      const composition = await selectComposition({ serveUrl, id: "ProjectGraph", inputProps });
+      directory = await mkdtemp(join(tmpdir(), "sciencemotion-preview-")); const output = join(directory, "preview.png");
+      this.stage(request, "rendering", 0);
+      await renderStill({ composition, serveUrl, output, frame: request.frame, inputProps, cancelSignal: cancellation.cancelSignal });
+      this.stage(request, "rendering", 1);
+      return { bytes: new Uint8Array(await readFile(output)), mediaType: "image/png", extension: "png", rendererId: this.id, rendererVersion: this.version };
+    } finally { cancellation.dispose(); if (directory) await rm(directory, { recursive: true, force: true }); }
+  }
+  async renderVideo(request: ProjectGraphVideoRequest): Promise<ProjectGraphRenderOutput> {
+    const cancellation = this.cancellation(request); let directory: string | undefined;
+    try {
+      this.stage(request, "bundling");
+      const serveUrl = await this.serveUrl(), inputProps = { project: structuredClone(request.project), sceneId: request.sceneId };
+      this.stage(request, "selecting");
+      const composition = await selectComposition({ serveUrl, id: "ProjectGraph", inputProps });
+      directory = await mkdtemp(join(tmpdir(), "sciencemotion-video-")); const output = join(directory, "render.mp4");
+      this.stage(request, "rendering", 0);
+      await renderMedia({ composition, serveUrl, codec: "h264", outputLocation: output, inputProps,
+        frameRange: [request.startFrame, request.startFrame + request.durationFrames - 1], pixelFormat: "yuv420p", cancelSignal: cancellation.cancelSignal,
+        onProgress: p => this.report(request, p.renderedDoneIn === null ? "rendering" : "encoding", p.progress) });
+      request.signal?.throwIfAborted();
+      return { bytes: new Uint8Array(await readFile(output)), mediaType: "video/mp4", extension: "mp4", rendererId: this.id, rendererVersion: this.version };
+    } finally { cancellation.dispose(); if (directory) await rm(directory, { recursive: true, force: true }); }
+  }
 }

@@ -19,7 +19,8 @@ Main is the delivery baseline. The merged chart/scene-selection fix on `020ae447
 | Inspection I1 | Read-only model diagnostics, declared shape/chart bounds and exact frame coverage |
 | Inspection I2 | Production-browser text/element measurement without image encoding; font-ready line boxes, overflow warnings and heuristic font fallback |
 | P1.1-H | Local AI-client interface, recorded interactive AI trial and separate CI replay; two-topic/plugin-switch regression; human review remains open |
-| P1.2+ | Isolated workers, broader tools/professional engines and general autonomous visual iteration |
+| P1.2 | Opt-in Linux render workers, descendant cleanup, cancellation/deadlines and progress callbacks; durable jobs and aggregate resource quotas remain open |
+| P1.3+ | Broader tools/professional engines and general autonomous visual iteration |
 
 The built-in workspace plugin now includes initial scene, text, shape, transform and keyframe tools. The generic Project Graph composition is a first 2D slice; the CPU-cache Episode renderer remains separate. The [two-topic acceptance scenario](docs/P1.1-CREATIVE-LOOP.md) creates 12-second cache and water-cycle fixtures through public tools, detects/repairs seeded defects, edits text/motion and verifies export/restart/restore including original data dependencies. CI preserves six baseline/edited/restored MP4s, 18 previews, manifests and invocation evidence. These technical fixtures are silent and scripted.
 
@@ -36,7 +37,7 @@ Approved content -> AI tool calls -> Project Graph -> immutable snapshot
 
 The current host has 19 executable built-ins; acceptance adds one executable test extension and grants 17 tools to the fixture workflow. One catalogue-only manifest and 300 synthetic scale entries (100 IDs × 3 versions) are counted separately. The scale entries are not implemented creative tools. Reuse Remotion and the existing contracts; marketplace/distributed infrastructure remains deferred.
 
-P1.1 has evidence for 23/25 acceptance items, not an effort-completion percentage. [Host plugin switching and the 300-manifest scenario](docs/P1.1-PLUGIN-SWITCH-SCALE.md), plus the [local interface and recorded AI trial](docs/P1.1-AI-TRIAL.md), are implemented. Watch the trial's [12-second revised video](docs/ai-trials/cache-hit-2026-11-17/video-final.mp4): it was created through discovered tools and repaired from a layout report. CI separately replays that historical interaction; it does not run a new model trial. Next is final effect review, deferred by the user; the two remaining checklist items require that human review. See [Development Plan](docs/PLAN.md) and [P1.1 Acceptance](docs/P1.1-ACCEPTANCE.md).
+P1.1 has evidence for 23/25 acceptance items, not an effort-completion percentage. [Host plugin switching and the 300-manifest scenario](docs/P1.1-PLUGIN-SWITCH-SCALE.md), plus the [local interface and recorded AI trial](docs/P1.1-AI-TRIAL.md), are implemented. Watch the trial's [12-second revised video](docs/ai-trials/cache-hit-2026-11-17/video-final.mp4): it was created through discovered tools and repaired from a layout report. The user gave [positive sample feedback and authorized continued work](docs/P1.1-REVIEW.md). Engineering has advanced to [P1.2's first render-worker slice](docs/P1.2-WORKERS.md); detailed review of both original fixtures remains separately tracked. CI replay makes no new model calls. See [Development Plan](docs/PLAN.md) and [P1.1 Acceptance](docs/P1.1-ACCEPTANCE.md).
 
 ## Development checks
 
@@ -57,6 +58,7 @@ npm run inspect:snapshot-smoke
 npm run inspect:layout-smoke
 npm run accept:creative-loop
 npm run accept:ai-trial
+npm run accept:render-worker
 ```
 
 `npm run studio` and `npm run render` also generate narration and require the Python voice environment described by the repository's voice scripts and CI workflow.
@@ -68,6 +70,8 @@ npm run accept:ai-trial
 `accept:catalogue-scale` needs no browser. It writes `out/catalogue-scale-evidence.json` with synthetic inventory, compatibility/conflict checks and machine-specific timings; CI includes it in `sciencemotion-demo`.
 
 `host:stdio` exposes a project-bound JSON-lines process for AI clients; launch with a trusted config and explicit tool grants. `accept:ai-trial` validates the retained original trial and replays it through the CLI in a fresh workspace, writing separate media/evidence to `out/ai-trial/`. CI uploads `ai-trial-replay-evidence`. See [protocol, provenance and limitations](docs/P1.1-AI-TRIAL.md).
+
+`accept:render-worker` runs the same CLI replay with `renderWorker: {}` in trusted launch configuration, then cancels a real video after frame progress, verifies Chromium/FFmpeg cleanup and absence of a cancelled Artifact, and renders a new preview. It requires Linux and Python 3 in addition to renderer dependencies. CI uploads `out/ai-trial-worker/` as `render-worker-evidence`. The default host remains in process; enable workers explicitly. Next are durable asynchronous render jobs and status/cancellation APIs.
 
 ## Design and documentation
 

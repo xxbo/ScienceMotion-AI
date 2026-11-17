@@ -10,10 +10,14 @@ import type { SnapshotLayoutInspectionReport } from "../src/contracts/layout-ins
 import type { SnapshotInspectionReport } from "../src/contracts/inspection";
 import { parseCreativeRequest } from "../src/platform/creative-stdio";
 import { hashProject, type ProjectSnapshot } from "../src/platform/project-snapshots";
+import { verifyRenderWorkerLifecycle } from "./fixtures/render-worker-lifecycle";
 
 // This replays a historical model interaction. It never calls or impersonates a model.
 const fixture = "docs/ai-trials/cache-hit-2026-11-17";
-const output = resolve("out/ai-trial");
+const args = process.argv.slice(2);
+assert.ok(args.length === 0 || (args.length === 1 && args[0] === "--worker"), "Usage: accept:ai-trial [--worker]");
+const processWorker = args[0] === "--worker";
+const output = resolve(processWorker ? "out/ai-trial-worker" : "out/ai-trial");
 const width = 960, height = 540, frames = [0, 90, 179, 180, 270, 359];
 const sha = (bytes: Uint8Array | string) => createHash("sha256").update(bytes).digest("hex");
 const json = async (path: string) => JSON.parse(await readFile(path, "utf8"));
@@ -184,6 +188,7 @@ try {
   const originalMedia = validateMedia(fixture);
   const tracePath = join(root, "replay.jsonl");
   await writeFile(join(root, "config.json"), JSON.stringify({ ...config, directory: join(root, "workspace"), traceFile: tracePath,
+    ...(processWorker ? { renderWorker: {} } : {}),
     metadata: { mode: "deterministic-replay", modelCalls: 0, originalTranscriptHash: manifest.files["transcript.jsonl"].sha256 } }));
   const child = spawnSync(process.execPath, ["--import", "tsx", "scripts/creative-host-server.ts", "--config", join(root, "config.json")], {
     input: original.requests.map(r => JSON.stringify(r) + "\n").join(""), encoding: "utf8", timeout: 180000, maxBuffer: 16 * 1024 * 1024,
@@ -193,6 +198,7 @@ try {
   try { await writeFile(join(output, "replay-transcript.jsonl"), await readFile(tracePath)); } catch { /* Startup failures have stderr. */ }
   assert.equal(child.status, 0, child.stderr || child.error?.message); assert.equal(child.stderr, "");
   const replay = transcript(await readFile(tracePath, "utf8")), replayProjects = checkProjectsAndReports(replay);
+  assert.equal(replay.records[0].data.renderExecution.mode, processWorker ? "local-process" : "in-process");
   assert.deepEqual(replay.requests, original.requests); assert.deepEqual(replay.catalogue, original.catalogue);
   assert.deepEqual(child.stdout.trim().split("\n").map(line => JSON.parse(line)), replay.records.filter(r => r.kind === "response").map(r => r.data));
   for (const stage of ["before", "after"] as const) {
@@ -202,19 +208,27 @@ try {
   const mediaReceipts = [];
   for (const media of manifest.media) {
     const receipt = checkRenderReceipt(replay, media.requestId), hash = receipt.contentHash;
+    if (processWorker) {
+      assert.equal(receipt.metadata.execution.kind, "local-process");
+      assert.ok(Number.isSafeInteger(receipt.metadata.execution.processId));
+      assert.notEqual(receipt.metadata.execution.processId, process.pid);
+    }
     assert.match(hash, /^[a-f0-9]{64}$/);
     const bytes = await readFile(join(root, "workspace", "artifacts", "blobs", hash.slice(0, 2), hash));
     assert.equal(sha(bytes), hash); assert.equal(receipt.artifactId, `sha256:${hash}`);
     await writeFile(join(output, media.file), bytes); mediaReceipts.push({ file: media.file, receipt });
   }
+  if (processWorker) assert.equal(new Set(mediaReceipts.map(m => m.receipt.metadata.execution.jobId)).size, mediaReceipts.length);
+  const lifecycle = processWorker ? await verifyRenderWorkerLifecycle(join(root, "workspace"), replayProjects.after, output) : undefined;
   const evidence = { status: "passed", mode: "deterministic-replay-of-historical-model-trial", newModelCalls: 0,
+    renderExecution: processWorker ? "local-process" : "in-process", ...(lifecycle ? { workerLifecycle: lifecycle } : {}),
     originalTranscriptHash: manifest.files["transcript.jsonl"].sha256, requests: replay.requests.length,
     sourceCommit: spawnSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).stdout.trim(), node: process.version,
     sourceWorktreeDirty: Boolean(spawnSync("git", ["status", "--porcelain"], { encoding: "utf8" }).stdout.trim()),
     auditNormalization: ["project.createdAt", "project.updatedAt", "revisions[*].createdAt"],
     original: { media: originalMedia, layoutBefore: original.value("layout-before"), layoutFinal: original.value("layout-final") },
     replay: { media: validateMedia(output), receipts: mediaReceipts, layoutBefore: replay.value("layout-before"), layoutFinal: replay.value("layout-final") },
-    humanVisualReview: "pending", companionRegression: "accept:creative-loop runs separately in the same CI job" };
+    humanVisualReview: "Historical AI sample accepted by the user on 2026-11-17; this run is automated. Full two-topic human review remains separately pending.", companionRegression: "accept:creative-loop runs separately in the same CI job" };
   await writeFile(join(output, "evidence.json"), JSON.stringify(evidence, null, 2) + "\n");
   console.log(`Verified historical AI trial and ${replay.requests.length}-request deterministic replay; two videos and five previews per run.`);
 } catch (error) {

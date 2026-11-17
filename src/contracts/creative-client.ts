@@ -1,5 +1,6 @@
 import type { CreativeHostLimits, CreativeInvocation, CreativeSessionGrant } from "./creative-host";
 import type { ToolSearchQuery } from "./agent-tool";
+import type { RenderWorkerPolicy } from "./render-worker";
 
 /** Local, sequential UTF-8 JSON Lines protocol. This is not an MCP or HTTP server. */
 export const CREATIVE_CLIENT_PROTOCOL = "1.0.0" as const;
@@ -20,6 +21,7 @@ export interface CreativeLocalConfig {
   traceFile: string;
   grant: CreativeSessionGrant;
   limits?: Partial<CreativeHostLimits>;
+  renderWorker?: Partial<RenderWorkerPolicy>;
   maxRequestBytes?: number;
   maxTraceBytes?: number;
   /** Operator-supplied provenance, not provider attestation or executable configuration. */
