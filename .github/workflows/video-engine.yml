@@ -143,6 +143,18 @@ jobs:
           path: out/render-job-cli/
           if-no-files-found: error
 
+      - name: Verify concurrent worker scheduling and bounded waiting jobs
+        id: render-scheduler
+        run: npm run accept:render-scheduler
+
+      - name: Upload render scheduler evidence
+        if: ${{ !cancelled() && (steps.render-scheduler.outcome == 'success' || steps.render-scheduler.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: render-scheduler-evidence
+          path: out/render-job-scheduler/
+          if-no-files-found: error
+
       - name: Verify chart rendering and targeted pixel changes
         run: npm run render:chart-smoke
 

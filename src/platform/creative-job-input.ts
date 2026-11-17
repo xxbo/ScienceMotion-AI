@@ -5,10 +5,19 @@ import { hashProject } from "./project-snapshots";
 import { projectArtifactBindings } from "./project-assets";
 import { jobCopy, jobFail, jobIdentity, jobInteger, jobObject, validateJobSubmission } from "./render-job-validation";
 
-export function creativeJobPolicy(input: Partial<CreativeJobPolicy> = {}): CreativeJobPolicy {
-  jobObject(input, ["maxActiveJobs", "timeoutMs"]);
-  const policy = { maxActiveJobs: input.maxActiveJobs ?? 8, timeoutMs: input.timeoutMs ?? 30000 };
-  jobInteger(policy.maxActiveJobs, 1, 32); jobInteger(policy.timeoutMs, 1, 300000); return policy as CreativeJobPolicy;
+export function creativeJobPolicy(input: Partial<CreativeJobPolicy> = {}): Omit<CreativeJobPolicy, "maxActiveJobs"> {
+  jobObject(input, ["maxActiveJobs", "maxQueuedJobs", "maxConcurrentJobs", "timeoutMs"]);
+  if (input.maxActiveJobs !== undefined) jobInteger(input.maxActiveJobs, 1, 32);
+  if (input.maxQueuedJobs !== undefined) jobInteger(input.maxQueuedJobs, 0, 31);
+  if (input.maxConcurrentJobs !== undefined) jobInteger(input.maxConcurrentJobs, 1, 4);
+  if (input.timeoutMs !== undefined) jobInteger(input.timeoutMs, 1, 300000);
+  if (input.maxActiveJobs !== undefined && (input.maxQueuedJobs !== undefined || input.maxConcurrentJobs !== undefined))
+    jobFail("HOST_JOB_CONFIG", "Choose legacy maxActiveJobs or independent queue/concurrency limits");
+  const policy = { maxQueuedJobs: input.maxQueuedJobs ?? (input.maxActiveJobs === undefined ? 7 : input.maxActiveJobs - 1),
+    maxConcurrentJobs: input.maxConcurrentJobs ?? 1, timeoutMs: input.timeoutMs ?? 30000 };
+  if (policy.maxQueuedJobs + policy.maxConcurrentJobs > 32)
+    jobFail("HOST_JOB_CONFIG", "Queued plus concurrent job capacity must not exceed 32");
+  return policy;
 }
 export function parseJobSubmission(value: CreativeJobSubmission): CreativeJobSubmission {
   const request = jobCopy(value);

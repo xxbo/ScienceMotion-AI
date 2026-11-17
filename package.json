@@ -32,7 +32,8 @@
     "host:stdio": "tsx scripts/creative-host-server.ts",
     "accept:ai-trial": "tsx scripts/ai-trial-acceptance.ts",
     "accept:render-worker": "tsx scripts/ai-trial-acceptance.ts --worker",
-    "accept:render-jobs": "python3 scripts/fixtures/owned-process-harness.py node --import tsx scripts/render-job-cli-acceptance.ts"
+    "accept:render-jobs": "python3 scripts/fixtures/owned-process-harness.py node --import tsx scripts/render-job-cli-acceptance.ts",
+    "accept:render-scheduler": "tsx scripts/render-job-scheduler-acceptance.ts"
   },
   "dependencies": {
     "@remotion/cli": "^4.0.0",
