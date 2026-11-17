@@ -73,6 +73,8 @@ test("real stdio session creates/replays/snapshots, rejects authority injection 
 
 function fakeSession(counter: { calls: number }): CreativeSession {
   return { projectId: "p", discover: async () => ({ tools: [], total: 0, limit: 50, offset: 0 }), manifest: async () => undefined,
+    jobs: { submit: async () => { throw new Error("Unexpected job call"); }, get: async () => undefined,
+      list: async () => ({ jobs: [], total: 0, offset: 0, limit: 50 }), cancel: async () => { throw new Error("Unexpected job call"); } },
     invoke: async () => { counter.calls++; return { ok: true, output: { mutation: counter.calls }, diagnostics: [] }; }, revoke() {} };
 }
 test("malformed requests cannot mutate, while framing/UTF-8/byte-limit errors close the transport", async () => {

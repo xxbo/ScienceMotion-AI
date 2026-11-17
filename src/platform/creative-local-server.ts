@@ -2,11 +2,12 @@ import { mkdir, open, readFile, stat } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import type { Readable, Writable } from "node:stream";
 import type { CreativeLocalConfig } from "../contracts/creative-client";
-import { CREATIVE_CLIENT_PROTOCOL } from "../contracts/creative-client";
+import { CREATIVE_CLIENT_PROTOCOL, CREATIVE_CLIENT_JOB_PROTOCOL } from "../contracts/creative-client";
 import { openCreativeHost } from "./creative-host";
 import { assertFiniteJson } from "./project-creative-edits";
 import { CreativeTransportError, serveCreativeStdio, type CreativeTraceSink } from "./creative-stdio";
 import { renderWorkerPolicy } from "./render-worker";
+import { creativeJobPolicy } from "./creative-job-input";
 
 function bounded(value: unknown, fallback: number, maximum: number): number {
   const n = value ?? fallback;
@@ -18,11 +19,13 @@ export async function readCreativeLocalConfig(path: string): Promise<CreativeLoc
   const value = JSON.parse(await readFile(path, "utf8")) as CreativeLocalConfig;
   assertFiniteJson(value);
   if (!value || typeof value !== "object" || Array.isArray(value) || value.schemaVersion !== "1.0.0" ||
-      Object.keys(value).some(k => !["schemaVersion", "directory", "traceFile", "grant", "limits", "renderWorker", "maxRequestBytes", "maxTraceBytes", "metadata"].includes(k)) ||
+      Object.keys(value).some(k => !["schemaVersion", "protocolVersion", "directory", "traceFile", "grant", "limits", "renderWorker", "renderJobs", "maxRequestBytes", "maxTraceBytes", "metadata"].includes(k)) ||
       typeof value.directory !== "string" || !value.directory.trim() || typeof value.traceFile !== "string" || !value.traceFile.trim())
     throw new Error("Invalid local launch configuration");
   if (value.metadata !== undefined && (!value.metadata || typeof value.metadata !== "object" || Array.isArray(value.metadata))) throw new Error("Invalid launch metadata");
   if (value.renderWorker !== undefined) renderWorkerPolicy(value.renderWorker);
+  if (value.protocolVersion !== undefined && ![CREATIVE_CLIENT_PROTOCOL, CREATIVE_CLIENT_JOB_PROTOCOL].includes(value.protocolVersion)) throw new Error("Unsupported local protocol");
+  if (value.renderJobs !== undefined) creativeJobPolicy(value.renderJobs);
   return { ...value, directory: resolve(dirname(path), value.directory), traceFile: resolve(dirname(path), value.traceFile),
     maxRequestBytes: bounded(value.maxRequestBytes, 1024 * 1024, 1024 * 1024),
     maxTraceBytes: bounded(value.maxTraceBytes, 64 * 1024 * 1024, 128 * 1024 * 1024) };
@@ -40,16 +43,16 @@ export async function runCreativeLocalServer(configPath: string, streams: { inpu
   } };
   let host: Awaited<ReturnType<typeof openCreativeHost>> | undefined;
   try {
-    host = await openCreativeHost({ directory: config.directory, limits: config.limits, renderWorker: config.renderWorker });
+    host = await openCreativeHost({ directory: config.directory, limits: config.limits, renderWorker: config.renderWorker, renderJobs: config.renderJobs });
     const session = host.createSession(config.grant);
     const abort = () => { session.revoke(); streams.input.destroy(); };
     streams.signal?.addEventListener("abort", abort, { once: true });
     try {
-      await trace.record("session", { protocolVersion: CREATIVE_CLIENT_PROTOCOL, grant: config.grant,
+      await trace.record("session", { protocolVersion: config.protocolVersion ?? CREATIVE_CLIENT_PROTOCOL, grant: config.grant,
         renderExecution: config.renderWorker === undefined ? { mode: "in-process" } : { mode: "local-process", policy: renderWorkerPolicy(config.renderWorker) },
         plugins: host.plugins.exportLock(), metadata: config.metadata ?? {}, metadataSource: "operator-supplied; not provider-attested" });
       if (streams.signal?.aborted) abort();
-      const completed = await serveCreativeStdio({ ...streams, session, trace, maxRequestBytes: config.maxRequestBytes!, close: async () => { session.revoke(); await host!.close(); } });
+      const completed = await serveCreativeStdio({ ...streams, session, trace, protocolVersion: config.protocolVersion, maxRequestBytes: config.maxRequestBytes!, close: async () => { session.revoke(); await host!.close(); } });
       return completed && !streams.signal?.aborted;
     } finally { streams.signal?.removeEventListener("abort", abort); }
   } finally { try { await host?.close(); } finally { await file.close(); } }

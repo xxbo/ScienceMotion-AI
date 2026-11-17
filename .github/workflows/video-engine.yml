@@ -128,6 +128,9 @@ jobs:
       - name: Validate Creative Host render Artifacts
         run: npm run validate:host-render
 
+      - name: Verify background job API with real PNG and MP4 outputs
+        run: npm run render:job-smoke
+
       - name: Verify chart rendering and targeted pixel changes
         run: npm run render:chart-smoke
 
@@ -148,6 +151,9 @@ jobs:
             out/project-graph-demo.mp4
             out/project-graph-host-preview.png
             out/project-graph-host-video.mp4
+            out/job-host-preview.png
+            out/job-host-video.mp4
+            out/job-host-evidence.json
             out/charts-before.png
             out/charts-after.png
             out/charts-video.mp4

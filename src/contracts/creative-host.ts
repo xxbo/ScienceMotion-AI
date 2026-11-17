@@ -7,6 +7,7 @@ import type { ProjectSnapshot } from "../platform/project-snapshots";
 import type { ProjectGraphRenderOutput, ProjectGraphRenderRequest } from "./renderer";
 import type { SnapshotInspectionReport } from "./inspection";
 import type { SnapshotLayoutInspectionReport } from "./layout-inspection";
+import type { CreativeRenderJobs } from "./creative-jobs";
 
 export const CREATIVE_PERMISSIONS = [
   "project.read", "project.write", "project.delete", "snapshot.read", "snapshot.write",
@@ -64,6 +65,7 @@ export interface CreativeInvocation {
 }
 export interface CreativeSession {
   readonly projectId: string;
+  readonly jobs: CreativeRenderJobs;
   discover(query?: ToolSearchQuery): Promise<{ tools: AgentToolManifest[]; total: number; limit: number; offset: number }>;
   manifest(toolId: string): Promise<AgentToolManifest | undefined>;
   invoke(call: CreativeInvocation): Promise<ToolResult>;
