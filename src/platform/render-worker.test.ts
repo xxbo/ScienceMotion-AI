@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, watch, type FSWatcher } from "node:fs";
-import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import type { RenderWorkerEvent } from "../contracts/render-worker";
@@ -30,6 +31,20 @@ async function notRunning(pid: number) {
   assert.fail(`Worker descendant ${pid} is still running`);
 }
 const linux = { skip: process.platform !== "linux", timeout: 30000 };
+
+test("guardian refuses work and removes its private temporary directory when the parent is already gone at startup", linux, async () => {
+  const root = await mkdtemp(join(tmpdir(), "science-worker-orphan-start-"));
+  const directory = await mkdtemp(join(root, "sciencemotion-worker-"));
+  try {
+    await writeFile(join(directory, "request.json"), "unfinished parent request");
+    await writeFile(join(root, "unrelated.txt"), "must remain");
+    const result = spawnSync("python3", [resolve("src/platform/render-worker-supervisor.py"), process.execPath, script, directory, "1024", "150", "-1"],
+      { encoding: "utf8", timeout: 5000 });
+    assert.equal(result.error, undefined); assert.equal(result.status, 1, result.stderr); assert.equal(result.stderr, "");
+    await noJobs(root); assert.equal(await readFile(join(root, "unrelated.txt"), "utf8"), "must remain");
+    assert.equal(existsSync(join(root, "worker.json")), false, "No renderer may start after parent loss");
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
 
 test("worker returns verified bytes only after exit; observers cannot alter success; descendants and temporary files are cleaned", linux, async () => {
   const root = await mkdtemp(join(tmpdir(), "science-worker-test-")), events: RenderWorkerEvent[] = [];

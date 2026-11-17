@@ -6,6 +6,7 @@ their parent exits. This is lifecycle control, not a security or memory sandbox.
 """
 import ctypes
 import os
+import shutil
 import signal
 import sys
 import time
@@ -111,4 +112,12 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    finally:
+        # A dead host cannot run its normal output-read / temporary-cleanup path.
+        # main() has drained all descendants before this point. Keep the output
+        # intact while the original parent lives; it still needs to verify it.
+        # getppid() changes on reparenting, independent of stale/reused PIDs.
+        if os.getppid() != int(sys.argv[6]):
+            shutil.rmtree(sys.argv[3])

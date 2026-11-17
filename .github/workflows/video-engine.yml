@@ -131,6 +131,18 @@ jobs:
       - name: Verify background job API with real PNG and MP4 outputs
         run: npm run render:job-smoke
 
+      - name: Verify protocol-1.1 worker cancellation and interrupted-host recovery
+        id: render-jobs
+        run: npm run accept:render-jobs
+
+      - name: Upload background job CLI lifecycle evidence
+        if: ${{ !cancelled() && (steps.render-jobs.outcome == 'success' || steps.render-jobs.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: render-job-cli-evidence
+          path: out/render-job-cli/
+          if-no-files-found: error
+
       - name: Verify chart rendering and targeted pixel changes
         run: npm run render:chart-smoke
 

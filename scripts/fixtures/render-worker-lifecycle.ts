@@ -1,8 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
-import { readFile, writeFile } from "node:fs/promises";
+import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { RenderWorkerEvent } from "../../src/contracts/render-worker";
 import type { ProjectSnapshot } from "../../src/platform/project-snapshots";
@@ -11,33 +9,7 @@ import type { ProjectDocument } from "../../src/contracts/project";
 import { openCreativeHost } from "../../src/platform/creative-host";
 import { FileSystemArtifactStore } from "../../src/platform/artifact-store";
 import { hashProject } from "../../src/platform/project-snapshots";
-
-interface ObservedProcess { pid: number; parent: number; group: number; command: string; startTicks: string }
-function processes(root: number): ObservedProcess[] {
-  const ps = spawnSync("ps", ["-eo", "pid=,ppid=,pgid=,comm="], { encoding: "utf8", timeout: 5000 });
-  assert.equal(ps.status, 0, ps.stderr);
-  const entries = ps.stdout.trim().split("\n").map(line => {
-    const [pid, parent, group, ...name] = line.trim().split(/\s+/);
-    return { pid: Number(pid), parent: Number(parent), group: Number(group), command: name.join(" ") };
-  });
-  const owned = new Set([root]);
-  for (let changed = true; changed;) {
-    changed = false;
-    for (const p of entries) if (owned.has(p.parent) && !owned.has(p.pid)) { owned.add(p.pid); changed = true; }
-  }
-  return entries.filter(p => owned.has(p.pid)).flatMap(p => {
-    try { const stat = readFileSync(`/proc/${p.pid}/stat`, "utf8"); return [{ ...p, startTicks: stat.slice(stat.lastIndexOf(")") + 2).split(" ")[19] }]; }
-    catch (e) { if ((e as NodeJS.ErrnoException).code === "ENOENT") return []; throw e; }
-  });
-}
-async function assertReaped(processes: ObservedProcess[]) {
-  for (const p of processes) {
-    try {
-      const stat = await readFile(`/proc/${p.pid}/stat`, "utf8");
-      assert.notEqual(stat.slice(stat.lastIndexOf(")") + 2).split(" ")[19], p.startTicks, `Owned process ${p.pid} (${p.command}) was not reaped`);
-    } catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
-  }
-}
+import { processes, assertReaped, type ObservedProcess } from "./owned-processes";
 
 /** Deterministic lifecycle check against the real browser; it is not another model interaction. */
 export async function verifyRenderWorkerLifecycle(directory: string, saved: ProjectSnapshot, output: string) {
