@@ -91,6 +91,19 @@ jobs:
           path: out/creative-loop/
           if-no-files-found: error
 
+      - name: Verify recorded AI trial and deterministic stdio replay
+        # Replay is a regression of the retained interaction, not a new model trial.
+        run: npm run accept:ai-trial
+        id: ai-trial
+
+      - name: Upload historical AI trial replay evidence
+        if: ${{ !cancelled() && (steps.ai-trial.outcome == 'success' || steps.ai-trial.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-trial-replay-evidence
+          path: out/ai-trial/
+          if-no-files-found: error
+
       - name: Render generic Project Graph video
         run: npm run render:project
 

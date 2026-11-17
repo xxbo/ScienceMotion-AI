@@ -27,7 +27,9 @@
     "render:showcase": "tsx scripts/render-cache-showcase.ts",
     "inspect:layout-smoke": "tsx scripts/inspect-layout-smoke.ts",
     "accept:creative-loop": "tsx scripts/creative-loop-acceptance.ts",
-    "accept:catalogue-scale": "tsx scripts/catalogue-scale-acceptance.ts"
+    "accept:catalogue-scale": "tsx scripts/catalogue-scale-acceptance.ts",
+    "host:stdio": "tsx scripts/creative-host-server.ts",
+    "accept:ai-trial": "tsx scripts/ai-trial-acceptance.ts"
   },
   "dependencies": {
     "@remotion/cli": "^4.0.0",
