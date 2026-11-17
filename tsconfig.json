@@ -25,6 +25,8 @@
     "scripts/catalogue-scale-acceptance.ts",
     "scripts/creative-host-server.ts",
     "scripts/ai-trial-acceptance.ts",
+    "scripts/render-job-cli-acceptance.ts",
+    "scripts/render-job-host-smoke.ts",
     "scripts/fixtures/**/*.ts"
   ]
 }
