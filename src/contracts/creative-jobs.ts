@@ -12,5 +12,13 @@ export interface CreativeRenderJobs {
   list(query?: { offset?: number; limit?: number }): Promise<RenderJobPage>;
   cancel(jobId: string): Promise<{ accepted: boolean; record: RenderJobRecord }>;
 }
-/** Trusted launch limits. Initial execution is one FIFO runner, with a bounded number of retained active inputs. */
-export interface CreativeJobPolicy { maxActiveJobs: number; timeoutMs: number }
+/** Trusted launch limits for native background jobs; per-project FIFO with round-robin dispatch. */
+export interface CreativeJobPolicy {
+  /** Waiting jobs, excluding reserved execution slots. Zero disables waiting. */
+  maxQueuedJobs: number;
+  /** Slots include claim, rendering, cleanup and serialized publication. */
+  maxConcurrentJobs: number;
+  timeoutMs: number;
+  /** Legacy input only: one running slot plus N - 1 waiting slots. Do not mix with the new counts. */
+  maxActiveJobs?: number;
+}

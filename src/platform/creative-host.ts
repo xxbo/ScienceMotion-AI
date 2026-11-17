@@ -45,6 +45,8 @@ export async function openCreativeHost(options: OpenCreativeHostOptions): Promis
   const jobPolicy = creativeJobPolicy(options.renderJobs);
   if (options.renderWorker !== undefined && options.renderer) throw new Error("Choose a custom renderer or renderWorker, not both");
   const workerPolicy = options.renderWorker === undefined ? undefined : renderWorkerPolicy(options.renderWorker);
+  if (workerPolicy && jobPolicy.maxConcurrentJobs > workerPolicy.maxConcurrentJobs)
+    throw new CreativeHostError("HOST_JOB_CONFIG", "Background job concurrency exceeds the configured worker capacity");
   if (typeof options.directory !== "string" || !options.directory.trim()) throw new Error("Host directory is required");
   const directory = resolve(options.directory);
   const factories = [workspacePlugin, ...(options.plugins ?? [])].map((f) => ({ id: f.id, version: f.version, create: f.create.bind(f) }));

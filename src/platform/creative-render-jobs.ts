@@ -33,12 +33,12 @@ const diagnostic = (error: unknown) => ({ code: /^[A-Z0-9_]{1,128}$/.test(errorC
 /** Native host operations, authorized by the built-in render grants. They do not impersonate Gateway invocations. */
 export class CreativeRenderJobController {
   private readonly store: RenderJobStore;
-  private readonly policy: CreativeJobPolicy;
+  private readonly policy: Omit<CreativeJobPolicy, "maxActiveJobs">;
   private readonly entries = new Map<string, Entry>();
   private readonly admissions = new Set<Promise<unknown>>();
   private readonly pendingSubmissions = new Map<string, { hash: string; promise: Promise<{ created: boolean; record: RenderJobRecord }> }>();
-  private pumping?: Promise<void>;
-  private scheduled = false;
+  private readonly running = new Map<string, Promise<void>>();
+  private readonly queues = new Map<string, Entry[]>();
   private closing = false;
   private fatalError?: unknown;
 
@@ -93,7 +93,7 @@ export class CreativeRenderJobController {
       const result = await pending.promise; actor.admit(); actor.authorize(request.toolId, request.toolVersion);
       return { created: false, record: structuredClone(result.record) };
     }
-    if (this.admissions.size >= this.policy.maxActiveJobs) jobFail("HOST_JOB_CAPACITY", "Job admission capacity reached; retry later");
+    if (this.admissions.size >= this.policy.maxQueuedJobs + this.policy.maxConcurrentJobs) jobFail("HOST_JOB_CAPACITY", "Job admission capacity reached; retry later");
     const admission = this.ports.serial(async () => {
       actor.admit(); const manifest = actor.authorize(request.toolId, request.toolVersion);
       const existing = (await this.records(actor.projectId)).find(record => record.input.submissionId === request.submissionId);
@@ -101,7 +101,11 @@ export class CreativeRenderJobController {
         if (hashToolInput(jobRequest(existing)) !== hashToolInput(request)) jobFail("RENDER_JOB_CONFLICT", "Submission identity is already bound to another request");
         actor.admit(); return { created: false, record: existing };
       }
-      if (this.entries.size >= this.policy.maxActiveJobs) jobFail("HOST_JOB_CAPACITY", "Active job capacity reached; retry admission later");
+      // Dispatch reserves slots synchronously, before another admission can consume
+      // them. A stopping/publishing job keeps its slot until actual settlement.
+      const queued = [...this.queues.values()].reduce((total, queue) => total + queue.length, 0);
+      if (this.running.size >= this.policy.maxConcurrentJobs && queued >= this.policy.maxQueuedJobs)
+        jobFail("HOST_JOB_CAPACITY", "Render queue is full; retry admission later");
       const saved = await this.ports.runtime.projects.getSnapshot(request.input.snapshotId);
       if (!saved || saved.projectId !== actor.projectId) return jobFail("HOST_SNAPSHOT_DENIED", "Snapshot is outside this session or missing");
       this.ports.validateSnapshot(saved);
@@ -114,6 +118,8 @@ export class CreativeRenderJobController {
         timeoutMs: Math.min(this.policy.timeoutMs, this.ports.maxTimeoutMs, manifest.execution.timeoutMs ?? this.ports.maxTimeoutMs),
         abort: new AbortController(), revoke: () => { void this.stop(admitted.record, "cancelled").catch(error => this.fatal(error)); } };
       this.entries.set(admitted.record.id, entry);
+      const queue = this.queues.get(actor.projectId) ?? [];
+      queue.push(entry); this.queues.set(actor.projectId, queue);
       actor.signal.addEventListener("abort", entry.revoke, { once: true });
       if (actor.signal.aborted || this.closing) entry.revoke();
       this.schedule(); return admitted;
@@ -128,6 +134,11 @@ export class CreativeRenderJobController {
   }
   private remove(entry: Entry): void {
     this.entries.delete(entry.record.id); entry.actor.signal.removeEventListener("abort", entry.revoke);
+    const projectId = entry.record.input.projectId, queue = this.queues.get(projectId);
+    if (queue) {
+      const index = queue.indexOf(entry); if (index >= 0) queue.splice(index, 1);
+      if (!queue.length) this.queues.delete(projectId);
+    }
   }
   private async stop(record: RenderJobRecord, reason: RenderJobStopReason) {
     try {
@@ -140,26 +151,26 @@ export class CreativeRenderJobController {
     } catch (error) { this.fatal(error); throw error; }
   }
   private schedule(): void {
-    if (this.pumping || this.scheduled || !this.entries.size || this.fatalError) return;
-    this.scheduled = true;
-    setImmediate(() => {
-      this.scheduled = false;
-      this.pumping = (async () => {
-        while (this.entries.size && !this.fatalError) {
-          const entry = this.entries.values().next().value!;
-          try { await this.execute(entry); } catch (error) { this.fatal(error); }
-          finally { this.remove(entry); }
-        }
-      })().finally(() => { this.pumping = undefined; this.schedule(); });
-    });
+    while (!this.closing && !this.fatalError && this.running.size < this.policy.maxConcurrentJobs && this.queues.size) {
+      // One dispatch per waiting project per turn. Reinsert remaining FIFO work
+      // at the end so a busy project's backlog cannot monopolize future slots.
+      const [projectId, queue] = this.queues.entries().next().value!;
+      const entry = queue.shift()!; this.queues.delete(projectId);
+      if (queue.length) this.queues.set(projectId, queue);
+      const executing = this.execute(entry).catch(error => this.fatal(error)).finally(() => {
+        this.remove(entry); this.running.delete(entry.record.id); this.schedule();
+      });
+      this.running.set(entry.record.id, executing);
+    }
   }
   private async execute(entry: Entry): Promise<void> {
     const { id, input } = entry.record, projectId = input.projectId;
-    if ((await this.store.get(projectId, id))?.state !== "queued") return;
+    if ((await this.store.get(projectId, id))?.state !== "queued" || this.fatalError) return;
     let owner;
     try { owner = await this.store.claim(projectId, id); }
     catch (error) { if ((await this.store.get(projectId, id))?.state === "cancelled") return; throw error; }
     entry.token = owner.token;
+    if (this.fatalError) throw this.fatalError;
     if (entry.actor.signal.aborted || this.closing) await this.stop(entry.record, "cancelled");
     let timer: ReturnType<typeof setTimeout> | undefined;
     let progressOpen = true, latest: ProjectGraphRenderProgress | undefined, progressError: unknown;
@@ -194,6 +205,9 @@ export class CreativeRenderJobController {
         await this.stop(entry.record, errorCode(renderError) === "RENDER_WORKER_TIMEOUT" ? "timed-out" : "cancelled");
       if (progressError) throw progressError;
       await this.ports.serial(async () => {
+        // A sibling cleanup/storage failure must not release an uncommitted late
+        // result. Keep its active evidence for conservative recovery instead.
+        if (this.fatalError) throw this.fatalError;
         const current = (await this.store.get(projectId, id))!;
         if (current.state === "stopping") { await this.store.finish(projectId, id, owner.token, { state: current.stop!.reason }); return; }
         if (renderError) throw renderError;
@@ -204,7 +218,7 @@ export class CreativeRenderJobController {
         await this.store.finish(projectId, id, owner.token, { state: "succeeded", result: receipt });
       });
     } catch (error) {
-      if (["RENDER_JOB_PERSISTENCE_UNCERTAIN", "RENDER_JOB_RECOVERY_REQUIRED", "RENDER_WORKER_CLEANUP"].includes(errorCode(error))) throw error;
+      if (this.fatalError || ["RENDER_JOB_PERSISTENCE_UNCERTAIN", "RENDER_JOB_RECOVERY_REQUIRED", "RENDER_WORKER_CLEANUP"].includes(errorCode(error))) throw error;
       const current = (await this.store.get(projectId, id))!;
       if (current.state === "stopping") await this.store.finish(projectId, id, owner.token, { state: current.stop!.reason });
       else await this.store.finish(projectId, id, owner.token, { state: "failed", diagnostic: diagnostic(error) });
@@ -243,10 +257,12 @@ export class CreativeRenderJobController {
   }
   async drain(): Promise<void> {
     await Promise.allSettled([...this.admissions]);
-    while (this.entries.size && !this.fatalError) {
-      this.schedule(); await new Promise<void>(resolve => setImmediate(resolve)); await this.pumping;
+    while (this.running.size || (this.queues.size && !this.closing && !this.fatalError)) {
+      this.schedule();
+      // Includes non-cooperative siblings after fatal failure; resources cannot
+      // close merely because the first executor has stopped or failed.
+      await Promise.allSettled([...this.running.values()]);
     }
-    await this.pumping;
     if (this.fatalError) throw this.fatalError;
   }
   async shutdown(): Promise<void> {
