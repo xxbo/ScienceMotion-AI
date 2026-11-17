@@ -15,6 +15,9 @@ import type { ProjectGraphSnapshotRenderer } from "../contracts/renderer";
 import { RemotionProjectGraphRenderer } from "../renderers/remotion/remotion-project-graph-renderer";
 import { LocalRenderWorker, RenderWorkerError, renderWorkerPolicy } from "./render-worker";
 import type { RenderWorkerEvent, RenderWorkerPolicy } from "../contracts/render-worker";
+import type { CreativeJobPolicy } from "../contracts/creative-jobs";
+import { FileSystemRenderJobStore } from "./filesystem-render-job-store";
+import { creativeJobPolicy } from "./creative-job-input";
 import projectSchema from "../../schemas/project.schema.json";
 import patchSchema from "../../schemas/project-patch.schema.json";
 import toolSchema from "../../schemas/tool-manifest.schema.json";
@@ -29,6 +32,7 @@ export interface OpenCreativeHostOptions {
   renderEntryPoint?: string;
   /** Opt-in disposable render processes; custom renderer injection and this option are mutually exclusive. */
   renderWorker?: Partial<RenderWorkerPolicy>;
+  renderJobs?: Partial<CreativeJobPolicy>;
   onRenderWorkerEvent?: (event: RenderWorkerEvent) => void;
 }
 function assertValid(validate: ValidateFunction, value: unknown, label: string): void {
@@ -38,6 +42,7 @@ function assertValid(validate: ValidateFunction, value: unknown, label: string):
 /** Assemble one local, exclusive-writer host using the delivered F storage and execution implementations. */
 export async function openCreativeHost(options: OpenCreativeHostOptions): Promise<CreativeHost> {
   const limits = resolveCreativeLimits(options.limits);
+  const jobPolicy = creativeJobPolicy(options.renderJobs);
   if (options.renderWorker !== undefined && options.renderer) throw new Error("Choose a custom renderer or renderWorker, not both");
   const workerPolicy = options.renderWorker === undefined ? undefined : renderWorkerPolicy(options.renderWorker);
   if (typeof options.directory !== "string" || !options.directory.trim()) throw new Error("Host directory is required");
@@ -53,12 +58,13 @@ export async function openCreativeHost(options: OpenCreativeHostOptions): Promis
   const rootLock = await open(join(directory, "host.lock"), "wx", 0o600);
   let workspace: FileSystemProjectWorkspace | undefined;
   let executions: FileSystemToolExecutionStore | undefined;
+  let jobs: FileSystemRenderJobStore | undefined;
   let ownedRenderer: LocalRenderWorker | undefined;
   let closed: Promise<void> | undefined;
   const closeResources = (): Promise<void> => {
     if (!closed) closed = (async () => {
       const errors: unknown[] = [];
-      for (const resource of [ownedRenderer, executions, workspace]) if (resource) {
+      for (const resource of [ownedRenderer, jobs, executions, workspace]) if (resource) {
         try { await resource.close(); } catch (error) { errors.push(error); }
       }
       if (errors.length) throw new AggregateError(errors, "Persistent host close failed; host.lock retained for explicit recovery");
@@ -74,6 +80,7 @@ export async function openCreativeHost(options: OpenCreativeHostOptions): Promis
     // Project/reference recovery completes before plugins can run. Execution reopening retains uncertainty.
     workspace = await FileSystemProjectWorkspace.open(join(directory, "projects"), lifecycle);
     executions = await FileSystemToolExecutionStore.open(join(directory, "executions"));
+    jobs = await FileSystemRenderJobStore.open(join(directory, "jobs"));
     const projects = workspace, evidence = executions;
     const registry = new InMemoryAgentToolRegistry();
     const manager = new InMemoryPluginManager(registry, { projectSchemaVersion: "1.1.0", healthCheckTimeoutMs: Math.min(limits.maxTimeoutMs, 5000) });
@@ -85,7 +92,7 @@ export async function openCreativeHost(options: OpenCreativeHostOptions): Promis
       catch (error) { if (error instanceof RenderWorkerError) throw new CreativeHostError(error.code, error.message); throw error; }
     };
     const runtime: CreativeHostRuntime = {
-      projects, artifacts,
+      projects, artifacts, jobs, rendererIdentity: { id: renderer.id, version: renderer.version },
       renderPreview: (request) => rendering(() => renderer.renderPreview(request)),
       renderVideo: (request) => rendering(() => renderer.renderVideo(request)),
       ...(renderer.measureLayout ? { measureLayout: (request: Parameters<NonNullable<typeof renderer.measureLayout>>[0]) => rendering(() => renderer.measureLayout!(request)) } : {}),
@@ -156,7 +163,7 @@ export async function openCreativeHost(options: OpenCreativeHostOptions): Promis
       }),
       close: closeResources,
     };
-    return await assembleCreativeHost(runtime, factories, { limits });
+    return await assembleCreativeHost(runtime, factories, { limits, renderJobs: jobPolicy });
   } catch (error) {
     try { await closeResources(); } catch (cleanup) { throw new AggregateError([error, cleanup], "Host startup/recovery failed"); }
     throw error;

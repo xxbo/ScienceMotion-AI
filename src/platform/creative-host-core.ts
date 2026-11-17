@@ -18,11 +18,16 @@ import { inspectProjectSnapshot, SnapshotInspectionError } from "./snapshot-insp
 import { finishLayoutInspection, prepareLayoutInspection } from "./snapshot-layout-inspection";
 import type { ProjectGraphLayoutRequest } from "../contracts/renderer";
 import type { LayoutFrameMeasurement } from "../contracts/layout-inspection";
+import type { RenderJobStore, RenderJobSubmission } from "../contracts/render-job";
+import type { CreativeJobPolicy } from "../contracts/creative-jobs";
+import { CreativeRenderJobController } from "./creative-render-jobs";
 
 type Revision = { newRevisionId: string; createdAt: string; message: string };
 type Reference = { artifactId: string; ownerType: string; ownerId: string; role: string };
 /** Internal composition port. Production binds the existing Workspace/Registry/Gateway, not substitutes. */
 export interface CreativeHostRuntime {
+  jobs: RenderJobStore;
+  rendererIdentity: RenderJobSubmission["renderer"];
   projects: {
     get(id: string): Promise<ProjectDocument | undefined>;
     create(document: ProjectDocument): Promise<void>;
@@ -110,7 +115,7 @@ interface Scope {
 
 /** Service authorization is independent of tool permission hints and is checked on each actual use. */
 export async function assembleCreativeHost(runtime: CreativeHostRuntime, factories: readonly CreativePluginFactory[],
-  options: { limits?: Partial<CreativeHostLimits> } = {}): Promise<CreativeHost> {
+  options: { limits?: Partial<CreativeHostLimits>; renderJobs?: Partial<CreativeJobPolicy> } = {}): Promise<CreativeHost> {
   let limits: CreativeHostLimits;
   try { limits = resolveCreativeLimits(options.limits); }
   catch (error) { await runtime.close(); throw error; }
@@ -464,6 +469,8 @@ export async function assembleCreativeHost(runtime: CreativeHostRuntime, factori
     admitted();
     if (calls.getStore() || scopes.getStore()) fail("HOST_PLUGIN_ADMIN_SCOPE", "Plugin administration cannot run inside a tool invocation");
   };
+  const jobs = new CreativeRenderJobController({ runtime, serial, maxArtifactBytes: limits.maxArtifactBytes, maxTimeoutMs: limits.maxTimeoutMs,
+    validateSnapshot: saved => { document(saved.document); }, fatal: () => { state = "failed"; } }, options.renderJobs);
   const host: CreativeHost = {
     createSession: (input) => {
       admitted(); exactKeys(input, ["projectId", "permissions", "toolIds", "allowDestructive", "allowHighCost"]); identity(input.projectId);
@@ -477,6 +484,17 @@ export async function assembleCreativeHost(runtime: CreativeHostRuntime, factori
       const session: SessionState = { grant, permissions: rights, tools: new Set(grant.toolIds), abort: new AbortController(), gateway }; sessions.push(session);
       const api: CreativeSession = {
         projectId: grant.projectId,
+        jobs: jobs.forSession({ projectId: grant.projectId, signal: session.abort.signal, admit: () => admitted(session),
+          authorize: (toolId, version) => {
+            admitted(session);
+            const selected = catalogue.get(toolId);
+            if (!selected || !available(session, selected) || !session.permissions.has("snapshot.read") || !session.permissions.has("artifact.write"))
+              fail("HOST_TOOL_DENIED", "Render operation is outside this session grant");
+            if (selected.version !== version) fail("HOST_TOOL_VERSION_MISMATCH", "Use the exact discovered render tool version");
+            if (selected.pluginId !== "builtin.workspace" || selected.version !== "1.0.0" || !["render.preview", "render.video"].includes(toolId))
+              fail("HOST_JOB_TOOL_UNSUPPORTED", "This render implementation has no supported background-job binding");
+            return structuredClone(selected);
+          } }),
         manifest: async (id) => { admitted(session); const m = catalogue.get(id); return m && available(session, m) ? structuredClone(m) : undefined; },
         discover: async (input = {}) => {
           admitted(session); const query = jsonCopy(input, limits.maxInputBytes);
@@ -540,7 +558,7 @@ export async function assembleCreativeHost(runtime: CreativeHostRuntime, factori
         transition = (async () => {
           try {
             // Shutdown drains actual work, including tools that already returned a timeout.
-            await Promise.all([...gateways].map((g) => g.shutdown())); await tail;
+            await jobs.drain(); await Promise.all([...gateways].map((g) => g.shutdown())); await tail;
             if (state !== "switching") fail("HOST_CLOSED", "Host closed before plugin activation");
             const result = await runtime.plugins.activate(pluginId, version);
             if (result.ok) { activePlugins.set(pluginId, candidate); refreshCatalogue(); }
@@ -570,6 +588,7 @@ export async function assembleCreativeHost(runtime: CreativeHostRuntime, factori
         admitted(); identity(projectId); identity(snapshotId);
         return serial(async () => { const saved = await runtime.projects.getSnapshot(snapshotId);
           if (!saved || saved.projectId !== projectId) fail("HOST_SNAPSHOT_DENIED", "Snapshot project does not match maintenance request");
+          await jobs.assertSnapshotReleasable(projectId, snapshotId);
           await runtime.projects.releaseSnapshot(snapshotId);
         });
       },
@@ -579,8 +598,17 @@ export async function assembleCreativeHost(runtime: CreativeHostRuntime, factori
       if (!closePromise) {
         state = "draining";
         closePromise = (async () => {
-          try { await transition?.catch(() => undefined); await Promise.all([...gateways].map((g) => g.shutdown())); await tail; await runtime.close(); state = "closed"; }
-          catch (error) { state = "failed"; throw error; }
+          const closingJobs = jobs.shutdown();
+          const errors: unknown[] = [];
+          // Observe rejection immediately while a plugin transition may still be draining these jobs.
+          const jobDrain = closingJobs.catch(error => { errors.push(error); });
+          await transition?.catch(() => undefined);
+          const drains = await Promise.allSettled([...gateways].map(g => g.shutdown()));
+          for (const result of drains) if (result.status === "rejected") errors.push(result.reason);
+          await jobDrain; await tail;
+          try { await runtime.close(); } catch (error) { errors.push(error); }
+          if (errors.length) { state = "failed"; throw new AggregateError(errors, "Host drain/close failed; inspect persisted evidence before recovery"); }
+          state = "closed";
         })();
       }
       return closePromise;

@@ -22,6 +22,7 @@
     "validate:project-render": "node scripts/validate-project-render.mjs out/project-graph-demo.mp4",
     "render:host-smoke": "tsx scripts/render-project-host-smoke.ts",
     "validate:host-render": "node scripts/validate-host-render.mjs",
+    "render:job-smoke": "tsx scripts/render-job-host-smoke.ts",
     "render:chart-smoke": "tsx scripts/render-chart-smoke.ts",
     "inspect:snapshot-smoke": "tsx scripts/inspect-snapshot-smoke.ts",
     "render:showcase": "tsx scripts/render-cache-showcase.ts",

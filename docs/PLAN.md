@@ -10,7 +10,7 @@ Prioritize a small demonstrated creation-and-repair workflow on Remotion. Progra
 
 [Platform Vision](PLATFORM_VISION.md) owns durable principles, [Architecture](ARCHITECTURE.md) implementation boundaries, and [P1.1 Acceptance](P1.1-ACCEPTANCE.md) measurable exit gates. Test counts and catalogue size are not product-completion percentages.
 
-Current engineering priority: P1.2-B2 host/client job integration, following the delivered P1.2-A worker lifecycle and implemented [B1 contract/durable ledger](P1.2-B1-JOB-LEDGER.md). The [P1.2 plan](P1.2-PLAN.md) defines five steps, current evidence and the next implementation increments. Per the user's latest instruction, human effect review moves to a final acceptance workstream; automated engineering checks continue throughout development.
+Current engineering priority: P1.2-B3 real worker/CLI cancellation and interrupted-host recovery, following P1.2-A, [B1's durable ledger](P1.2-B1-JOB-LEDGER.md) and [B2 host/client jobs](P1.2-B2-HOST-JOBS.md). The [P1.2 plan](P1.2-PLAN.md) defines five steps, current evidence and the next implementation increments. Per the user's latest instruction, human effect review moves to a final acceptance workstream; automated engineering checks continue throughout development.
 
 ## Main is the delivery baseline
 
@@ -35,7 +35,8 @@ Recorded baselines are historical evidence, not aliases for main HEAD. [PR #1](h
 | Inspection I2 | Production-browser text lines, actual element boxes, viewport overflow and heuristic font fallback; no screenshot/video encoding | Exact glyph fonts/ink, occlusion, cross-session evidence caching and visual quality remain open |
 | P1.1-H AI acceptance | Local JSON-lines interface, recorded interactive Codex trial, separate CI replay, two-topic regression and persisted evidence | Final human visual review; general autonomous planning remains P1.4 |
 | P1.2-A | Opt-in Linux render/layout processes, guardian cleanup of detached descendants, cancellation/deadlines, progress callbacks and bounded output/admission | B: durable jobs/restart states; C: scheduling/retention; D: aggregate budgets; E: measured performance/reuse |
-| P1.2-B1 | Internal job contract and local durable ledger; project-scoped idempotency, owned state transitions, bounded progress/results and interruption on reopen | B2 host authorization/input retention and client APIs; B3 real-worker integration/restart evidence |
+| P1.2-B1 | Internal job contract and local durable ledger; project-scoped idempotency, owned state transitions, bounded progress/results and interruption on reopen | Reconciliation/retention administration; B3 actual interruption evidence |
+| P1.2-B2 | Authorized host/client background jobs, retained input admission, bounded single runner and progress, stop/publication ordering, verified results and explicit revoke/close | B3 full worker/CLI cancellation and interrupted-host scenario; C independent scheduling/fairness and retention management |
 
 The built-in workspace catalogue has 19 executable tools including inspection and administrative operations. The two-topic scenario adds one executable test extension using public services; one JSON catalogue-only manifest and 300 synthetic scale entries (100 IDs × 3 versions) are counted separately. Plugin administration is an application API, not an additional AI tool. `assets.import` is still planned.
 
@@ -54,9 +55,9 @@ P1.1's engineering gates have evidence; full visual closure is deferred to the f
 | 5 — implemented | Real-AI trial | Local stdio interface; interactive Codex discovery/create/inspect/repair/export trial with 50 tool calls, recorded snapshots/media/provenance; separate 52-request deterministic CI replay alongside existing regression |
 | 6 — implemented | P1.2-A disposable render workers | Opt-in host/stdio worker mode; real CLI replay; mid-render cancellation with Chromium/FFmpeg reaped; no late Artifact; a new preview succeeds |
 | 7a — implemented foundation | P1.2-B1 job contract and ledger | Eighteen tests of idempotency, state/publication/stop races, bounded progress, durable output, process abandonment and storage faults; no async client API yet |
-| 7b — next implementation | P1.2-B2 host/client job APIs | Authorized submit/get/list/cancel; verified retained inputs before client admission; control requests do not wait behind rendering |
-| 7c — pending integration | P1.2-B3 real execution and restart evidence | Bind ledger transitions to actual worker cleanup/publication, CLI cancellation/recovery and persisted result queries after reopen |
-| 8 — pending | P1.2-C scheduling and retained inputs | Bounded queue/concurrency; editing while rendering an older protected snapshot; safe publication and reference release |
+| 7b — implemented | P1.2-B2 host/client job APIs | Seventeen tests of authorized submit/get/list/cancel, bounded admission, retained inputs, revoke/close, publication races and uncertainty; actual PNG/MP4 host-API smoke and persisted results after reopen |
+| 7c — next implementation | P1.2-B3 real worker/CLI interruption evidence | New protocol's mid-render cancellation, cleanup/no late result, subsequent success and verified-owner recovery after host interruption |
+| 8 — pending | P1.2-C scheduling and retention management | Extend B2's single runner/pins with independent queue/concurrency, fairness, reconciliation/reference release and actual concurrent editing/maintenance stress |
 | 9 — pending | P1.2-D aggregate resource limits | Enforced process-tree CPU/RSS/temp-disk budgets and quota failure/recovery evidence |
 | 10 — pending | P1.2-E performance evidence | Comparable measurements; justified bundle/worker reuse only if correctness and isolation are preserved |
 | Final acceptance workstream — deferred | Consolidated human effect review | Review both P1.1 fixtures and representative later outputs, record defects/fixes and final reviewed main evidence |
@@ -130,7 +131,7 @@ Project/plugin operation remains trusted and single-writer. The [P1.2 first slic
 
 | Stage | Responsibility |
 | --- | --- |
-| P1.2 | [A and B1 implemented; B2 next; B3/C–E pending](P1.2-PLAN.md): host job integration, scheduling/retention, aggregate budgets and measured performance |
+| P1.2 | [A/B1/B2 implemented; B3 next; C–E pending](P1.2-PLAN.md): worker/CLI interruption evidence, scheduling/retention management, aggregate budgets and measured performance |
 | P1.3 | Broader project/timeline, geometry, SVG/charts, animation, audio/captions and inspection tools |
 | P1.4 | Provider-independent planning and autonomous inspection/repair |
 | P1.5 | Multi-tool composition, performance evidence and new engines without orchestration rewrites |
@@ -153,3 +154,4 @@ Defer marketplace/distribution/signatures, automatic dependency solving, multi-p
 | Chart/scene fix on main | `020ae447bb81a6e727872188689407a14abac60c`, [CI #43801547940](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43801547940), 185 tests |
 | P1.1 technical acceptance and AI trial | `d8745ce2988d475e2a43f975233254a02648aec6`, [CI #43995270980](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43995270980), 215 tests; subsequent sample feedback in [review record](P1.1-REVIEW.md) |
 | P1.2-A render-worker lifecycle | `b4e5bc9fa47111ce8a8324f69b14559d25d4f1de`, [CI #44002989900](https://github.com/xxbo/ScienceMotion-AI/actions/runs/44002989900), 223 tests; real worker replay, cancellation/cleanup and recovery preview |
+| P1.2-B1 durable job ledger | `82281fccd7a8e567a3546e6546f6455aaa3f68d3`, [PR #10](https://github.com/xxbo/ScienceMotion-AI/pull/10), [main CI #44033946604](https://github.com/xxbo/ScienceMotion-AI/actions/runs/44033946604), 241 tests and all existing real-render regression |

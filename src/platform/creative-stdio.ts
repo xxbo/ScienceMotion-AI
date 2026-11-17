@@ -1,6 +1,8 @@
 import type { Readable, Writable } from "node:stream";
 import type { CreativeSession } from "../contracts/creative-host";
-import { CREATIVE_CLIENT_PROTOCOL, type CreativeClientRequest, type CreativeClientResponse } from "../contracts/creative-client";
+import { CREATIVE_CLIENT_PROTOCOL, CREATIVE_CLIENT_JOB_PROTOCOL, type CreativeClientProtocol, type CreativeClientRequest, type CreativeClientResponse } from "../contracts/creative-client";
+import { CREATIVE_JOBS_VERSION, type CreativeJobSubmission } from "../contracts/creative-jobs";
+import { parseJobSubmission } from "./creative-job-input";
 import { assertFiniteJson } from "./project-creative-edits";
 
 export interface CreativeTraceSink { record(kind: string, data: unknown): Promise<void> }
@@ -16,11 +18,13 @@ function identity(value: unknown): asserts value is string {
   if (typeof value !== "string" || !value.trim() || value.length > 128 || value.includes("\0"))
     throw new CreativeTransportError("TRANSPORT_REQUEST_INVALID", "Request/tool identity must be a bounded non-empty string");
 }
-export function parseCreativeRequest(value: unknown): CreativeClientRequest {
+export function parseCreativeRequest(value: unknown, protocolVersion: CreativeClientProtocol = CREATIVE_CLIENT_PROTOCOL): CreativeClientRequest {
   assertFiniteJson(value); object(value, ["id", "method", "params", "note"]); identity(value.id);
   if (value.note !== undefined && (typeof value.note !== "string" || value.note.length > 2048))
     throw new CreativeTransportError("TRANSPORT_REQUEST_INVALID", "The optional decision note must be at most 2048 characters");
   object(value.params);
+  if (typeof value.method === "string" && value.method.startsWith("jobs.") && protocolVersion !== CREATIVE_CLIENT_JOB_PROTOCOL)
+    throw new CreativeTransportError("TRANSPORT_METHOD_UNKNOWN", "Background job methods require local protocol 1.1.0");
   switch (value.method) {
     case "discover": break; // The host validates and filters the complete search query.
     case "manifest": object(value.params, ["toolId"]); identity(value.params.toolId); break;
@@ -30,7 +34,10 @@ export function parseCreativeRequest(value: unknown): CreativeClientRequest {
       if (!("input" in value.params)) throw new CreativeTransportError("TRANSPORT_REQUEST_INVALID", "Invocation input is required");
       break;
     case "close": object(value.params, []); break;
-    default: throw new CreativeTransportError("TRANSPORT_METHOD_UNKNOWN", "Supported methods: discover, manifest, invoke, close");
+    case "jobs.submit": parseJobSubmission(value.params as CreativeJobSubmission); break;
+    case "jobs.get": case "jobs.cancel": object(value.params, ["jobId"]); identity(value.params.jobId); break;
+    case "jobs.list": object(value.params, ["offset", "limit"]); break;
+    default: throw new CreativeTransportError("TRANSPORT_METHOD_UNKNOWN", "Unknown method for the selected local protocol; consult the ready message");
   }
   return structuredClone(value) as CreativeClientRequest;
 }
@@ -71,14 +78,17 @@ const errorResponse = (id: string | null, code: string, message: string, fatal =
 /** Sequential dispatch provides backpressure. Only a pre-bound session is reachable from the wire. */
 export async function serveCreativeStdio(options: {
   session: CreativeSession; input: Readable; output: Writable; trace: CreativeTraceSink;
-  maxRequestBytes: number; close(): Promise<void>;
+  maxRequestBytes: number; protocolVersion?: CreativeClientProtocol; close(): Promise<void>;
 }): Promise<boolean> {
   const { session, input, output, trace } = options;
+  const protocolVersion = options.protocolVersion ?? CREATIVE_CLIENT_PROTOCOL;
   let currentId: string | null = null, effectsPossible = false;
   const emit = async (value: unknown) => { await trace.record("response", value); await writeLine(output, value); };
   try {
-    await emit({ type: "ready", protocolVersion: CREATIVE_CLIENT_PROTOCOL, projectId: session.projectId,
-      methods: ["discover", "manifest", "invoke", "close"], maxRequestBytes: options.maxRequestBytes });
+    if (![CREATIVE_CLIENT_PROTOCOL, CREATIVE_CLIENT_JOB_PROTOCOL].includes(protocolVersion)) throw new CreativeTransportError("TRANSPORT_PROTOCOL_UNSUPPORTED", "Unsupported local protocol");
+    await emit({ type: "ready", protocolVersion, projectId: session.projectId,
+      methods: ["discover", "manifest", "invoke", "close", ...(protocolVersion === CREATIVE_CLIENT_JOB_PROTOCOL ? ["jobs.submit", "jobs.get", "jobs.list", "jobs.cancel"] : [])],
+      ...(protocolVersion === CREATIVE_CLIENT_JOB_PROTOCOL ? { jobsVersion: CREATIVE_JOBS_VERSION } : {}), maxRequestBytes: options.maxRequestBytes });
     for await (const line of creativeRequestLines(input, options.maxRequestBytes)) {
       currentId = null; effectsPossible = false;
       // Preserve the exact UTF-8 request text, including client-provided decision summaries.
@@ -89,7 +99,7 @@ export async function serveCreativeStdio(options: {
         try { parsed = JSON.parse(line); } catch { throw new CreativeTransportError("TRANSPORT_PARSE_ERROR", "Expected one JSON request per line"); }
         if (parsed && typeof parsed === "object" && !Array.isArray(parsed) && typeof (parsed as { id?: unknown }).id === "string")
           currentId = (parsed as { id: string }).id.slice(0, 128);
-        request = parseCreativeRequest(parsed); currentId = request.id;
+        request = parseCreativeRequest(parsed, protocolVersion); currentId = request.id;
       } catch (error) {
         await emit(errorResponse(currentId, error instanceof CreativeTransportError ? error.code : "TRANSPORT_REQUEST_INVALID", error instanceof CreativeTransportError ? error.message : "Request must contain finite JSON data"));
         currentId = null;
@@ -102,6 +112,10 @@ export async function serveCreativeStdio(options: {
           case "discover": result = await session.discover(request.params); break;
           case "manifest": result = (await session.manifest(request.params.toolId)) ?? null; break;
           case "invoke": effectsPossible = true; result = await session.invoke(request.params); break;
+          case "jobs.submit": effectsPossible = true; result = await session.jobs.submit(request.params); break;
+          case "jobs.get": result = (await session.jobs.get(request.params.jobId)) ?? null; break;
+          case "jobs.list": result = await session.jobs.list(request.params); break;
+          case "jobs.cancel": effectsPossible = true; result = await session.jobs.cancel(request.params.jobId); break;
           case "close": await options.close(); result = { closed: true }; break;
         }
         response = { id: request.id, ok: true, result };
@@ -117,7 +131,7 @@ export async function serveCreativeStdio(options: {
   } catch (error) {
     const code = error instanceof CreativeTransportError ? error.code : "TRANSPORT_IO_FAILED";
     // A lost trace/output write after invocation is not evidence of a rolled-back project mutation.
-    try { await writeLine(output, errorResponse(currentId, code, "Transport stopped; consult persisted execution evidence before retrying an admitted invocation", true, effectsPossible)); } catch { /* Disconnected output cannot receive an acknowledgement. */ }
+    try { await writeLine(output, errorResponse(currentId, code, "Transport stopped; consult persisted execution/job evidence before retrying admitted work", true, effectsPossible)); } catch { /* Disconnected output cannot receive an acknowledgement. */ }
     return false;
   } finally { await options.close(); }
 }
