@@ -55,9 +55,11 @@ export interface ProjectGraphRenderer {
 
 
 /** Immutable Project Graph render contract; renderers never rewrite editorial meaning. */
-export interface ProjectGraphRenderRequest { project: ProjectDocument; revisionId: string; snapshotHash: string; sceneId?: string; profile?: { width: number; height: number; fps?: number } }
+export interface ProjectGraphRenderProgress { phase: "bundling" | "selecting" | "rendering" | "encoding"; fraction?: number }
+export interface ProjectGraphRenderRequest { project: ProjectDocument; revisionId: string; snapshotHash: string; sceneId?: string; profile?: { width: number; height: number; fps?: number }; signal?: AbortSignal; onProgress?: (progress: ProjectGraphRenderProgress) => void }
 export interface ProjectGraphPreviewRequest extends ProjectGraphRenderRequest { frame: number }
 export interface ProjectGraphVideoRequest extends ProjectGraphRenderRequest { startFrame: number; durationFrames: number }
-export interface ProjectGraphRenderOutput { bytes: Uint8Array; mediaType: "image/png" | "video/mp4"; extension: "png" | "mp4"; rendererId: string; rendererVersion: string }
+export interface ProjectGraphRenderOutput { bytes: Uint8Array; mediaType: "image/png" | "video/mp4"; extension: "png" | "mp4"; rendererId: string; rendererVersion: string;
+  execution?: { kind: "local-process"; protocolVersion: "1.0.0"; jobId: string; processId: number; elapsedMs: number } }
 export interface ProjectGraphLayoutRequest extends ProjectGraphRenderRequest { frames: number[]; signal?: AbortSignal }
 export interface ProjectGraphSnapshotRenderer { readonly id: string; readonly version: string; renderPreview(request: ProjectGraphPreviewRequest): Promise<ProjectGraphRenderOutput>; renderVideo(request: ProjectGraphVideoRequest): Promise<ProjectGraphRenderOutput>; measureLayout?(request: ProjectGraphLayoutRequest): Promise<LayoutFrameMeasurement[]> }

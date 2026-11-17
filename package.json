@@ -29,7 +29,8 @@
     "accept:creative-loop": "tsx scripts/creative-loop-acceptance.ts",
     "accept:catalogue-scale": "tsx scripts/catalogue-scale-acceptance.ts",
     "host:stdio": "tsx scripts/creative-host-server.ts",
-    "accept:ai-trial": "tsx scripts/ai-trial-acceptance.ts"
+    "accept:ai-trial": "tsx scripts/ai-trial-acceptance.ts",
+    "accept:render-worker": "tsx scripts/ai-trial-acceptance.ts --worker"
   },
   "dependencies": {
     "@remotion/cli": "^4.0.0",

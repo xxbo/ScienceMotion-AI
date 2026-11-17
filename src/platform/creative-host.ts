@@ -9,10 +9,12 @@ import { FileSystemProjectWorkspace } from "./filesystem-project-workspace";
 import { FileSystemToolExecutionStore } from "./filesystem-tool-execution-store";
 import { InMemoryPluginManager } from "./plugin-manager";
 import { InMemoryAgentToolRegistry, LocalAgentToolGateway } from "./tool-registry";
-import { assembleCreativeHost, resolveCreativeLimits, type CreativeHostRuntime } from "./creative-host-core";
+import { assembleCreativeHost, CreativeHostError, resolveCreativeLimits, type CreativeHostRuntime } from "./creative-host-core";
 import { workspacePlugin } from "./workspace-tools";
 import type { ProjectGraphSnapshotRenderer } from "../contracts/renderer";
 import { RemotionProjectGraphRenderer } from "../renderers/remotion/remotion-project-graph-renderer";
+import { LocalRenderWorker, RenderWorkerError, renderWorkerPolicy } from "./render-worker";
+import type { RenderWorkerEvent, RenderWorkerPolicy } from "../contracts/render-worker";
 import projectSchema from "../../schemas/project.schema.json";
 import patchSchema from "../../schemas/project-patch.schema.json";
 import toolSchema from "../../schemas/tool-manifest.schema.json";
@@ -25,6 +27,9 @@ export interface OpenCreativeHostOptions {
   limits?: Partial<CreativeHostLimits>;
   renderer?: ProjectGraphSnapshotRenderer;
   renderEntryPoint?: string;
+  /** Opt-in disposable render processes; custom renderer injection and this option are mutually exclusive. */
+  renderWorker?: Partial<RenderWorkerPolicy>;
+  onRenderWorkerEvent?: (event: RenderWorkerEvent) => void;
 }
 function assertValid(validate: ValidateFunction, value: unknown, label: string): void {
   if (!validate(value)) throw new Error(`${label}: ${JSON.stringify(validate.errors)}`);
@@ -33,6 +38,8 @@ function assertValid(validate: ValidateFunction, value: unknown, label: string):
 /** Assemble one local, exclusive-writer host using the delivered F storage and execution implementations. */
 export async function openCreativeHost(options: OpenCreativeHostOptions): Promise<CreativeHost> {
   const limits = resolveCreativeLimits(options.limits);
+  if (options.renderWorker !== undefined && options.renderer) throw new Error("Choose a custom renderer or renderWorker, not both");
+  const workerPolicy = options.renderWorker === undefined ? undefined : renderWorkerPolicy(options.renderWorker);
   if (typeof options.directory !== "string" || !options.directory.trim()) throw new Error("Host directory is required");
   const directory = resolve(options.directory);
   const factories = [workspacePlugin, ...(options.plugins ?? [])].map((f) => ({ id: f.id, version: f.version, create: f.create.bind(f) }));
@@ -46,11 +53,12 @@ export async function openCreativeHost(options: OpenCreativeHostOptions): Promis
   const rootLock = await open(join(directory, "host.lock"), "wx", 0o600);
   let workspace: FileSystemProjectWorkspace | undefined;
   let executions: FileSystemToolExecutionStore | undefined;
+  let ownedRenderer: LocalRenderWorker | undefined;
   let closed: Promise<void> | undefined;
   const closeResources = (): Promise<void> => {
     if (!closed) closed = (async () => {
       const errors: unknown[] = [];
-      for (const resource of [executions, workspace]) if (resource) {
+      for (const resource of [ownedRenderer, executions, workspace]) if (resource) {
         try { await resource.close(); } catch (error) { errors.push(error); }
       }
       if (errors.length) throw new AggregateError(errors, "Persistent host close failed; host.lock retained for explicit recovery");
@@ -69,12 +77,18 @@ export async function openCreativeHost(options: OpenCreativeHostOptions): Promis
     const projects = workspace, evidence = executions;
     const registry = new InMemoryAgentToolRegistry();
     const manager = new InMemoryPluginManager(registry, { projectSchemaVersion: "1.1.0", healthCheckTimeoutMs: Math.min(limits.maxTimeoutMs, 5000) });
-    const renderer = options.renderer ?? new RemotionProjectGraphRenderer(options.renderEntryPoint ?? resolve("src/index.ts"));
+    if (workerPolicy) ownedRenderer = new LocalRenderWorker({ entryPoint: options.renderEntryPoint,
+      policy: { ...workerPolicy, maxOutputBytes: Math.min(workerPolicy.maxOutputBytes, limits.maxArtifactBytes) }, onEvent: options.onRenderWorkerEvent });
+    const renderer = options.renderer ?? ownedRenderer ?? new RemotionProjectGraphRenderer(options.renderEntryPoint ?? resolve("src/index.ts"));
+    const rendering = async <T>(work: () => Promise<T>): Promise<T> => {
+      try { return await work(); }
+      catch (error) { if (error instanceof RenderWorkerError) throw new CreativeHostError(error.code, error.message); throw error; }
+    };
     const runtime: CreativeHostRuntime = {
       projects, artifacts,
-      renderPreview: (request) => renderer.renderPreview(request),
-      renderVideo: (request) => renderer.renderVideo(request),
-      ...(renderer.measureLayout ? { measureLayout: renderer.measureLayout.bind(renderer) } : {}),
+      renderPreview: (request) => rendering(() => renderer.renderPreview(request)),
+      renderVideo: (request) => rendering(() => renderer.renderVideo(request)),
+      ...(renderer.measureLayout ? { measureLayout: (request: Parameters<NonNullable<typeof renderer.measureLayout>>[0]) => rendering(() => renderer.measureLayout!(request)) } : {}),
       references: (id) => references.list({ artifactId: id }),
       retain: async (ref) => {
         if (ref.ownerType !== "tool-run") throw new Error("Unsupported host retention owner");

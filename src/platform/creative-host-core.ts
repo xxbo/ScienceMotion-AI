@@ -199,11 +199,14 @@ export async function assembleCreativeHost(runtime: CreativeHostRuntime, factori
     return saved;
   };
   const publishRenderArtifact = async (scope: Scope, output: ProjectGraphRenderOutput, metadata: Record<string, unknown>): Promise<ArtifactRecord> => {
+    // A renderer that settles after cancellation must not publish new artifact bytes.
+    check(scope, ["snapshot.read", "artifact.write"]);
     if (!(output.bytes instanceof Uint8Array) || output.bytes.byteLength < 8 || output.bytes.byteLength > limits.maxArtifactBytes) fail("HOST_RENDER_OUTPUT_INVALID", "Renderer returned empty or oversized output bytes");
     const expected = output.mediaType === "image/png" ? { kind: "image" as const, extension: "png" } : output.mediaType === "video/mp4" ? { kind: "video" as const, extension: "mp4" } : undefined;
     if (!expected || output.extension !== expected.extension || !output.rendererId || !output.rendererVersion) fail("HOST_RENDER_OUTPUT_INVALID", "Renderer returned an unsupported or inconsistent output declaration");
     scope.writesStarted = true;
-    const renderMetadata = { ...metadata, rendererId: output.rendererId, rendererVersion: output.rendererVersion };
+    const renderMetadata = { ...metadata, rendererId: output.rendererId, rendererVersion: output.rendererVersion,
+      ...(output.execution ? { execution: jsonCopy(output.execution, limits.maxInputBytes) } : {}) };
     const provenance = { projectId: scope.context.projectId, runId: scope.context.runId, callId: scope.context.callId, toolId: scope.manifest.id,
       toolVersion: scope.manifest.version, pluginId: scope.manifest.pluginId, parametersHash: createHash("sha256").update(JSON.stringify(metadata)).digest("hex") };
     const stored = await runtime.artifacts.put({ bytes: new Uint8Array(output.bytes), kind: expected.kind, mediaType: output.mediaType, extension: expected.extension,
@@ -299,7 +302,8 @@ export async function assembleCreativeHost(runtime: CreativeHostRuntime, factori
         const revisionId = saved.document.revisions.at(-1)?.id;
         if (!revisionId) fail("HOST_SNAPSHOT_INVALID", "Snapshot has no revision identity");
         const output = await runtime.renderPreview({ project: structuredClone(saved.document), revisionId, snapshotHash: saved.contentHash,
-          sceneId, frame, profile: { width: sequence.width, height: sequence.height, fps: sequence.fps } });
+          sceneId, frame, profile: { width: sequence.width, height: sequence.height, fps: sequence.fps },
+          signal: AbortSignal.any([scope.session.abort.signal, ...(scope.context.signal ? [scope.context.signal] : [])]) });
         return publishRenderArtifact(scope, output, { snapshotId, revisionId, snapshotHash: saved.contentHash, frame, ...(sceneId ? { sceneId } : {}),
           width: sequence.width, height: sequence.height, fps: sequence.fps });
       }),
@@ -315,7 +319,8 @@ export async function assembleCreativeHost(runtime: CreativeHostRuntime, factori
         const revisionId = saved.document.revisions.at(-1)?.id;
         if (!revisionId) fail("HOST_SNAPSHOT_INVALID", "Snapshot has no revision identity");
         const output = await runtime.renderVideo({ project: structuredClone(saved.document), revisionId, snapshotHash: saved.contentHash,
-          sceneId, startFrame, durationFrames, profile: { width: sequence.width, height: sequence.height, fps: sequence.fps } });
+          sceneId, startFrame, durationFrames, profile: { width: sequence.width, height: sequence.height, fps: sequence.fps },
+          signal: AbortSignal.any([scope.session.abort.signal, ...(scope.context.signal ? [scope.context.signal] : [])]) });
         return publishRenderArtifact(scope, output, { snapshotId, revisionId, snapshotHash: saved.contentHash, startFrame, durationFrames, ...(sceneId ? { sceneId } : {}),
           width: sequence.width, height: sequence.height, fps: sequence.fps });
       }),

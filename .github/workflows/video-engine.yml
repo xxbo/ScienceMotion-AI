@@ -104,6 +104,18 @@ jobs:
           path: out/ai-trial/
           if-no-files-found: error
 
+      - name: Verify isolated render worker replay, cancellation and recovery
+        run: npm run accept:render-worker
+        id: render-worker
+
+      - name: Upload isolated render worker evidence
+        if: ${{ !cancelled() && (steps.render-worker.outcome == 'success' || steps.render-worker.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: render-worker-evidence
+          path: out/ai-trial-worker/
+          if-no-files-found: error
+
       - name: Render generic Project Graph video
         run: npm run render:project
 
