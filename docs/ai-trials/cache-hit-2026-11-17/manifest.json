@@ -1,0 +1,241 @@
+{
+  "schemaVersion": "1.0.0",
+  "trialId": "cache-hit-2026-11-17",
+  "kind": "historical-interactive-model-trial",
+  "startedAt": "2026-11-17T00:59:47.083Z",
+  "completedAt": "2026-11-17T01:04:22.299Z",
+  "requestCount": 52,
+  "invocationCount": 50,
+  "metadata": {
+    "trialId": "cache-hit-2026-11-17",
+    "mode": "interactive-model-trial",
+    "provider": "OpenAI",
+    "client": "Codex",
+    "modelFamily": "GPT-6 (session instruction)",
+    "exactModelId": null,
+    "samplingParameters": null,
+    "tokenUsage": null,
+    "providerReceipt": null,
+    "brief": "用两个镜头说明：命中时从缓存返回数据；程序可能重复访问近期数据。图形为示意，不表示真实硬件尺寸或时延。",
+    "briefSource": "Existing cache fixture in scripts/creative-loop-acceptance.ts; reused under the user instruction to continue P1.1, without a new human factual review.",
+    "scope": "12 seconds; 960x540; 30 fps; two shots; silent; public data-driven tools only.",
+    "controlledChallenge": "Deliberately create one undersized explanatory text box, inspect it, then choose a repair from the returned diagnostics. This is a seeded challenge, not an unseeded model error.",
+    "humanInterventions": [
+      "User authorized continuing P1.1 and merging after CI; no human edits during this trial."
+    ],
+    "decisionRecord": "Concise action summaries supplied by the model, not private chain-of-thought.",
+    "sourceBaseCommit": "a46a07bd5a801e85d671fcb3aca02131ed0b1485",
+    "transportSourceSha256": {
+      "src/contracts/creative-client.ts": "6f16e06fa8d253167ceef8c8d1a58a8c19927fbac227f6277522ea8feeff2c4d",
+      "src/platform/creative-stdio.ts": "d375893024c0d2cca9c6daa1348dd3c8eb1324caea50eb668410b20815d9a0ed",
+      "src/platform/creative-local-server.ts": "6ce3c68c326ec263f39ae7615a0d8544458ccf9bb37f555d9f8fdc6ba23605ad",
+      "scripts/creative-host-server.ts": "97663cc7e56ef75333c91d6e085e9c2c87a96a4f48e068ff0bb489e1c7af268e"
+    },
+    "attestation": "Operator-recorded interaction with the current Codex session; not provider-signed evidence."
+  },
+  "files": {
+    "before-snapshot.json": {
+      "sha256": "1f3b386930d53e978bf5d79fea966da4e43419fe39e39399a171417d7fbea9b0",
+      "bytes": 37177
+    },
+    "final-snapshot.json": {
+      "sha256": "12984b4fb9b415cb1aaf1264fecfc72156628ce9783067c3f1850ff71876f12c",
+      "bytes": 37887
+    },
+    "launch-config.json": {
+      "sha256": "6edff5f71a96909ff67ad64a58cc1ec544f17bd31dee01aa2b351458ad238048",
+      "bytes": 2681
+    },
+    "preview-before-90.png": {
+      "sha256": "9e68240711734b57bee97486aad69fb50cbbb7d18777e4c16b9241c92f7a962e",
+      "bytes": 52278
+    },
+    "preview-final-0.png": {
+      "sha256": "f5d61c7c404f6d601a427aa2d04640ae44dbc1b91bd56d65ba630d102c17f25e",
+      "bytes": 49944
+    },
+    "preview-final-180.png": {
+      "sha256": "7747b55d03fe49897f528fe2ba06a6a096aa8da44ed0b6d3b734426fbcd34577",
+      "bytes": 49292
+    },
+    "preview-final-359.png": {
+      "sha256": "be33558f57a6947540302ba83d5a4ab4f9bd617045e7109f01dd2b1b33d3d5a6",
+      "bytes": 49301
+    },
+    "preview-final-90.png": {
+      "sha256": "40f7aeb34f626266dfd548b571b5176319b7314f46cddf472740beea76002d5d",
+      "bytes": 49913
+    },
+    "transcript.jsonl": {
+      "sha256": "6859bdc796bad7c58b6f3c94e061287459f4c33d5aca5e5c711ce6462082103e",
+      "bytes": 248099
+    },
+    "video-before.mp4": {
+      "sha256": "12b96ebaafc459dbe0c80183f6f0744d4db9799faaafa22ee668a6907cfeeb36",
+      "bytes": 70907
+    },
+    "video-final.mp4": {
+      "sha256": "15ad3efbffe7b29e3c057eaf06d48a2068bc481b5b20da0d6fccfd08e9cfe5ed",
+      "bytes": 67877
+    }
+  },
+  "media": [
+    {
+      "requestId": "preview-before-90",
+      "file": "preview-before-90.png",
+      "receipt": {
+        "artifactId": "sha256:9e68240711734b57bee97486aad69fb50cbbb7d18777e4c16b9241c92f7a962e",
+        "uri": "artifact://sha256/9e68240711734b57bee97486aad69fb50cbbb7d18777e4c16b9241c92f7a962e",
+        "mediaType": "image/png",
+        "contentHash": "9e68240711734b57bee97486aad69fb50cbbb7d18777e4c16b9241c92f7a962e",
+        "metadata": {
+          "snapshotId": "before",
+          "revisionId": "revision-host-a6a83993719782e6252bd6b2203a4dd4dce60ff08f1836373cde2e9d5fe74a55",
+          "snapshotHash": "7c3b92f55fd05d4b4772535bb298c4bbbb77aa3b3b1db38e285d477db9863347",
+          "frame": 90,
+          "width": 960,
+          "height": 540,
+          "fps": 30,
+          "rendererId": "remotion.project-graph",
+          "rendererVersion": "1.0.0"
+        }
+      }
+    },
+    {
+      "requestId": "video-before",
+      "file": "video-before.mp4",
+      "receipt": {
+        "artifactId": "sha256:12b96ebaafc459dbe0c80183f6f0744d4db9799faaafa22ee668a6907cfeeb36",
+        "uri": "artifact://sha256/12b96ebaafc459dbe0c80183f6f0744d4db9799faaafa22ee668a6907cfeeb36",
+        "mediaType": "video/mp4",
+        "contentHash": "12b96ebaafc459dbe0c80183f6f0744d4db9799faaafa22ee668a6907cfeeb36",
+        "metadata": {
+          "snapshotId": "before",
+          "revisionId": "revision-host-a6a83993719782e6252bd6b2203a4dd4dce60ff08f1836373cde2e9d5fe74a55",
+          "snapshotHash": "7c3b92f55fd05d4b4772535bb298c4bbbb77aa3b3b1db38e285d477db9863347",
+          "startFrame": 0,
+          "durationFrames": 360,
+          "width": 960,
+          "height": 540,
+          "fps": 30,
+          "rendererId": "remotion.project-graph",
+          "rendererVersion": "1.0.0"
+        }
+      }
+    },
+    {
+      "requestId": "preview-final-0",
+      "file": "preview-final-0.png",
+      "receipt": {
+        "artifactId": "sha256:f5d61c7c404f6d601a427aa2d04640ae44dbc1b91bd56d65ba630d102c17f25e",
+        "uri": "artifact://sha256/f5d61c7c404f6d601a427aa2d04640ae44dbc1b91bd56d65ba630d102c17f25e",
+        "mediaType": "image/png",
+        "contentHash": "f5d61c7c404f6d601a427aa2d04640ae44dbc1b91bd56d65ba630d102c17f25e",
+        "metadata": {
+          "snapshotId": "final",
+          "revisionId": "revision-host-c1562d0e5daada15115b8a4a7332e642b18c124be212f08c395b27fdb47407c2",
+          "snapshotHash": "a47aa2e2577038279af6062015e2c629141e31cff8c90aede6ded4839301c345",
+          "frame": 0,
+          "width": 960,
+          "height": 540,
+          "fps": 30,
+          "rendererId": "remotion.project-graph",
+          "rendererVersion": "1.0.0"
+        }
+      }
+    },
+    {
+      "requestId": "preview-final-90",
+      "file": "preview-final-90.png",
+      "receipt": {
+        "artifactId": "sha256:40f7aeb34f626266dfd548b571b5176319b7314f46cddf472740beea76002d5d",
+        "uri": "artifact://sha256/40f7aeb34f626266dfd548b571b5176319b7314f46cddf472740beea76002d5d",
+        "mediaType": "image/png",
+        "contentHash": "40f7aeb34f626266dfd548b571b5176319b7314f46cddf472740beea76002d5d",
+        "metadata": {
+          "snapshotId": "final",
+          "revisionId": "revision-host-c1562d0e5daada15115b8a4a7332e642b18c124be212f08c395b27fdb47407c2",
+          "snapshotHash": "a47aa2e2577038279af6062015e2c629141e31cff8c90aede6ded4839301c345",
+          "frame": 90,
+          "width": 960,
+          "height": 540,
+          "fps": 30,
+          "rendererId": "remotion.project-graph",
+          "rendererVersion": "1.0.0"
+        }
+      }
+    },
+    {
+      "requestId": "preview-final-180",
+      "file": "preview-final-180.png",
+      "receipt": {
+        "artifactId": "sha256:7747b55d03fe49897f528fe2ba06a6a096aa8da44ed0b6d3b734426fbcd34577",
+        "uri": "artifact://sha256/7747b55d03fe49897f528fe2ba06a6a096aa8da44ed0b6d3b734426fbcd34577",
+        "mediaType": "image/png",
+        "contentHash": "7747b55d03fe49897f528fe2ba06a6a096aa8da44ed0b6d3b734426fbcd34577",
+        "metadata": {
+          "snapshotId": "final",
+          "revisionId": "revision-host-c1562d0e5daada15115b8a4a7332e642b18c124be212f08c395b27fdb47407c2",
+          "snapshotHash": "a47aa2e2577038279af6062015e2c629141e31cff8c90aede6ded4839301c345",
+          "frame": 180,
+          "width": 960,
+          "height": 540,
+          "fps": 30,
+          "rendererId": "remotion.project-graph",
+          "rendererVersion": "1.0.0"
+        }
+      }
+    },
+    {
+      "requestId": "preview-final-359",
+      "file": "preview-final-359.png",
+      "receipt": {
+        "artifactId": "sha256:be33558f57a6947540302ba83d5a4ab4f9bd617045e7109f01dd2b1b33d3d5a6",
+        "uri": "artifact://sha256/be33558f57a6947540302ba83d5a4ab4f9bd617045e7109f01dd2b1b33d3d5a6",
+        "mediaType": "image/png",
+        "contentHash": "be33558f57a6947540302ba83d5a4ab4f9bd617045e7109f01dd2b1b33d3d5a6",
+        "metadata": {
+          "snapshotId": "final",
+          "revisionId": "revision-host-c1562d0e5daada15115b8a4a7332e642b18c124be212f08c395b27fdb47407c2",
+          "snapshotHash": "a47aa2e2577038279af6062015e2c629141e31cff8c90aede6ded4839301c345",
+          "frame": 359,
+          "width": 960,
+          "height": 540,
+          "fps": 30,
+          "rendererId": "remotion.project-graph",
+          "rendererVersion": "1.0.0"
+        }
+      }
+    },
+    {
+      "requestId": "video-final",
+      "file": "video-final.mp4",
+      "receipt": {
+        "artifactId": "sha256:15ad3efbffe7b29e3c057eaf06d48a2068bc481b5b20da0d6fccfd08e9cfe5ed",
+        "uri": "artifact://sha256/15ad3efbffe7b29e3c057eaf06d48a2068bc481b5b20da0d6fccfd08e9cfe5ed",
+        "mediaType": "video/mp4",
+        "contentHash": "15ad3efbffe7b29e3c057eaf06d48a2068bc481b5b20da0d6fccfd08e9cfe5ed",
+        "metadata": {
+          "snapshotId": "final",
+          "revisionId": "revision-host-c1562d0e5daada15115b8a4a7332e642b18c124be212f08c395b27fdb47407c2",
+          "snapshotHash": "a47aa2e2577038279af6062015e2c629141e31cff8c90aede6ded4839301c345",
+          "startFrame": 0,
+          "durationFrames": 360,
+          "width": 960,
+          "height": 540,
+          "fps": 30,
+          "rendererId": "remotion.project-graph",
+          "rendererVersion": "1.0.0"
+        }
+      }
+    }
+  ],
+  "humanVisualReview": "pending; user deferred it until final acceptance",
+  "assistantVisualReview": "After closing the recorded interaction, the assistant viewed final PNGs at frames 90 and 359: labels/footer readable and intended diagrams visible. No new creative edits. This is not human review or full-video motion approval.",
+  "limitations": [
+    "Exact model ID, sampling parameters and token usage are not exposed by the current session.",
+    "Operator-recorded evidence, not provider-attested.",
+    "One disclosed seeded layout challenge; no autonomous discovery success-rate claim.",
+    "Silent two-shot sample; no audio synchronization or final visual quality acceptance."
+  ]
+}

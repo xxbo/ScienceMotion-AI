@@ -1,0 +1,62 @@
+{
+  "schemaVersion": "1.0.0",
+  "directory": "workspace",
+  "traceFile": "transcript.jsonl",
+  "grant": {
+    "projectId": "ai-cache-hit",
+    "permissions": [
+      "project.read",
+      "project.write",
+      "snapshot.read",
+      "snapshot.write",
+      "artifact.read",
+      "artifact.write"
+    ],
+    "toolIds": [
+      "project.create",
+      "project.inspect",
+      "project.patch.apply",
+      "project.scene.create",
+      "graphics.2d.text.create",
+      "graphics.2d.shape.create",
+      "graphics.2d.path.create",
+      "graphics.2d.chart.create",
+      "project.node.transform.set",
+      "animation.keyframes.set",
+      "project.snapshot.save",
+      "project.snapshot.inspect",
+      "inspect.snapshot",
+      "inspect.layout",
+      "render.preview",
+      "render.video"
+    ],
+    "allowHighCost": true
+  },
+  "metadata": {
+    "trialId": "cache-hit-2026-11-17",
+    "mode": "interactive-model-trial",
+    "provider": "OpenAI",
+    "client": "Codex",
+    "modelFamily": "GPT-6 (session instruction)",
+    "exactModelId": null,
+    "samplingParameters": null,
+    "tokenUsage": null,
+    "providerReceipt": null,
+    "brief": "用两个镜头说明：命中时从缓存返回数据；程序可能重复访问近期数据。图形为示意，不表示真实硬件尺寸或时延。",
+    "briefSource": "Existing cache fixture in scripts/creative-loop-acceptance.ts; reused under the user instruction to continue P1.1, without a new human factual review.",
+    "scope": "12 seconds; 960x540; 30 fps; two shots; silent; public data-driven tools only.",
+    "controlledChallenge": "Deliberately create one undersized explanatory text box, inspect it, then choose a repair from the returned diagnostics. This is a seeded challenge, not an unseeded model error.",
+    "humanInterventions": [
+      "User authorized continuing P1.1 and merging after CI; no human edits during this trial."
+    ],
+    "decisionRecord": "Concise action summaries supplied by the model, not private chain-of-thought.",
+    "sourceBaseCommit": "a46a07bd5a801e85d671fcb3aca02131ed0b1485",
+    "transportSourceSha256": {
+      "src/contracts/creative-client.ts": "6f16e06fa8d253167ceef8c8d1a58a8c19927fbac227f6277522ea8feeff2c4d",
+      "src/platform/creative-stdio.ts": "d375893024c0d2cca9c6daa1348dd3c8eb1324caea50eb668410b20815d9a0ed",
+      "src/platform/creative-local-server.ts": "6ce3c68c326ec263f39ae7615a0d8544458ccf9bb37f555d9f8fdc6ba23605ad",
+      "scripts/creative-host-server.ts": "97663cc7e56ef75333c91d6e085e9c2c87a96a4f48e068ff0bb489e1c7af268e"
+    },
+    "attestation": "Operator-recorded interaction with the current Codex session; not provider-signed evidence."
+  }
+}

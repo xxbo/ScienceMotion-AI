@@ -1,6 +1,6 @@
 # Development Plan
 
-Last updated: 2026-11-16
+Last updated: 2026-11-17
 
 ## Goal and current priority
 
@@ -31,15 +31,15 @@ Recorded baselines are historical evidence, not aliases for main HEAD. [PR #1](h
 | P1.1-G creation/render | Scene/text/shape/path/chart/transform/keyframe tools; snapshot PNG/MP4; two-topic creation/edit/export/restart/restore and real dependency recovery | Broader media import/audio/captions and professional presentation remain later work |
 | Inspection I1 | Read-only model diagnostics, declared shape/chart bounds and exact frame coverage | Final visual quality remains unchecked |
 | Inspection I2 | Production-browser text lines, actual element boxes, viewport overflow and heuristic font fallback; no screenshot/video encoding | Exact glyph fonts/ink, occlusion, cross-session evidence caching and visual quality remain open |
-| P1.1-H AI acceptance | Two-topic deterministic public-tool scenario, failures/retries, frame comparisons and persisted evidence | Local AI-client interface, real-AI trial and human visual review |
+| P1.1-H AI acceptance | Local JSON-lines interface, recorded interactive Codex trial, separate CI replay, two-topic regression and persisted evidence | Final human visual review; general autonomous planning remains P1.4 |
 
 The built-in workspace catalogue has 19 executable tools including inspection and administrative operations. The two-topic scenario adds one executable test extension using public services; one JSON catalogue-only manifest and 300 synthetic scale entries (100 IDs × 3 versions) are counted separately. Plugin administration is an application API, not an additional AI tool. `assets.import` is still planned.
 
 ## Next delivery sequence
 
-Current checkpoint decision (2026-11-16): continue engineering and defer the user's effect review to the final acceptance. Keep the [30-second CPU-cache sample](showcase/README.md) as the comparison baseline. Automated checks remain required for every increment. The sample does not close the two-topic, restore, real-AI or human-review gates.
+Current checkpoint decision (2026-11-17): continue engineering and defer the user's effect review to the final acceptance. Keep the [30-second CPU-cache sample](showcase/README.md) as the comparison baseline, alongside the new [12-second AI trial](P1.1-AI-TRIAL.md). Automated checks remain required for every increment. Neither sample alone closes the human-review gates.
 
-P1.1 is still active. I1, bounded I2 measurement, the [two-topic workflow](P1.1-CREATIVE-LOOP.md), [host plugin switching and catalogue scale](P1.1-PLUGIN-SWITCH-SCALE.md) are implemented. The [acceptance checklist](P1.1-ACCEPTANCE.md) has 20/25 closed items: R 6/6, I 4/5, C 5/5, Q 2/3, X 3/3 and A 0/3. Items differ in scope; this is not an effort percentage. Final visual review stays an explicit pending gate, not a prerequisite for continuing engineering.
+P1.1 is still active. I1, bounded I2 measurement, the [two-topic workflow](P1.1-CREATIVE-LOOP.md), [host plugin switching and catalogue scale](P1.1-PLUGIN-SWITCH-SCALE.md), and the [local AI interface and trial](P1.1-AI-TRIAL.md) are implemented. The [acceptance checklist](P1.1-ACCEPTANCE.md) has 23/25 closed items: R 6/6, I 4/5, C 5/5, Q 2/3, X 3/3 and A 3/3. Items differ in scope; this is not an effort percentage. The remaining two items both require the deferred human review of the two fixtures.
 
 | Order | Increment | Completion evidence |
 | --- | --- | --- |
@@ -47,8 +47,8 @@ P1.1 is still active. I1, bounded I2 measurement, the [two-topic workflow](P1.1-
 | 2 — implemented | Inspection I2: measure actual browser layout | Font-ready line/element boxes; scoped reports; seeded text/motion/font cases; repair/recheck/restart and production-pixel correspondence |
 | 3 — implemented | Two-topic creation and restoration | Two 12-second briefs use the same public tools/renderer; inspect/repair, text/motion edits, preview/export, failed mutation/idempotent retry, restart and restore with real data dependencies |
 | 4 — implemented | Integrated extension/version and scale acceptance | Public host administration pauses/drains calls, switches exact versions and preserves the old version on failed upgrade; both topics continue editing; 300 synthetic manifests and timings recorded |
-| 5 — next | Real-AI trial | Thin local AI-client interface; discovered schemas/diagnostics, real model decisions, calls/revisions/outputs and interventions; retain deterministic regression alongside it |
-| 6 | P1.1 closure and effect review | Human review of both fixtures; gates R/I/C/Q/X/A mapped to one integrated main commit/CI run and reviewed outputs |
+| 5 — implemented | Real-AI trial | Local stdio interface; interactive Codex discovery/create/inspect/repair/export trial with 50 tool calls, recorded snapshots/media/provenance; separate 52-request deterministic CI replay alongside existing regression |
+| 6 — next | P1.1 closure and effect review | Human review of both fixtures; gates R/I/C/Q/X/A mapped to one integrated main commit/CI run and reviewed outputs |
 
 Land each verified increment independently. I2 is a bounded measurement feature, not a new Studio UI or a general autonomous video critic. Additional infrastructure needs an acceptance case that depends on it.
 
@@ -101,7 +101,7 @@ The deterministic [creative-loop scenario](P1.1-CREATIVE-LOOP.md) covers this pa
 
 Both topics use the same public contracts; no new topic-specific TSX scene is allowed. Preserve approved content and unrelated state during repairs. Compare canonical data, asset identities and declared frame tolerances rather than requiring byte-identical MP4s across environments.
 
-The real-AI trial separately records model/provider, approved brief, manifests, calls, revisions, diagnostics, artifacts and human intervention. Scripted regression does not satisfy that trial. General planning and autonomous visual critique remain P1.4.
+The [recorded AI trial](P1.1-AI-TRIAL.md) uses the current OpenAI Codex session, a reused approved brief and public tools. It preserves schemas, action summaries, calls, revisions, diagnostics, media and intervention scope. Exact model build/sampling/token usage are unavailable and explicitly null. A disclosed seeded text overflow was repaired using browser measurements; the original record is distinct from the later CI replay, which makes zero new model calls. General planning and autonomous visual critique remain P1.4.
 
 ## Retained reliability boundaries
 
