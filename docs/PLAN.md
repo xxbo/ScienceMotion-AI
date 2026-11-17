@@ -10,7 +10,7 @@ Prioritize a small demonstrated creation-and-repair workflow on Remotion. Progra
 
 [Platform Vision](PLATFORM_VISION.md) owns durable principles, [Architecture](ARCHITECTURE.md) implementation boundaries, and [P1.1 Acceptance](P1.1-ACCEPTANCE.md) measurable exit gates. Test counts and catalogue size are not product-completion percentages.
 
-Current engineering priority: P1.2 local render-worker lifecycle, following the user's positive feedback on the AI cache sample and instruction to continue. Detailed two-topic human review remains a separate P1.1 follow-up, not a reason to stop authorized engineering.
+Current engineering priority: P1.2-B durable asynchronous jobs, following the delivered P1.2-A render-worker lifecycle. The [P1.2 plan](P1.2-PLAN.md) defines five steps, current evidence and the next implementation increments. Per the user's latest instruction, human effect review moves to a final acceptance workstream; automated engineering checks continue throughout development.
 
 ## Main is the delivery baseline
 
@@ -34,15 +34,15 @@ Recorded baselines are historical evidence, not aliases for main HEAD. [PR #1](h
 | Inspection I1 | Read-only model diagnostics, declared shape/chart bounds and exact frame coverage | Final visual quality remains unchecked |
 | Inspection I2 | Production-browser text lines, actual element boxes, viewport overflow and heuristic font fallback; no screenshot/video encoding | Exact glyph fonts/ink, occlusion, cross-session evidence caching and visual quality remain open |
 | P1.1-H AI acceptance | Local JSON-lines interface, recorded interactive Codex trial, separate CI replay, two-topic regression and persisted evidence | Final human visual review; general autonomous planning remains P1.4 |
-| P1.2 first increment | Opt-in Linux render/layout processes, guardian cleanup of detached descendants, cancellation/deadlines, progress callbacks and bounded output/admission | Durable asynchronous jobs, restart states, scheduling and aggregate CPU/RSS/disk budgets |
+| P1.2-A | Opt-in Linux render/layout processes, guardian cleanup of detached descendants, cancellation/deadlines, progress callbacks and bounded output/admission | B: durable jobs/restart states; C: scheduling/retention; D: aggregate budgets; E: measured performance/reuse |
 
 The built-in workspace catalogue has 19 executable tools including inspection and administrative operations. The two-topic scenario adds one executable test extension using public services; one JSON catalogue-only manifest and 300 synthetic scale entries (100 IDs × 3 versions) are counted separately. Plugin administration is an application API, not an additional AI tool. `assets.import` is still planned.
 
 ## Next delivery sequence
 
-Current checkpoint decision (2026-11-17): the user viewed the presented AI cache sample, reported “看起来没什么问题，继续吧”, and authorized continued work. The [review record](P1.1-REVIEW.md) preserves that feedback and its scope. Continue into P1.2 while tracking the full two-topic review separately. Keep the [30-second CPU-cache sample](showcase/README.md) and [12-second AI trial](P1.1-AI-TRIAL.md) as comparison references. Automated checks remain required for every increment.
+Current checkpoint decision (2026-11-17): the user explicitly instructed “验收留到最后进行吧，会有一个验收专项” and asked to proceed with P1.2. Move human effect review to the final acceptance workstream and proceed with the [five-step P1.2 sequence](P1.2-PLAN.md). The [review record](P1.1-REVIEW.md) retains the earlier AI sample feedback separately. Keep the [30-second CPU-cache sample](showcase/README.md) and [12-second AI trial](P1.1-AI-TRIAL.md) as comparison references. Automated checks remain required for every increment.
 
-P1.1's engineering gates have evidence; full visual closure remains tracked. I1, bounded I2 measurement, the [two-topic workflow](P1.1-CREATIVE-LOOP.md), [host plugin switching and catalogue scale](P1.1-PLUGIN-SWITCH-SCALE.md), and the [local AI interface and trial](P1.1-AI-TRIAL.md) are implemented. The [acceptance checklist](P1.1-ACCEPTANCE.md) has 23/25 closed items under its existing wording: R 6/6, I 4/5, C 5/5, Q 2/3, X 3/3 and A 3/3. The user has given positive viewing feedback on the AI sample; the remaining items include detailed review of both deterministic fixtures. These counts are not effort percentages.
+P1.1's engineering gates have evidence; full visual closure is deferred to the final acceptance workstream. I1, bounded I2 measurement, the [two-topic workflow](P1.1-CREATIVE-LOOP.md), [host plugin switching and catalogue scale](P1.1-PLUGIN-SWITCH-SCALE.md), and the [local AI interface and trial](P1.1-AI-TRIAL.md) are implemented. The [acceptance checklist](P1.1-ACCEPTANCE.md) retains 23/25 closed items under its existing wording: R 6/6, I 4/5, C 5/5, Q 2/3, X 3/3 and A 3/3. Its two human-review items are deferred, not current engineering blockers or evidence of completed visual review. These counts are not effort percentages.
 
 | Order | Increment | Completion evidence |
 | --- | --- | --- |
@@ -51,11 +51,20 @@ P1.1's engineering gates have evidence; full visual closure remains tracked. I1,
 | 3 — implemented | Two-topic creation and restoration | Two 12-second briefs use the same public tools/renderer; inspect/repair, text/motion edits, preview/export, failed mutation/idempotent retry, restart and restore with real data dependencies |
 | 4 — implemented | Integrated extension/version and scale acceptance | Public host administration pauses/drains calls, switches exact versions and preserves the old version on failed upgrade; both topics continue editing; 300 synthetic manifests and timings recorded |
 | 5 — implemented | Real-AI trial | Local stdio interface; interactive Codex discovery/create/inspect/repair/export trial with 50 tool calls, recorded snapshots/media/provenance; separate 52-request deterministic CI replay alongside existing regression |
-| 6 — review follow-up | P1.1 closure and effect review | AI sample feedback recorded; detailed human review of both fixtures remains separately tracked |
-| 7 — implemented first slice | P1.2 disposable render workers | Opt-in host/stdio worker mode; real CLI replay; mid-render cancellation with Chromium/FFmpeg reaped; no late Artifact; a new preview succeeds |
-| 8 — next engineering increment | P1.2 durable jobs and progress | Submit/status/cancel semantics, interrupted/restart evidence and snapshot retention/publication rules before background scheduling |
+| 6 — implemented | P1.2-A disposable render workers | Opt-in host/stdio worker mode; real CLI replay; mid-render cancellation with Chromium/FFmpeg reaped; no late Artifact; a new preview succeeds |
+| 7 — next implementation | P1.2-B durable jobs and progress | B1 contract/ledger, B2 host/client APIs, B3 real execution and restart evidence; no async job API is implemented yet |
+| 8 — pending | P1.2-C scheduling and retained inputs | Bounded queue/concurrency; editing while rendering an older protected snapshot; safe publication and reference release |
+| 9 — pending | P1.2-D aggregate resource limits | Enforced process-tree CPU/RSS/temp-disk budgets and quota failure/recovery evidence |
+| 10 — pending | P1.2-E performance evidence | Comparable measurements; justified bundle/worker reuse only if correctness and isolation are preserved |
+| Final acceptance workstream — deferred | Consolidated human effect review | Review both P1.1 fixtures and representative later outputs, record defects/fixes and final reviewed main evidence |
 
 Land each verified increment independently. I2 is a bounded measurement feature, not a new Studio UI or a general autonomous video critic. Additional infrastructure needs an acceptance case that depends on it.
+
+## Final human acceptance workstream
+
+The user has reserved human effect review for the end. This workstream owns the two remaining P1.1 I/Q items, review of representative later outputs, and narration/caption alignment where present. Inspect approved content, text legibility, clipping, accidental overlap and motion timing; preserve baseline/edited/restored comparisons and record any fixes. The final report identifies the reviewed outputs, main commit, CI evidence and outstanding limitations. Do not convert the deferred items into passed checks before that evidence exists.
+
+Automated validation, fault tests, real-render regression and PR/main CI remain part of each engineering delivery. The deferral does not postpone those checks or block P1.2-B.
 
 ## Programmatic inspection strategy
 
@@ -118,7 +127,7 @@ Project/plugin operation remains trusted and single-writer. The [P1.2 first slic
 
 | Stage | Responsibility |
 | --- | --- |
-| P1.2 | First render-worker slice implemented; next durable jobs/progress, interrupted-state recovery, scheduling and aggregate resource limits |
+| P1.2 | [A delivered; B next; C–E pending](P1.2-PLAN.md): durable jobs, scheduling/retention, aggregate budgets and measured performance |
 | P1.3 | Broader project/timeline, geometry, SVG/charts, animation, audio/captions and inspection tools |
 | P1.4 | Provider-independent planning and autonomous inspection/repair |
 | P1.5 | Multi-tool composition, performance evidence and new engines without orchestration rewrites |
@@ -140,3 +149,4 @@ Defer marketplace/distribution/signatures, automatic dependency solving, multi-p
 | Snapshot render | `f56a42ab22ddbfc15272d64c3eebe1622bf4e0e6`, [CI #43788856539](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43788856539), 177 tests |
 | Chart/scene fix on main | `020ae447bb81a6e727872188689407a14abac60c`, [CI #43801547940](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43801547940), 185 tests |
 | P1.1 technical acceptance and AI trial | `d8745ce2988d475e2a43f975233254a02648aec6`, [CI #43995270980](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43995270980), 215 tests; subsequent sample feedback in [review record](P1.1-REVIEW.md) |
+| P1.2-A render-worker lifecycle | `b4e5bc9fa47111ce8a8324f69b14559d25d4f1de`, [CI #44002989900](https://github.com/xxbo/ScienceMotion-AI/actions/runs/44002989900), 223 tests; real worker replay, cancellation/cleanup and recovery preview |

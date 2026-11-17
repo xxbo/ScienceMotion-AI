@@ -6,7 +6,7 @@ An extensible science-video creation framework for AI agents: discover typed too
 
 Watch the [30-second CPU-cache capability sample](docs/showcase/cpu-cache-30s.mp4) ([download MP4](https://raw.githubusercontent.com/xxbo/ScienceMotion-AI/main/docs/showcase/cpu-cache-30s.mp4)). It combines four scenes, text, shapes, paths, keyframes and a data-driven chart using the current public tools. Mandarin narration is added by a separate finishing script. [Reproduction, evidence and limits](docs/showcase/README.md).
 
-Main is the delivery baseline. The merged chart/scene-selection fix on `020ae447bb81a6e727872188689407a14abac60c` passed [CI #43801547940](https://github.com/xxbo/ScienceMotion-AI/actions/runs/43801547940) with 185 tests and render/pixel checks. Recorded SHAs are historical evidence; current source is main HEAD. **P1.1 remains active.**
+Main is the delivery baseline. P1.2-A's render-worker lifecycle was delivered on `b4e5bc9fa47111ce8a8324f69b14559d25d4f1de`; [CI #44002989900](https://github.com/xxbo/ScienceMotion-AI/actions/runs/44002989900) passed 223 tests and all real-render regressions. Recorded SHAs are historical evidence; current source is main HEAD. **P1.1 engineering is delivered, human review is deferred to final acceptance, and P1.2-B is the next implementation step.**
 
 | Stage | Implemented scope |
 | --- | --- |
@@ -18,8 +18,9 @@ Main is the delivery baseline. The merged chart/scene-selection fix on `020ae447
 | P1.1-G | Initial 2D tools and snapshot PNG/MP4 rendering; chart regressions and two-topic creation/edit/export/restart/restore automation |
 | Inspection I1 | Read-only model diagnostics, declared shape/chart bounds and exact frame coverage |
 | Inspection I2 | Production-browser text/element measurement without image encoding; font-ready line boxes, overflow warnings and heuristic font fallback |
-| P1.1-H | Local AI-client interface, recorded interactive AI trial and separate CI replay; two-topic/plugin-switch regression; human review remains open |
-| P1.2 | Opt-in Linux render workers, descendant cleanup, cancellation/deadlines and progress callbacks; durable jobs and aggregate resource quotas remain open |
+| P1.1-H | Local AI-client interface, recorded interactive AI trial and separate CI replay; two-topic/plugin-switch regression; human review assigned to final acceptance |
+| P1.2-A | Opt-in Linux render workers, descendant cleanup, cancellation/deadlines and application progress callbacks |
+| P1.2-B–E | [Planned next steps](docs/P1.2-PLAN.md): durable jobs, scheduling/retention, aggregate resource limits and measured performance |
 | P1.3+ | Broader tools/professional engines and general autonomous visual iteration |
 
 The built-in workspace plugin now includes initial scene, text, shape, transform and keyframe tools. The generic Project Graph composition is a first 2D slice; the CPU-cache Episode renderer remains separate. The [two-topic acceptance scenario](docs/P1.1-CREATIVE-LOOP.md) creates 12-second cache and water-cycle fixtures through public tools, detects/repairs seeded defects, edits text/motion and verifies export/restart/restore including original data dependencies. CI preserves six baseline/edited/restored MP4s, 18 previews, manifests and invocation evidence. These technical fixtures are silent and scripted.
@@ -28,7 +29,7 @@ Structured SVG paths and bar/line charts use the same Project Graph composition.
 
 ## Next milestone
 
-Connect the existing foundation into one public path:
+The delivered P1.1 path is:
 
 ```text
 Approved content -> AI tool calls -> Project Graph -> immutable snapshot
@@ -37,7 +38,7 @@ Approved content -> AI tool calls -> Project Graph -> immutable snapshot
 
 The current host has 19 executable built-ins; acceptance adds one executable test extension and grants 17 tools to the fixture workflow. One catalogue-only manifest and 300 synthetic scale entries (100 IDs × 3 versions) are counted separately. The scale entries are not implemented creative tools. Reuse Remotion and the existing contracts; marketplace/distributed infrastructure remains deferred.
 
-P1.1 has evidence for 23/25 acceptance items, not an effort-completion percentage. [Host plugin switching and the 300-manifest scenario](docs/P1.1-PLUGIN-SWITCH-SCALE.md), plus the [local interface and recorded AI trial](docs/P1.1-AI-TRIAL.md), are implemented. Watch the trial's [12-second revised video](docs/ai-trials/cache-hit-2026-11-17/video-final.mp4): it was created through discovered tools and repaired from a layout report. The user gave [positive sample feedback and authorized continued work](docs/P1.1-REVIEW.md). Engineering has advanced to [P1.2's first render-worker slice](docs/P1.2-WORKERS.md); detailed review of both original fixtures remains separately tracked. CI replay makes no new model calls. See [Development Plan](docs/PLAN.md) and [P1.1 Acceptance](docs/P1.1-ACCEPTANCE.md).
+P1.1 has evidence for 23/25 acceptance items, not an effort-completion percentage. [Host plugin switching and the 300-manifest scenario](docs/P1.1-PLUGIN-SWITCH-SCALE.md), plus the [local interface and recorded AI trial](docs/P1.1-AI-TRIAL.md), are implemented. Watch the trial's [12-second revised video](docs/ai-trials/cache-hit-2026-11-17/video-final.mp4): it was created through discovered tools and repaired from a layout report. The user gave [positive sample feedback and deferred human review to final acceptance](docs/P1.1-REVIEW.md). [P1.2-A](docs/P1.2-WORKERS.md) is delivered; [B, durable asynchronous jobs](docs/P1.2-PLAN.md), is the next implementation step. CI replay makes no new model calls. See [Development Plan](docs/PLAN.md) and [P1.1 Acceptance](docs/P1.1-ACCEPTANCE.md).
 
 ## Development checks
 
