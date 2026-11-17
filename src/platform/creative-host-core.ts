@@ -469,7 +469,7 @@ export async function assembleCreativeHost(runtime: CreativeHostRuntime, factori
     admitted();
     if (calls.getStore() || scopes.getStore()) fail("HOST_PLUGIN_ADMIN_SCOPE", "Plugin administration cannot run inside a tool invocation");
   };
-  const jobs = new CreativeRenderJobController({ runtime, serial, maxArtifactBytes: limits.maxArtifactBytes, maxTimeoutMs: limits.maxTimeoutMs,
+  const jobs = new CreativeRenderJobController({ runtime, serial, maxArtifactBytes: limits.maxArtifactBytes, maxTimeoutMs: limits.maxTimeoutMs, maxInputBytes: limits.maxInputBytes,
     validateSnapshot: saved => { document(saved.document); }, fatal: () => { state = "failed"; } }, options.renderJobs);
   const host: CreativeHost = {
     createSession: (input) => {

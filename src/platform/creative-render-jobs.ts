@@ -23,7 +23,7 @@ interface JobPorts {
   runtime: CreativeHostRuntime;
   serial<T>(work: () => Promise<T>): Promise<T>;
   validateSnapshot(snapshot: ProjectSnapshot): void;
-  maxArtifactBytes: number; maxTimeoutMs: number;
+  maxArtifactBytes: number; maxTimeoutMs: number; maxInputBytes: number;
   fatal(error: unknown): void;
 }
 const errorCode = (error: unknown) => error && typeof error === "object" && "code" in error && typeof error.code === "string" ? error.code : "HOST_JOB_FAILED";
@@ -84,6 +84,8 @@ export class CreativeRenderJobController {
     actor.admit();
     if (this.closing || this.fatalError) jobFail("HOST_CLOSED", "Job controller is not accepting work");
     const request = parseJobSubmission(value); actor.authorize(request.toolId, request.toolVersion);
+    if (Buffer.byteLength(JSON.stringify(request.input)) > this.ports.maxInputBytes)
+      jobFail("HOST_INPUT_TOO_LARGE", "Render input exceeds the configured host byte limit");
     const key = JSON.stringify([actor.projectId, request.submissionId]), hash = hashToolInput(request);
     const pending = this.pendingSubmissions.get(key);
     if (pending) {

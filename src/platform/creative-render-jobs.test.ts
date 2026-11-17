@@ -113,6 +113,9 @@ test("job admission/control enforce session grants, project ownership, exact ver
       { ...submission("bad", "video"), input: { snapshotId: "baseline", startFrame: 25, durationFrames: 10 } }])
       await assert.rejects(session.jobs.submit(bad as CreativeJobSubmission));
     await assert.rejects(session.jobs.list({ limit: 201 })); assert.equal((await session.jobs.list()).total, 2); assert.equal(executions, 2);
+    await host.close(); host = await openCreativeHost({ directory: root, limits: { maxInputBytes: 32 } });
+    const bounded = actor(host); await assert.rejects(bounded.jobs.submit(submission("too-large")), code("HOST_INPUT_TOO_LARGE"));
+    assert.equal((await bounded.jobs.list()).total, 2);
   } finally { await host?.close(); await rm(root, { recursive: true, force: true }); }
 });
 
