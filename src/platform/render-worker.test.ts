@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { existsSync, readdirSync, watch, type FSWatcher } from "node:fs";
 import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -112,6 +113,28 @@ test("worker rejects invalid policy and pre-aborted work before filesystem/proce
   const worker = new LocalRenderWorker({ workerScript: script, temporaryDirectory: root });
   try { await assert.rejects(worker.renderPreview(request("success", controller.signal)), { code: "RENDER_WORKER_CANCELLED" }); assert.deepEqual(await readdir(root), []); }
   finally { await worker.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test("worker observes cancellation during temporary cleanup and cannot return contradictory success", linux, async () => {
+  const root = await mkdtemp(join(tmpdir(), "science-worker-cleanup-")), controller = new AbortController();
+  const events: RenderWorkerEvent[] = []; let watcher: FSWatcher | undefined, cancelledDuringCleanup = false;
+  const worker = new LocalRenderWorker({ workerScript: script, temporaryDirectory: root, onEvent: event => {
+    events.push(event);
+    if (event.state === "running" && !watcher) {
+      const directory = join(root, readdirSync(root).find(name => name.startsWith("sciencemotion-worker-"))!);
+      watcher = watch(directory, (_kind, filename) => {
+        // Observe actual output removal while the guardian has exited and nested files are still being cleaned.
+        if (filename === "output.bin" && !existsSync(join(directory, "output.bin")) && worker.status().activeJobs === 1) {
+          cancelledDuringCleanup = true; controller.abort();
+        }
+      });
+    }
+  } });
+  try {
+    await assert.rejects(worker.renderPreview(request("cleanup", controller.signal)), { code: "RENDER_WORKER_CANCELLED" });
+    assert.equal(cancelledDuringCleanup, true); assert.equal(events.at(-1)!.state, "cancelled");
+    assert.equal(events.some(event => event.state === "completed"), false); await noJobs(root);
+  } finally { watcher?.close(); await worker.close(); await rm(root, { recursive: true, force: true }); }
 });
 
 test("host cancellation reaches the render request and prevents a late non-cooperative renderer from publishing bytes", async () => {

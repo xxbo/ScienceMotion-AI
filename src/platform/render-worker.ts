@@ -163,13 +163,14 @@ export class LocalRenderWorker implements ProjectGraphSnapshotRenderer {
         failure ??= error instanceof RenderWorkerError ? error : new RenderWorkerError("RENDER_WORKER_OUTPUT_INVALID", error instanceof Error ? error.message : "Worker failed");
         throw failure;
       } finally {
-        clearTimeout(timer); clearTimeout(escalation); signal?.removeEventListener("abort", cancel);
-        if (!exited) { stopGuardian(true); await childClosed; }
+        if (!exited) { stopGuardian(true); await childClosed; exited = true; }
         try { if (directory) await rm(directory, { recursive: true, force: true }); }
         catch { failure = new RenderWorkerError("RENDER_WORKER_CLEANUP", "Could not remove the worker's temporary files"); }
+        // Cancellation/deadlines remain live through cleanup, before returning verified bytes.
+        clearTimeout(timer); clearTimeout(escalation); signal?.removeEventListener("abort", cancel);
         this.jobs.delete(active);
         notify(failure ? failure.code === "RENDER_WORKER_CANCELLED" ? "cancelled" : failure.code === "RENDER_WORKER_TIMEOUT" ? "timed-out" : "failed" : "completed", failure ? { code: failure.code } : {});
-        if (failure?.code === "RENDER_WORKER_CLEANUP") throw failure;
+        if (failure) throw failure;
       }
     };
     active.done = execute(); return active.done as Promise<{ bytes: Buffer; execution: NonNullable<ProjectGraphRenderOutput["execution"]> }>;

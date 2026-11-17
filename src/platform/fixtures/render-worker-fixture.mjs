@@ -1,12 +1,17 @@
 import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
-import { readFile, writeFile, symlink } from "node:fs/promises";
+import { mkdir, readFile, writeFile, symlink } from "node:fs/promises";
 import { join, dirname } from "node:path";
 
 const directory = process.argv[2], job = JSON.parse(await readFile(join(directory, "request.json"), "utf8"));
 const mode = job.request.project.project.name;
 const send = message => new Promise((resolve, reject) => process.send({ protocolVersion: "1.0.0", jobId: job.jobId, ...message }, error => error ? reject(error) : resolve()));
 process.on("SIGTERM", () => {}); // Deliberately non-cooperative test renderer.
+if (mode === "cleanup") {
+  const nested = join(directory, "cleanup", ...Array.from({ length: 32 }, () => "nested"));
+  await mkdir(nested, { recursive: true });
+  await Promise.all(Array.from({ length: 256 }, (_, i) => writeFile(join(nested, String(i)), "temporary render data")));
+}
 if (["spin", "crash", "late", "result-hang", "success-child"].includes(mode)) {
   const child = spawn(process.execPath, ["-e", "process.on('SIGTERM',()=>{}); setInterval(()=>{},1000)"], { stdio: "ignore", detached: true });
   await writeFile(join(dirname(directory), "descendant.json"), JSON.stringify({ pid: child.pid, parent: process.pid }));
