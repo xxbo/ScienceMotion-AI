@@ -13,6 +13,7 @@ import { openCreativeHost } from "./creative-host";
 import type { CreativeSession } from "../contracts/creative-host";
 import type { ProjectGraphSnapshotRenderer } from "../contracts/renderer";
 import { FileSystemArtifactStore } from "./artifact-store";
+import { probeRenderResources } from "./render-resource-capabilities";
 
 const script = resolve("src/platform/fixtures/render-worker-fixture.mjs");
 function request(name: string, signal?: AbortSignal) {
@@ -128,6 +129,46 @@ test("worker rejects invalid policy and pre-aborted work before filesystem/proce
   const worker = new LocalRenderWorker({ workerScript: script, temporaryDirectory: root });
   try { await assert.rejects(worker.renderPreview(request("success", controller.signal)), { code: "RENDER_WORKER_CANCELLED" }); assert.deepEqual(await readdir(root), []); }
   finally { await worker.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test("resource budget validation distinguishes invalid limits from unavailable enforcement", () => {
+  for (const resourceBudget of [{}, { cpuMillicores: 9 }, { cpuTimeMs: 0 }, { cpuTimeMs: Number.MAX_SAFE_INTEGER },
+    { memoryBytes: 1.5 }, { temporaryBytes: Infinity }, { unknown: 1 }, JSON.parse('{"constructor": 1}')]) {
+    assert.throws(() => renderWorkerPolicy({ resourceBudget }), { code: "RENDER_WORKER_CONFIG" });
+  }
+  for (const resourceBudget of [{ cpuMillicores: 500 }, { cpuTimeMs: 2000 }, { memoryBytes: 128 * 1024 * 1024 }, { temporaryBytes: 32 * 1024 * 1024 }])
+    assert.throws(() => renderWorkerPolicy({ resourceBudget }), { code: "RENDER_WORKER_RESOURCE_UNAVAILABLE" });
+});
+
+test("native and stdio resource requests fail before creating workspace or trace files", async () => {
+  const root = await mkdtemp(join(tmpdir(), "science-worker-resource-config-"));
+  const directory = join(root, "workspace"), traceFile = join(root, "trace.jsonl");
+  const renderWorker = { resourceBudget: { cpuMillicores: 500, memoryBytes: 128 * 1024 * 1024 } };
+  try {
+    await assert.rejects(openCreativeHost({ directory, renderWorker }), { code: "RENDER_WORKER_RESOURCE_UNAVAILABLE" });
+    const config = join(root, "config.json");
+    await writeFile(config, JSON.stringify({ schemaVersion: "1.0.0", directory, traceFile, grant: { projectId: "resource-fixture" }, renderWorker }));
+    const result = spawnSync(process.execPath, ["--import", "tsx", "scripts/creative-host-server.ts", "--config", config],
+      { encoding: "utf8", timeout: 10000 });
+    assert.equal(result.error, undefined);
+    assert.equal(result.status, 1);
+    assert.equal(result.stdout, "");
+    assert.match(result.stderr, /\[RENDER_WORKER_RESOURCE_UNAVAILABLE\]/);
+    assert.deepEqual(await readdir(root), ["config.json"]);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test("explicit resource probes reject ordinary directories before creating any probe objects", linux, async () => {
+  const root = await mkdtemp(join(tmpdir(), "science-worker-resource-probe-"));
+  try {
+    await writeFile(join(root, "unrelated.txt"), "untouched");
+    const report = await probeRenderResources({ cgroupParent: root, temporaryVolume: root });
+    assert.equal(report.enforcement, "probe-only");
+    assert.equal(report.cgroup.verification.state, "unavailable");
+    assert.equal(report.storage.state, "unavailable");
+    assert.deepEqual(await readdir(root), ["unrelated.txt"]);
+    assert.equal(await readFile(join(root, "unrelated.txt"), "utf8"), "untouched");
+  } finally { await rm(root, { recursive: true, force: true }); }
 });
 
 test("worker observes cancellation during temporary cleanup and cannot return contradictory success", linux, async () => {

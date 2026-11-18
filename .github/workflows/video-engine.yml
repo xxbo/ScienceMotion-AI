@@ -15,6 +15,33 @@ permissions:
   contents: read
 
 jobs:
+  probe-render-resources:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Verify delegated cgroup controls and a bounded disk volume
+        id: resource-probe
+        run: bash scripts/fixtures/probe-render-resources-ci.sh
+
+      - name: Upload render worker capability evidence
+        if: ${{ !cancelled() && (steps.resource-probe.outcome == 'success' || steps.resource-probe.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: render-resource-capability
+          path: out/render-resource-capability.json
+          if-no-files-found: warn
+
   validate-and-render:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
