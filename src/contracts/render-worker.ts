@@ -3,6 +3,17 @@ import type { ProjectGraphLayoutRequest, ProjectGraphPreviewRequest, ProjectGrap
 export type RenderWorkerOperation = "preview" | "video" | "layout";
 export type RenderWorkerRequest = ProjectGraphPreviewRequest | ProjectGraphVideoRequest | ProjectGraphLayoutRequest;
 type SerializedRequest<T> = T extends unknown ? Omit<T, "signal" | "onProgress"> : never;
+/** Trusted per-job limits for the renderer and its descendants. */
+export interface RenderWorkerResourceBudget {
+  /** CPU bandwidth for the whole tree, in thousandths of one core. */
+  cpuMillicores?: number;
+  /** Cumulative CPU time for the whole tree, in milliseconds. */
+  cpuTimeMs?: number;
+  /** cgroup-charged memory limit, in bytes. */
+  memoryBytes?: number;
+  /** Capacity of the job's dedicated temporary filesystem, in bytes. */
+  temporaryBytes?: number;
+}
 export interface RenderWorkerPolicy {
   timeoutMs: number;
   maxConcurrentJobs: number;
@@ -10,6 +21,7 @@ export interface RenderWorkerPolicy {
   /** V8 old-space only: this is not a total RSS limit for Chromium/FFmpeg. */
   maxOldSpaceMb: number;
   killGraceMs: number;
+  resourceBudget?: RenderWorkerResourceBudget;
 }
 export interface RenderWorkerEvent {
   jobId: string; operation: RenderWorkerOperation; projectId: string; snapshotHash: string;

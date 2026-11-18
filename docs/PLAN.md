@@ -10,7 +10,7 @@ Prioritize a small demonstrated creation-and-repair workflow on Remotion. Progra
 
 [Platform Vision](PLATFORM_VISION.md) owns durable principles, [Architecture](ARCHITECTURE.md) implementation boundaries, and [P1.1 Acceptance](P1.1-ACCEPTANCE.md) measurable exit gates. Test counts and catalogue size are not product-completion percentages.
 
-P1.2-D aggregate process-tree resource limits follow the delivered concurrent editing and maintenance acceptance. Human effect review is assigned to the final acceptance workstream. Automated engineering checks continue throughout development. [C3 acceptance](P1.2-C3-CONCURRENT-MAINTENANCE.md) · [P1.2 plan](P1.2-PLAN.md).
+P1.2-D2 CPU and memory enforcement follows D1's per-job budget contract and runtime capability probes. Human effect review is assigned to the final acceptance workstream. Automated engineering checks continue throughout development. [D1 capability](P1.2-D1-RESOURCE-CAPABILITY.md) · [P1.2 plan](P1.2-PLAN.md).
 
 ## Main is the delivery baseline
 
@@ -64,7 +64,9 @@ P1.1's engineering gates have evidence; full visual closure is deferred to the f
 | 8a — implemented | P1.2-C1 scheduling core | Independent queue/execution limits, project round-robin/FIFO, cancellation/publication/failure ownership, complete close/plugin drain and real simultaneous workers with verified media |
 | 8b — implemented | P1.2-C2 retention/reconciliation administration | Trusted inspection, explicit reconciliation and release/pruning with durable evidence and GC protection |
 | 8c — implemented | P1.2-C3 concurrent editing/maintenance acceptance | Actual old/new snapshot rendering, retained-input GC protection, queue-pressure/lifecycle stress and restart evidence |
-| 9 — next implementation | P1.2-D aggregate resource limits | Enforced process-tree CPU/RSS/temp-disk budgets and quota failure/recovery evidence |
+| 9a — implemented | P1.2-D1 budget contract and capability | Typed failure at startup for unavailable enforcement, delegated CPU and memory controls, and bounded disk capacity verified by CI |
+| 9b — next implementation | P1.2-D2 process-tree CPU and memory | CPU bandwidth and cumulative limits, charged memory ceiling, typed failure and cleanup |
+| 9c–d — pending | P1.2-D3/D4 temporary disk and real-worker acceptance | Enforced temporary capacity, aggregate resource failure and recovery evidence with real workers |
 | 10 — pending | P1.2-E performance evidence | Comparable measurements; justified bundle/worker reuse only if correctness and isolation are preserved |
 | Final acceptance workstream — deferred | Consolidated human effect review | Review both P1.1 fixtures and representative later outputs, record defects/fixes and final reviewed main evidence |
 
@@ -137,7 +139,7 @@ Project/plugin operation remains trusted and single-writer. The [P1.2 first slic
 
 | Stage | Responsibility |
 | --- | --- |
-| P1.2 | A, B and C implemented. D is next, followed by E. [P1.2 plan](P1.2-PLAN.md) |
+| P1.2 | A, B, C and D1 implemented. D2 is next. [P1.2 plan](P1.2-PLAN.md) |
 | P1.3 | Broader project/timeline, geometry, SVG/charts, animation, audio/captions and inspection tools |
 | P1.4 | Provider-independent planning and autonomous inspection/repair |
 | P1.5 | Multi-tool composition, performance evidence and new engines without orchestration rewrites |

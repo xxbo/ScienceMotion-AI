@@ -7,23 +7,45 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { LayoutFrameMeasurement } from "../contracts/layout-inspection";
 import type { ProjectGraphLayoutRequest, ProjectGraphPreviewRequest, ProjectGraphRenderOutput, ProjectGraphSnapshotRenderer, ProjectGraphVideoRequest } from "../contracts/renderer";
-import type { RenderWorkerEvent, RenderWorkerJob, RenderWorkerOperation, RenderWorkerPolicy, RenderWorkerReceipt, RenderWorkerRequest } from "../contracts/render-worker";
+import type { RenderWorkerEvent, RenderWorkerJob, RenderWorkerOperation, RenderWorkerPolicy, RenderWorkerReceipt, RenderWorkerRequest, RenderWorkerResourceBudget } from "../contracts/render-worker";
 import { assertFiniteJson } from "./project-creative-edits";
 
 export class RenderWorkerError extends Error {
   constructor(readonly code: string, message: string) { super(message); this.name = "RenderWorkerError"; }
 }
 const fail = (code: string, message: string): never => { throw new RenderWorkerError(code, message); };
-const defaults: RenderWorkerPolicy = { timeoutMs: 30000, maxConcurrentJobs: 1, maxOutputBytes: 32 * 1024 * 1024, maxOldSpaceMb: 1024, killGraceMs: 150 };
+const defaults = { timeoutMs: 30000, maxConcurrentJobs: 1, maxOutputBytes: 32 * 1024 * 1024, maxOldSpaceMb: 1024, killGraceMs: 150 };
+const budgetBounds: Record<keyof RenderWorkerResourceBudget, [number, number]> = {
+  // With a 100 ms CPU bandwidth period, 10 millicores is Linux's 1 ms minimum quota.
+  cpuMillicores: [10, Math.floor(Number.MAX_SAFE_INTEGER / 100)],
+  cpuTimeMs: [1, Math.floor(Number.MAX_SAFE_INTEGER / 1000)],
+  memoryBytes: [1, Number.MAX_SAFE_INTEGER],
+  temporaryBytes: [1, Number.MAX_SAFE_INTEGER],
+};
+
 export function renderWorkerPolicy(value: Partial<RenderWorkerPolicy> = {}): Readonly<RenderWorkerPolicy> {
-  if (!value || typeof value !== "object" || Array.isArray(value) || Object.keys(value).some(k => !Object.hasOwn(defaults, k)))
+  if (!value || typeof value !== "object" || Array.isArray(value) ||
+      Object.keys(value).some(k => k !== "resourceBudget" && !Object.hasOwn(defaults, k)))
     fail("RENDER_WORKER_CONFIG", "Unknown render worker policy field");
-  const policy = { ...defaults, ...value };
-  const bounds: Record<keyof RenderWorkerPolicy, [number, number]> = {
+  const { resourceBudget, ...worker } = value;
+  const policy = { ...defaults, ...worker };
+  const bounds: Record<keyof typeof defaults, [number, number]> = {
     timeoutMs: [1, 300000], maxConcurrentJobs: [1, 4], maxOutputBytes: [1024, 64 * 1024 * 1024], maxOldSpaceMb: [128, 4096], killGraceMs: [0, 1000],
   };
-  for (const key of Object.keys(bounds) as (keyof RenderWorkerPolicy)[])
+  for (const key of Object.keys(bounds) as (keyof typeof defaults)[])
     if (!Number.isSafeInteger(policy[key]) || policy[key] < bounds[key][0] || policy[key] > bounds[key][1]) fail("RENDER_WORKER_CONFIG", `Invalid ${key}`);
+  if (resourceBudget !== undefined) {
+    if (!resourceBudget || typeof resourceBudget !== "object" || Array.isArray(resourceBudget) ||
+        ![Object.prototype, null].includes(Object.getPrototypeOf(resourceBudget)) ||
+        !Object.keys(resourceBudget).length || Object.keys(resourceBudget).some(key => !Object.hasOwn(budgetBounds, key)))
+      fail("RENDER_WORKER_CONFIG", "resourceBudget must specify at least one documented limit");
+    for (const key of Object.keys(resourceBudget) as (keyof RenderWorkerResourceBudget)[]) {
+      const amount = resourceBudget[key], [minimum, maximum] = budgetBounds[key];
+      if (typeof amount !== "number" || !Number.isSafeInteger(amount) || amount < minimum || amount > maximum)
+        fail("RENDER_WORKER_CONFIG", `Invalid resourceBudget.${key}`);
+    }
+    fail("RENDER_WORKER_RESOURCE_UNAVAILABLE", "Render worker resource budgets are not yet enforced. Run npm run probe:render-resources for host capability evidence.");
+  }
   return Object.freeze(policy);
 }
 export interface RenderWorkerOptions {
