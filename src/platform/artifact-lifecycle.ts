@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readFile, readdir, rm, open } from "node:fs/promises";
+import { readFile, readdir, rm, open, type FileHandle } from "node:fs/promises";
 import { join } from "node:path";
 import type { ArtifactKind, ArtifactRecord, ArtifactStore } from "../contracts/artifact";
 import type { ArtifactGarbageCollectionOptions, ArtifactGarbageCollectionResult, ArtifactLifecycleManager, ArtifactReference, ArtifactReferenceStore } from "../contracts/artifact-lifecycle";
@@ -49,9 +49,14 @@ export class FileSystemArtifactReferenceStore implements ArtifactReferenceStore 
   async detach(id: string): Promise<boolean> {
     try { await rm(join(this.rootDirectory, assertReferenceId(id) + ".json")); }
     catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return false; throw error; }
-    const directory = await open(this.rootDirectory, "r");
-    try { await directory.sync(); } finally { await directory.close(); }
+    await this.syncDirectory();
     return true;
+  }
+  async syncDirectory(): Promise<void> {
+    let directory: FileHandle;
+    try { directory = await open(this.rootDirectory, "r"); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return; throw error; }
+    try { await directory.sync(); } finally { await directory.close(); }
   }
   async list(query: Query = {}): Promise<ArtifactReference[]> {
     let names: string[];

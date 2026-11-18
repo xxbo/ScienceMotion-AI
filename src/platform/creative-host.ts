@@ -103,7 +103,11 @@ export async function openCreativeHost(options: OpenCreativeHostOptions): Promis
         if (ref.ownerType !== "tool-run" && ref.ownerType !== "render-job") throw new Error("Unsupported host retention owner");
         await lifecycle.attach(ref);
       },
-      releaseJobOutputs: (ownerId) => lifecycle.releaseOwner({ ownerType: "render-job", ownerId }, "host-output"),
+      releaseJobOutputs: async (ownerId) => {
+        await lifecycle.releaseOwner({ ownerType: "render-job", ownerId }, "host-output");
+        // A retry can observe a missing reference after a previous unlink without a directory sync.
+        await references.syncDirectory();
+      },
       listExecutions: (id) => evidence.list(id),
       validateProject: (document) => assertValid(validateProject, document, "Project Schema"),
       validatePatch: (patch) => assertValid(validatePatch, patch, "Patch Schema"),

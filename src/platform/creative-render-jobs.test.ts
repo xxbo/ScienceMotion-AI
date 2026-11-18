@@ -490,20 +490,20 @@ test("a publication candidate protects bytes without a reference and can be expl
   }
 });
 
-test("release intent protects an output when detachment settles but its acknowledgement is lost", async () => {
-  const root = await temp(); let host: CreativeHost | undefined, failDetach = true;
-  const detach = FileSystemArtifactReferenceStore.prototype.detach;
-  FileSystemArtifactReferenceStore.prototype.detach = async function (id) {
-    const detached = await detach.call(this, id);
-    if (failDetach && detached) throw new Error("Injected failure after durable detach");
-    return detached;
+test("release intent protects an output when reference unlink succeeds but directory sync fails", async () => {
+  const root = await temp(); let host: CreativeHost | undefined, failSync = true, syncCalls = 0;
+  const sync = FileSystemArtifactReferenceStore.prototype.syncDirectory;
+  FileSystemArtifactReferenceStore.prototype.syncDirectory = async function () {
+    syncCalls++;
+    if (failSync) throw new Error("Injected failure syncing reference deletion");
+    await sync.call(this);
   };
   try {
     host = await openCreativeHost({ directory: root, renderer: renderer(async (_request, mode) => result(mode)) });
     const session = await seed(host), first = await session.jobs.submit(submission());
     const done = await state(session, first.record.id, "succeeded"), artifactId = done.result!.artifactId;
     const admin = host.maintenance.renderJobs;
-    await assert.rejects(admin.release("p", done.id), /after durable detach/);
+    await assert.rejects(admin.release("p", done.id), /syncing reference deletion/);
     const pending = await admin.inspect("p", done.id);
     assert.ok(pending && "record" in pending && pending.retention.release);
     assert.equal(pending.retention.release.completedAt, undefined);
@@ -513,16 +513,17 @@ test("release intent protects an output when detachment settles but its acknowle
     assert.deepEqual((await host.maintenance.collectGarbage(0)).deleted, []);
     await host.close();
 
-    failDetach = false;
+    failSync = false;
     host = await openCreativeHost({ directory: root });
     const reopened = host.maintenance.renderJobs;
     assert.deepEqual(await reopened.inspect("p", done.id), pending);
-    const finished = await reopened.release("p", done.id);
+    const beforeRetry = syncCalls, finished = await reopened.release("p", done.id);
+    assert.ok(syncCalls > beforeRetry);
     assert.equal(finished.requestedAt, pending.retention.release.requestedAt);
     assert.ok(finished.completedAt);
     assert.deepEqual((await host.maintenance.collectGarbage(0)).deleted, [artifactId]);
   } finally {
-    FileSystemArtifactReferenceStore.prototype.detach = detach;
+    FileSystemArtifactReferenceStore.prototype.syncDirectory = sync;
     await host?.close(); await rm(root, { recursive: true, force: true });
   }
 });
