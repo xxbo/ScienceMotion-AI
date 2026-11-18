@@ -6,7 +6,7 @@ An extensible science-video creation framework for AI agents: discover typed too
 
 Watch the [30-second CPU-cache capability sample](docs/showcase/cpu-cache-30s.mp4) ([download MP4](https://raw.githubusercontent.com/xxbo/ScienceMotion-AI/main/docs/showcase/cpu-cache-30s.mp4)). It combines four scenes, text, shapes, paths, keyframes and a data-driven chart using the current public tools. Mandarin narration is added by a separate finishing script. [Reproduction, evidence and limits](docs/showcase/README.md).
 
-Main is the delivery baseline. P1.2-A's render-worker lifecycle was delivered on `b4e5bc9fa47111ce8a8324f69b14559d25d4f1de`. [CI #44002989900](https://github.com/xxbo/ScienceMotion-AI/actions/runs/44002989900) passed 223 tests and the real-render regressions. **P1.1 engineering is delivered and human review is deferred to final acceptance. P1.2 includes worker and CLI recovery, concurrent scheduling and trusted job retention administration. C3 concurrent editing and maintenance acceptance is next.**
+Main is the delivery baseline. P1.2-A's render-worker lifecycle was delivered on `b4e5bc9fa47111ce8a8324f69b14559d25d4f1de`. [CI #44002989900](https://github.com/xxbo/ScienceMotion-AI/actions/runs/44002989900) passed 223 tests and the real-render regressions. **P1.1 engineering is delivered and human review is deferred to final acceptance. P1.2 covers worker and CLI recovery, concurrent scheduling, retention administration and real-worker concurrent editing. P1.2-D aggregate resource limits are next.**
 
 | Stage | Implemented scope |
 | --- | --- |
@@ -25,7 +25,8 @@ Main is the delivery baseline. P1.2-A's render-worker lifecycle was delivered on
 | P1.2-B3 | [Real CLI lifecycle](docs/P1.2-B3-CLI-LIFECYCLE.md): cancellation, process/temp cleanup, verified media and explicit interrupted-host recovery without replay |
 | P1.2-C1 | [Concurrent scheduling](docs/P1.2-C1-SCHEDULING.md): independent waiting/running limits, per-project round-robin, lifecycle ownership and real simultaneous workers |
 | P1.2-C2 | [Job retention administration](docs/P1.2-C2-RETENTION.md) with explicit reconciliation, release, pruning and GC protection |
-| P1.2-C3–E | Concurrent editing and maintenance stress, aggregate limits and measured performance ([plan](docs/P1.2-PLAN.md)) |
+| P1.2-C3 | Real-worker edits during an older render, scoped GC, plugin drain and host close with a full queue. [Concurrent maintenance acceptance](docs/P1.2-C3-CONCURRENT-MAINTENANCE.md) |
+| P1.2-D–E | Aggregate resource limits and measured performance. [Plan](docs/P1.2-PLAN.md) |
 | P1.3+ | Broader tools/professional engines and general autonomous visual iteration |
 
 The built-in workspace plugin now includes initial scene, text, shape, transform and keyframe tools. The generic Project Graph composition is a first 2D slice; the CPU-cache Episode renderer remains separate. The [two-topic acceptance scenario](docs/P1.1-CREATIVE-LOOP.md) creates 12-second cache and water-cycle fixtures through public tools, detects/repairs seeded defects, edits text/motion and verifies export/restart/restore including original data dependencies. CI preserves six baseline/edited/restored MP4s, 18 previews, manifests and invocation evidence. These technical fixtures are silent and scripted.
@@ -43,7 +44,7 @@ Approved content -> AI tool calls -> Project Graph -> immutable snapshot
 
 The current host has 19 executable built-ins; acceptance adds one executable test extension and grants 17 tools to the fixture workflow. One catalogue-only manifest and 300 synthetic scale entries (100 IDs × 3 versions) are counted separately. The scale entries are not implemented creative tools. Reuse Remotion and the existing contracts; marketplace/distributed infrastructure remains deferred.
 
-P1.1 has evidence for 23/25 acceptance items, not an effort-completion percentage. [Host plugin switching and the 300-manifest scenario](docs/P1.1-PLUGIN-SWITCH-SCALE.md), plus the [local interface and recorded AI trial](docs/P1.1-AI-TRIAL.md), are implemented. Watch the trial's [12-second revised video](docs/ai-trials/cache-hit-2026-11-17/video-final.mp4): it was created through discovered tools and repaired from a layout report. The user gave [positive sample feedback and deferred human review to final acceptance](docs/P1.1-REVIEW.md). [P1.2-A](docs/P1.2-WORKERS.md), [B1's ledger](docs/P1.2-B1-JOB-LEDGER.md) and [B2 host/client jobs](docs/P1.2-B2-HOST-JOBS.md) are implemented; [B3 completes the actual worker/CLI lifecycle](docs/P1.2-B3-CLI-LIFECYCLE.md). C3 is the next engineering increment after [C1 scheduling](docs/P1.2-C1-SCHEDULING.md) and [C2 retention administration](docs/P1.2-C2-RETENTION.md). CI replay makes no new model calls. See [Development Plan](docs/PLAN.md) and [P1.1 Acceptance](docs/P1.1-ACCEPTANCE.md).
+P1.1 has evidence for 23/25 acceptance items, not an effort-completion percentage. [Host plugin switching and the 300-manifest scenario](docs/P1.1-PLUGIN-SWITCH-SCALE.md), plus the [local interface and recorded AI trial](docs/P1.1-AI-TRIAL.md), are implemented. Watch the trial's [12-second revised video](docs/ai-trials/cache-hit-2026-11-17/video-final.mp4): it was created through discovered tools and repaired from a layout report. The user gave [positive sample feedback and deferred human review to final acceptance](docs/P1.1-REVIEW.md). [P1.2-A](docs/P1.2-WORKERS.md), [B1's ledger](docs/P1.2-B1-JOB-LEDGER.md) and [B2 host/client jobs](docs/P1.2-B2-HOST-JOBS.md) are implemented; [B3 completes the actual worker/CLI lifecycle](docs/P1.2-B3-CLI-LIFECYCLE.md). P1.2-D follows the C1–C3 delivery. [C1 scheduling](docs/P1.2-C1-SCHEDULING.md) · [C2 retention administration](docs/P1.2-C2-RETENTION.md) · [C3 acceptance](docs/P1.2-C3-CONCURRENT-MAINTENANCE.md). CI replay makes no new model calls. See [Development Plan](docs/PLAN.md) and [P1.1 Acceptance](docs/P1.1-ACCEPTANCE.md).
 
 ## Development checks
 
@@ -67,6 +68,7 @@ npm run accept:ai-trial
 npm run accept:render-worker
 npm run accept:render-jobs
 npm run accept:render-scheduler
+npm run accept:render-maintenance
 ```
 
 `npm run studio` and `npm run render` also generate narration and require the Python voice environment described by the repository's voice scripts and CI workflow.
@@ -86,6 +88,8 @@ npm run accept:render-scheduler
 `accept:render-scheduler` verifies two actual concurrent worker/Chromium trees, bounded waiting capacity, two MP4s and a PNG, cleanup and exact reopened results. CI uploads `out/render-job-scheduler/` as `render-scheduler-evidence`. Configure `renderJobs.maxConcurrentJobs` and `maxQueuedJobs` independently, and give the selected worker sufficient capacity. [C1 configuration and scope](docs/P1.2-C1-SCHEDULING.md).
 
 `host.maintenance.renderJobs` lets a trusted application inspect job retention, reconcile an interrupted or uncertain outcome, release job-owned output references and prune a released record. The real `render:job-smoke` verifies targeted output GC and checks the pruned identity after reopening. [C2 API and evidence](docs/P1.2-C2-RETENTION.md).
+
+`accept:render-maintenance` verifies an edited snapshot and an unchanged in-flight render, GC before and after release, plugin switching and host close with a full queue. CI saves the decoded-pixel and restart evidence with the three rendered files in `render-maintenance-evidence`. [C3 scenario and evidence](docs/P1.2-C3-CONCURRENT-MAINTENANCE.md).
 
 ## Design and documentation
 

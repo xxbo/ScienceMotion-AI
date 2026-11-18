@@ -110,7 +110,7 @@ try {
   for (const record of records) assert.deepEqual(await actor(record.input.projectId).jobs.get(record.id), record);
   assert.equal((await actor("a").jobs.list()).total, 2); assert.equal((await actor("b").jobs.list()).total, 1);
   Object.assign(evidence, { status: "passed", peakWorkers: peak, overlap, outputs, events, processCleanup: true, temporaryCleanup: true, exactResultsAfterReopen: true,
-    scope: "C1 scheduling/parallel output evidence; concurrent editing/maintenance stress remains C3, aggregate resource enforcement remains D" });
+    scope: "C1 scheduling and parallel output evidence. C3 covers concurrent editing and maintenance. D covers aggregate resource enforcement." });
   console.log("PASS scheduler: two live Chromium worker trees, peak 2, bounded queue, 2 x 180-frame MP4 + PNG, cleanup and exact reopened results");
 } catch (error) {
   Object.assign(evidence, { status: "failed", failure: error instanceof Error ? error.stack : String(error), peakWorkers: peak, overlap, records, events }); throw error;
