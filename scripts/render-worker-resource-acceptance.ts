@@ -46,7 +46,7 @@ async function render(projectId: string, name: string, video = false): Promise<R
   await invoke(s, "project.scene.create", { sceneId: "scene", name, durationFrames });
   await invoke(s, "graphics.2d.shape.create", { sceneId: "scene", nodeId: "shape", primitive: "circle", x: 260, y: 120, width: 120, height: 120, fill: "#55d6e8" });
   const project = await invoke<ProjectDocument>(s, "project.inspect", {});
-  const snapshotId = "snapshot";
+  const snapshotId = "snapshot-" + projectId;
   await invoke(s, "project.snapshot.save", { snapshotId, revisionId: project.revisions.at(-1)!.id });
   const { record: admitted } = await s.jobs.submit({
     submissionId: projectId, runId: "resources", callId: projectId, toolVersion: "1.0.0",
