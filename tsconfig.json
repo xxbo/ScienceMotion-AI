@@ -28,6 +28,7 @@
     "scripts/render-job-cli-acceptance.ts",
     "scripts/render-job-host-smoke.ts",
     "scripts/render-job-scheduler-acceptance.ts",
+    "scripts/render-job-maintenance-acceptance.ts",
     "scripts/fixtures/**/*.ts"
   ]
 }
