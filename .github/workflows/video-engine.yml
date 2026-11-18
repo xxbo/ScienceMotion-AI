@@ -104,8 +104,11 @@ jobs:
 
       - name: Install system dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y fonts-noto-cjk ffmpeg python3-venv
+          # The runner's regional EC2 mirror stalled on the font and FFmpeg packages.
+          sudo sed -i -E 's@http://[^[:space:]]+\.ec2\.archive\.ubuntu\.com/ubuntu/?@https://archive.ubuntu.com/ubuntu/@g' /etc/apt/sources.list.d/ubuntu.sources
+          apt_options=(-o Acquire::Retries=2 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30)
+          sudo apt-get "${apt_options[@]}" update
+          sudo apt-get "${apt_options[@]}" install -y fonts-noto-cjk ffmpeg python3-venv
 
       - name: Set up Mandarin TTS environment
         run: |
