@@ -1,4 +1,4 @@
-import type { ProjectGraphLayoutRequest, ProjectGraphPreviewRequest, ProjectGraphRenderProgress, ProjectGraphVideoRequest } from "./renderer";
+import type { ProjectGraphLayoutRequest, ProjectGraphPreviewRequest, ProjectGraphRenderProgress, ProjectGraphVideoRequest, RenderWorkerResourceUsage } from "./renderer";
 
 export type RenderWorkerOperation = "preview" | "video" | "layout";
 export type RenderWorkerRequest = ProjectGraphPreviewRequest | ProjectGraphVideoRequest | ProjectGraphLayoutRequest;
@@ -22,11 +22,14 @@ export interface RenderWorkerPolicy {
   maxOldSpaceMb: number;
   killGraceMs: number;
   resourceBudget?: RenderWorkerResourceBudget;
+  /** Absolute path to an operator-delegated cgroup v2 parent for budgeted jobs. */
+  cgroupParent?: string;
 }
 export interface RenderWorkerEvent {
   jobId: string; operation: RenderWorkerOperation; projectId: string; snapshotHash: string;
   state: "starting" | "running" | "completed" | "cancelled" | "timed-out" | "failed";
   processId?: number; elapsedMs: number; progress?: ProjectGraphRenderProgress; code?: string;
+  resourceUsage?: RenderWorkerResourceUsage;
 }
 /** Private file/IPC protocol between trusted application-owned processes. No workspace/store handles. */
 export interface RenderWorkerJob {

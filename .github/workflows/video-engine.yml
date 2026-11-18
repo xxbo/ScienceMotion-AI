@@ -42,6 +42,21 @@ jobs:
           path: out/render-resource-capability.json
           if-no-files-found: warn
 
+      - name: Ensure Remotion browser
+        run: npx remotion browser ensure
+
+      - name: Verify render job CPU and memory limits
+        id: render-resources
+        run: bash scripts/fixtures/with-render-cgroup-ci.sh scripts/render-worker-resource-acceptance.ts
+
+      - name: Upload render job resource evidence
+        if: ${{ !cancelled() && (steps.render-resources.outcome == 'success' || steps.render-resources.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: render-worker-resource-evidence
+          path: out/render-worker-resources/
+          if-no-files-found: error
+
   validate-and-render:
     runs-on: ubuntu-24.04
     timeout-minutes: 20

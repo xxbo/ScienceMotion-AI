@@ -29,6 +29,7 @@
     "scripts/render-job-host-smoke.ts",
     "scripts/render-job-scheduler-acceptance.ts",
     "scripts/render-job-maintenance-acceptance.ts",
+    "scripts/render-worker-resource-acceptance.ts",
     "scripts/probe-render-resources.ts",
     "scripts/fixtures/**/*.ts"
   ]

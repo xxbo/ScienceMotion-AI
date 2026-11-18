@@ -138,6 +138,16 @@ test("resource budget validation distinguishes invalid limits from unavailable e
   }
   for (const resourceBudget of [{ cpuMillicores: 500 }, { cpuTimeMs: 2000 }, { memoryBytes: 128 * 1024 * 1024 }, { temporaryBytes: 32 * 1024 * 1024 }])
     assert.throws(() => renderWorkerPolicy({ resourceBudget }), { code: "RENDER_WORKER_RESOURCE_UNAVAILABLE" });
+  const cgroupParent = resolve("delegated");
+  assert.throws(() => renderWorkerPolicy({ cgroupParent }), { code: "RENDER_WORKER_CONFIG" });
+  assert.throws(() => renderWorkerPolicy({ cgroupParent: "relative", resourceBudget: { cpuTimeMs: 2000 } }), { code: "RENDER_WORKER_CONFIG" });
+  assert.throws(() => renderWorkerPolicy({ cgroupParent, resourceBudget: { cpuTimeMs: 2000, temporaryBytes: 1024 } }),
+    { code: "RENDER_WORKER_RESOURCE_UNAVAILABLE" });
+  const resourceBudget = { cpuTimeMs: 2000 };
+  const policy = renderWorkerPolicy({ cgroupParent, resourceBudget });
+  resourceBudget.cpuTimeMs = 500;
+  assert.deepEqual(policy.resourceBudget, { cpuTimeMs: 2000 });
+  assert.ok(Object.isFrozen(policy.resourceBudget));
 });
 
 test("native and stdio resource requests fail before creating workspace or trace files", async () => {
@@ -145,16 +155,18 @@ test("native and stdio resource requests fail before creating workspace or trace
   const directory = join(root, "workspace"), traceFile = join(root, "trace.jsonl");
   const renderWorker = { resourceBudget: { cpuMillicores: 500, memoryBytes: 128 * 1024 * 1024 } };
   try {
-    await assert.rejects(openCreativeHost({ directory, renderWorker }), { code: "RENDER_WORKER_RESOURCE_UNAVAILABLE" });
-    const config = join(root, "config.json");
-    await writeFile(config, JSON.stringify({ schemaVersion: "1.0.0", directory, traceFile, grant: { projectId: "resource-fixture" }, renderWorker }));
-    const result = spawnSync(process.execPath, ["--import", "tsx", "scripts/creative-host-server.ts", "--config", config],
-      { encoding: "utf8", timeout: 10000 });
-    assert.equal(result.error, undefined);
-    assert.equal(result.status, 1);
-    assert.equal(result.stdout, "");
-    assert.match(result.stderr, /\[RENDER_WORKER_RESOURCE_UNAVAILABLE\]/);
-    assert.deepEqual(await readdir(root), ["config.json"]);
+    for (const policy of [renderWorker, { ...renderWorker, cgroupParent: root }]) {
+      await assert.rejects(openCreativeHost({ directory, renderWorker: policy }), { code: "RENDER_WORKER_RESOURCE_UNAVAILABLE" });
+      const config = join(root, "config.json");
+      await writeFile(config, JSON.stringify({ schemaVersion: "1.0.0", directory, traceFile, grant: { projectId: "resource-fixture" }, renderWorker: policy }));
+      const result = spawnSync(process.execPath, ["--import", "tsx", "scripts/creative-host-server.ts", "--config", config],
+        { encoding: "utf8", timeout: 10000 });
+      assert.equal(result.error, undefined);
+      assert.equal(result.status, 1);
+      assert.equal(result.stdout, "");
+      assert.match(result.stderr, /\[RENDER_WORKER_RESOURCE_UNAVAILABLE\]/);
+      assert.deepEqual(await readdir(root), ["config.json"]);
+    }
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 

@@ -59,7 +59,14 @@ export interface ProjectGraphRenderProgress { phase: "bundling" | "selecting" | 
 export interface ProjectGraphRenderRequest { project: ProjectDocument; revisionId: string; snapshotHash: string; sceneId?: string; profile?: { width: number; height: number; fps?: number }; signal?: AbortSignal; onProgress?: (progress: ProjectGraphRenderProgress) => void }
 export interface ProjectGraphPreviewRequest extends ProjectGraphRenderRequest { frame: number }
 export interface ProjectGraphVideoRequest extends ProjectGraphRenderRequest { startFrame: number; durationFrames: number }
+/** Final cgroup counters for the enabled resource controls, in decimal to preserve kernel precision. */
+export interface RenderWorkerResourceUsage {
+  cpuUsageUsec?: string;
+  cpuThrottledPeriods?: string;
+  memoryOomEvents?: string;
+  memoryOomKills?: string;
+}
 export interface ProjectGraphRenderOutput { bytes: Uint8Array; mediaType: "image/png" | "video/mp4"; extension: "png" | "mp4"; rendererId: string; rendererVersion: string;
-  execution?: { kind: "local-process"; protocolVersion: "1.0.0"; jobId: string; processId: number; elapsedMs: number } }
+  execution?: { kind: "local-process"; protocolVersion: "1.0.0"; jobId: string; processId: number; elapsedMs: number; resourceUsage?: RenderWorkerResourceUsage } }
 export interface ProjectGraphLayoutRequest extends ProjectGraphRenderRequest { frames: number[]; signal?: AbortSignal }
 export interface ProjectGraphSnapshotRenderer { readonly id: string; readonly version: string; renderPreview(request: ProjectGraphPreviewRequest): Promise<ProjectGraphRenderOutput>; renderVideo(request: ProjectGraphVideoRequest): Promise<ProjectGraphRenderOutput>; measureLayout?(request: ProjectGraphLayoutRequest): Promise<LayoutFrameMeasurement[]> }

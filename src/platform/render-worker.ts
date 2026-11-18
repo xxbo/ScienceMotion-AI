@@ -1,12 +1,12 @@
-import { spawn, type ChildProcess } from "node:child_process";
+import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
-import { constants } from "node:fs";
+import { constants, statfsSync } from "node:fs";
 import { mkdtemp, open, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { LayoutFrameMeasurement } from "../contracts/layout-inspection";
-import type { ProjectGraphLayoutRequest, ProjectGraphPreviewRequest, ProjectGraphRenderOutput, ProjectGraphSnapshotRenderer, ProjectGraphVideoRequest } from "../contracts/renderer";
+import type { ProjectGraphLayoutRequest, ProjectGraphPreviewRequest, ProjectGraphRenderOutput, ProjectGraphSnapshotRenderer, ProjectGraphVideoRequest, RenderWorkerResourceUsage } from "../contracts/renderer";
 import type { RenderWorkerEvent, RenderWorkerJob, RenderWorkerOperation, RenderWorkerPolicy, RenderWorkerReceipt, RenderWorkerRequest, RenderWorkerResourceBudget } from "../contracts/render-worker";
 import { assertFiniteJson } from "./project-creative-edits";
 
@@ -14,6 +14,7 @@ export class RenderWorkerError extends Error {
   constructor(readonly code: string, message: string) { super(message); this.name = "RenderWorkerError"; }
 }
 const fail = (code: string, message: string): never => { throw new RenderWorkerError(code, message); };
+const supervisor = fileURLToPath(new URL("./render-worker-supervisor.py", import.meta.url));
 const defaults = { timeoutMs: 30000, maxConcurrentJobs: 1, maxOutputBytes: 32 * 1024 * 1024, maxOldSpaceMb: 1024, killGraceMs: 150 };
 const budgetBounds: Record<keyof RenderWorkerResourceBudget, [number, number]> = {
   // With a 100 ms CPU bandwidth period, 10 millicores is Linux's 1 ms minimum quota.
@@ -25,15 +26,17 @@ const budgetBounds: Record<keyof RenderWorkerResourceBudget, [number, number]> =
 
 export function renderWorkerPolicy(value: Partial<RenderWorkerPolicy> = {}): Readonly<RenderWorkerPolicy> {
   if (!value || typeof value !== "object" || Array.isArray(value) ||
-      Object.keys(value).some(k => k !== "resourceBudget" && !Object.hasOwn(defaults, k)))
+      Object.keys(value).some(k => k !== "resourceBudget" && k !== "cgroupParent" && !Object.hasOwn(defaults, k)))
     fail("RENDER_WORKER_CONFIG", "Unknown render worker policy field");
-  const { resourceBudget, ...worker } = value;
+  const { resourceBudget, cgroupParent, ...worker } = value;
   const policy = { ...defaults, ...worker };
   const bounds: Record<keyof typeof defaults, [number, number]> = {
     timeoutMs: [1, 300000], maxConcurrentJobs: [1, 4], maxOutputBytes: [1024, 64 * 1024 * 1024], maxOldSpaceMb: [128, 4096], killGraceMs: [0, 1000],
   };
   for (const key of Object.keys(bounds) as (keyof typeof defaults)[])
     if (!Number.isSafeInteger(policy[key]) || policy[key] < bounds[key][0] || policy[key] > bounds[key][1]) fail("RENDER_WORKER_CONFIG", `Invalid ${key}`);
+  if (cgroupParent !== undefined && (typeof cgroupParent !== "string" || !isAbsolute(cgroupParent) || cgroupParent.includes("\0")))
+    fail("RENDER_WORKER_CONFIG", "cgroupParent must be an absolute cgroup v2 path");
   if (resourceBudget !== undefined) {
     if (!resourceBudget || typeof resourceBudget !== "object" || Array.isArray(resourceBudget) ||
         ![Object.prototype, null].includes(Object.getPrototypeOf(resourceBudget)) ||
@@ -44,10 +47,58 @@ export function renderWorkerPolicy(value: Partial<RenderWorkerPolicy> = {}): Rea
       if (typeof amount !== "number" || !Number.isSafeInteger(amount) || amount < minimum || amount > maximum)
         fail("RENDER_WORKER_CONFIG", `Invalid resourceBudget.${key}`);
     }
-    fail("RENDER_WORKER_RESOURCE_UNAVAILABLE", "Render worker resource budgets are not yet enforced. Run npm run probe:render-resources for host capability evidence.");
+    if (resourceBudget.temporaryBytes !== undefined)
+      fail("RENDER_WORKER_RESOURCE_UNAVAILABLE", "The local render worker does not yet enforce temporaryBytes");
+    if (!cgroupParent)
+      fail("RENDER_WORKER_RESOURCE_UNAVAILABLE", "Resource budgets require a delegated cgroupParent. Run npm run probe:render-resources for host capability evidence.");
+    return Object.freeze({ ...policy, cgroupParent, resourceBudget: Object.freeze({ ...resourceBudget }) });
   }
+  if (cgroupParent !== undefined) fail("RENDER_WORKER_CONFIG", "cgroupParent requires resourceBudget");
   return Object.freeze(policy);
 }
+
+/** Verify delegation and the selected controls before opening persistent host state. */
+export function checkRenderWorkerResources({ cgroupParent, resourceBudget }: Readonly<RenderWorkerPolicy>): void {
+  if (!cgroupParent || !resourceBudget) return;
+  let type: number | undefined;
+  try { type = statfsSync(cgroupParent).type; } catch { /* Missing or inaccessible parent. */ }
+  if (process.platform !== "linux" || type !== 0x63677270) // CGROUP2_SUPER_MAGIC
+    fail("RENDER_WORKER_RESOURCE_UNAVAILABLE", "cgroupParent must be accessible on a Linux cgroup v2 filesystem");
+  const result = spawnSync("python3", [supervisor, "--check-cgroup", cgroupParent, JSON.stringify(resourceBudget)], {
+    encoding: "utf8", timeout: 5000, maxBuffer: 4096,
+  });
+  if (result.status !== 0) fail("RENDER_WORKER_RESOURCE_UNAVAILABLE",
+    `Could not enforce the render resource budget: ${(result.error?.message || result.stderr || "cgroup preflight failed").trim().slice(0, 512)}`);
+}
+
+const resourceFailureCodes = new Set(["RENDER_WORKER_CPU_TIME_LIMIT", "RENDER_WORKER_MEMORY_LIMIT",
+  "RENDER_WORKER_RESOURCE_UNAVAILABLE", "RENDER_WORKER_RESOURCE_ACCOUNTING", "RENDER_WORKER_CLEANUP"]);
+function readResourceReport(raw: string, exitCode: number | null, budget: RenderWorkerResourceBudget): {
+  usage?: RenderWorkerResourceUsage; failure?: RenderWorkerError;
+} {
+  try {
+    const report = JSON.parse(raw);
+    if (!report || typeof report !== "object" || Array.isArray(report) ||
+        Object.keys(report).some(key => key !== "usage" && key !== "failure") || raw.length > 4096) throw new Error();
+    const { usage, failure } = report;
+    if (failure !== undefined && (!resourceFailureCodes.has(failure?.code) ||
+        typeof failure.message !== "string" || !failure.message || failure.message.length > 1024)) throw new Error();
+    if (usage !== undefined || (exitCode === 0 && !failure)) {
+      const fields = [
+        ...(budget.cpuMillicores !== undefined || budget.cpuTimeMs !== undefined ? ["cpuUsageUsec"] : []),
+        ...(budget.cpuMillicores !== undefined ? ["cpuThrottledPeriods"] : []),
+        ...(budget.memoryBytes !== undefined ? ["memoryOomEvents", "memoryOomKills"] : []),
+      ];
+      if (!usage || typeof usage !== "object" || Object.keys(usage).length !== fields.length ||
+          fields.some(key => typeof usage[key] !== "string" || !/^\d{1,20}$/.test(usage[key]))) throw new Error();
+      Object.freeze(usage);
+    }
+    return { usage, failure: failure ? new RenderWorkerError(failure.code, failure.message) : undefined };
+  } catch {
+    return { failure: new RenderWorkerError("RENDER_WORKER_CLEANUP", "Render worker exited without a valid cgroup cleanup report") };
+  }
+}
+
 export interface RenderWorkerOptions {
   policy?: Partial<RenderWorkerPolicy>;
   entryPoint?: string;
@@ -64,8 +115,9 @@ export class LocalRenderWorker implements ProjectGraphSnapshotRenderer {
   private readonly jobs = new Set<ActiveJob>();
   private closed = false;
   constructor(private readonly options: RenderWorkerOptions = {}) {
-    if (process.platform !== "linux") fail("RENDER_WORKER_PLATFORM", "Render workers require Linux subreaper support and Python 3");
     this.policy = renderWorkerPolicy(options.policy);
+    checkRenderWorkerResources(this.policy);
+    if (process.platform !== "linux") fail("RENDER_WORKER_PLATFORM", "Render workers require Linux subreaper support and Python 3");
   }
   async close(): Promise<void> {
     this.closed = true;
@@ -100,6 +152,8 @@ export class LocalRenderWorker implements ProjectGraphSnapshotRenderer {
     let timer: NodeJS.Timeout | undefined, escalation: NodeJS.Timeout | undefined, exited = false, ready = false;
     let childClosed: Promise<number | null> | undefined;
     let receipt: RenderWorkerReceipt | undefined;
+    let resourceUsage: RenderWorkerResourceUsage | undefined;
+    const { resourceBudget, cgroupParent } = this.policy;
     const notify = (state: RenderWorkerEvent["state"], extra: Partial<RenderWorkerEvent> = {}) => {
       try { this.options.onEvent?.({ jobId, operation, projectId: data.project.project.id, snapshotHash: data.snapshotHash,
         state, processId: child?.pid, elapsedMs: Math.round(performance.now() - started), ...extra }); } catch { /* Observers cannot change the job outcome. */ }
@@ -116,6 +170,11 @@ export class LocalRenderWorker implements ProjectGraphSnapshotRenderer {
         stopGuardian(false); escalation = setTimeout(() => stopGuardian(true), this.policy.killGraceMs);
       }
     };
+    const accountResourceFailure = (error: RenderWorkerError) => {
+      // A renderer error from a dying descendant can precede confirmation of OOM.
+      const acceptedStop = failure?.code === "RENDER_WORKER_CANCELLED" || failure?.code === "RENDER_WORKER_TIMEOUT";
+      if (!acceptedStop || error.code === "RENDER_WORKER_CLEANUP") failure = error;
+    };
     const cancel = () => stop(new RenderWorkerError("RENDER_WORKER_CANCELLED", "Render was cancelled"));
     const active: ActiveJob = { cancel, done: Promise.resolve() };
     this.jobs.add(active); // Reserve synchronously, including job setup and output verification.
@@ -128,12 +187,15 @@ export class LocalRenderWorker implements ProjectGraphSnapshotRenderer {
         directory = await mkdtemp(join(this.options.temporaryDirectory ?? tmpdir(), "sciencemotion-worker-"));
         await writeFile(join(directory, "request.json"), text, { flag: "wx", mode: 0o600 });
         if (failure) throw failure;
-        child = spawn("python3", [fileURLToPath(new URL("./render-worker-supervisor.py", import.meta.url)), process.execPath,
+        child = spawn("python3", [supervisor, process.execPath,
           this.options.workerScript ?? fileURLToPath(new URL("../renderers/remotion/render-worker-entry.ts", import.meta.url)), directory,
-          String(this.policy.maxOldSpaceMb), String(this.policy.killGraceMs), String(process.pid)], {
-          detached: true, stdio: ["ignore", "ignore", "ignore", "ipc"],
+          String(this.policy.maxOldSpaceMb), String(this.policy.killGraceMs), String(process.pid),
+          ...(cgroupParent ? [cgroupParent, JSON.stringify(resourceBudget)] : [])], {
+          detached: true, stdio: ["ignore", cgroupParent ? "pipe" : "ignore", "ignore", "ipc"],
           env: { ...process.env, TMPDIR: directory, TMP: directory, TEMP: directory },
         });
+        let report = "";
+        child.stdout?.setEncoding("utf8").on("data", (chunk: string) => { report = (report + chunk).slice(0, 4097); });
         childClosed = new Promise<number | null>(resolveExit => child!.once("close", resolveExit));
         notify("starting");
         child.on("error", () => stop(new RenderWorkerError("RENDER_WORKER_START_FAILED", "Could not start render worker")));
@@ -166,6 +228,13 @@ export class LocalRenderWorker implements ProjectGraphSnapshotRenderer {
         });
         const code = await childClosed;
         exited = true;
+        // These handlers are installed before the guardian can create a cgroup.
+        const stoppedBeforeSetup = child.signalCode && ["SIGTERM", "SIGINT", "SIGUSR1"].includes(child.signalCode);
+        if (resourceBudget && child.pid && (report || !stoppedBeforeSetup)) {
+          const resources = readResourceReport(report, code, resourceBudget);
+          resourceUsage = resources.usage;
+          if (resources.failure) accountResourceFailure(resources.failure);
+        }
         if (failure) throw failure;
         if (code !== 0 || !receipt) throw new RenderWorkerError("RENDER_WORKER_EXIT", "Worker exited without a successful result");
         const file = await open(join(directory, "output.bin"), constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
@@ -180,7 +249,8 @@ export class LocalRenderWorker implements ProjectGraphSnapshotRenderer {
             fail("RENDER_WORKER_OUTPUT_INVALID", "Worker output size/hash differs from its receipt");
         } finally { await file.close(); }
         if (failure) throw failure;
-        return { bytes, execution: { kind: "local-process" as const, protocolVersion: "1.0.0" as const, jobId, processId: child.pid!, elapsedMs: Math.round(performance.now() - started) } };
+        return { bytes, execution: { kind: "local-process" as const, protocolVersion: "1.0.0" as const, jobId, processId: child.pid!,
+          elapsedMs: Math.round(performance.now() - started), ...(resourceUsage ? { resourceUsage } : {}) } };
       } catch (error) {
         failure ??= error instanceof RenderWorkerError ? error : new RenderWorkerError("RENDER_WORKER_OUTPUT_INVALID", error instanceof Error ? error.message : "Worker failed");
         throw failure;
@@ -191,7 +261,8 @@ export class LocalRenderWorker implements ProjectGraphSnapshotRenderer {
         // Cancellation/deadlines remain live through cleanup, before returning verified bytes.
         clearTimeout(timer); clearTimeout(escalation); signal?.removeEventListener("abort", cancel);
         this.jobs.delete(active);
-        notify(failure ? failure.code === "RENDER_WORKER_CANCELLED" ? "cancelled" : failure.code === "RENDER_WORKER_TIMEOUT" ? "timed-out" : "failed" : "completed", failure ? { code: failure.code } : {});
+        notify(failure ? failure.code === "RENDER_WORKER_CANCELLED" ? "cancelled" : failure.code === "RENDER_WORKER_TIMEOUT" ? "timed-out" : "failed" : "completed",
+          { ...(failure ? { code: failure.code } : {}), ...(resourceUsage ? { resourceUsage } : {}) });
         if (failure) throw failure;
       }
     };
