@@ -23,7 +23,7 @@ sudo chown -- "$(id -u):$(id -g)" "$probe_volume"
 
 # The probe runs as the ordinary runner user. The service keeps it in a leaf
 # so the delegated parent can enable the domain controllers for job children.
-sudo systemd-run --wait --pipe --collect --quiet --unit="$probe_unit" \
+sudo systemd-run --wait --pipe --collect --quiet --expand-environment=no --unit="$probe_unit" \
   --uid="$(id -u)" --gid="$(id -g)" --working-directory="$PWD" \
   --property='Delegate=cpu memory' --property=DelegateSubgroup=manager --property=RuntimeMaxSec=45s \
   /bin/bash -euc '
@@ -33,6 +33,10 @@ sudo systemd-run --wait --pipe --collect --quiet --unit="$probe_unit" \
       exit 1
     fi
     probe_parent="/sys/fs/cgroup${probe_membership%/manager}"
+    if [[ "${probe_parent##*/}" != "$3" ]]; then
+      printf "%s\n" "Expected a delegated parent owned by the probe service" >&2
+      exit 1
+    fi
     printf "+cpu +memory\n" > "$probe_parent/cgroup.subtree_control"
     exec "$1" --import tsx scripts/probe-render-resources.ts \
       --cgroup-parent "$probe_parent" --temporary-volume "$2" --require
