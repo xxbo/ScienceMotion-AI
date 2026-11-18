@@ -6,7 +6,7 @@ import { CREATIVE_CLIENT_PROTOCOL, CREATIVE_CLIENT_JOB_PROTOCOL } from "../contr
 import { openCreativeHost } from "./creative-host";
 import { assertFiniteJson } from "./project-creative-edits";
 import { CreativeTransportError, serveCreativeStdio, type CreativeTraceSink } from "./creative-stdio";
-import { renderWorkerPolicy } from "./render-worker";
+import { checkRenderWorkerResources, renderWorkerPolicy } from "./render-worker";
 import { creativeJobPolicy } from "./creative-job-input";
 
 function bounded(value: unknown, fallback: number, maximum: number): number {
@@ -23,7 +23,7 @@ export async function readCreativeLocalConfig(path: string): Promise<CreativeLoc
       typeof value.directory !== "string" || !value.directory.trim() || typeof value.traceFile !== "string" || !value.traceFile.trim())
     throw new Error("Invalid local launch configuration");
   if (value.metadata !== undefined && (!value.metadata || typeof value.metadata !== "object" || Array.isArray(value.metadata))) throw new Error("Invalid launch metadata");
-  if (value.renderWorker !== undefined) renderWorkerPolicy(value.renderWorker);
+  if (value.renderWorker !== undefined) checkRenderWorkerResources(renderWorkerPolicy(value.renderWorker));
   if (value.protocolVersion !== undefined && ![CREATIVE_CLIENT_PROTOCOL, CREATIVE_CLIENT_JOB_PROTOCOL].includes(value.protocolVersion)) throw new Error("Unsupported local protocol");
   if (value.renderJobs !== undefined) creativeJobPolicy(value.renderJobs);
   return { ...value, directory: resolve(dirname(path), value.directory), traceFile: resolve(dirname(path), value.traceFile),

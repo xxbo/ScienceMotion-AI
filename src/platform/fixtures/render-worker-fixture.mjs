@@ -16,6 +16,32 @@ if (["spin", "crash", "late", "result-hang", "success-child"].includes(mode)) {
   const child = spawn(process.execPath, ["-e", "process.on('SIGTERM',()=>{}); setInterval(()=>{},1000)"], { stdio: "ignore", detached: true });
   await writeFile(join(dirname(directory), "descendant.json"), JSON.stringify({ pid: child.pid, parent: process.pid }));
 }
+if (mode === "budget-cpu" || mode === "budget-memory") {
+  const initialMembership = await readFile("/proc/self/cgroup", "utf8");
+  const load = spawn(process.execPath, ["-e", `
+    const fs = require("node:fs"), mode = process.argv[1], gate = process.argv[2];
+    const deadline = performance.now() + 5000;
+    const wait = setInterval(() => {
+      if (performance.now() >= deadline) process.exit(71);
+      if (!fs.existsSync(gate)) return;
+      clearInterval(wait);
+      if (mode === "budget-cpu") {
+        const end = performance.now() + 5000;
+        while (performance.now() < end) {}
+      } else {
+        const resident = Array.from({ length: 12 }, () => Buffer.alloc(24 * 1024 * 1024, 1));
+        if (resident.length !== 12) process.exit(72);
+      }
+      process.exit(71);
+    }, 10);
+  `, mode, join(directory, "start-load")], { stdio: "ignore", detached: true });
+  const exited = new Promise(resolve => load.once("exit", resolve));
+  await writeFile(join(dirname(directory), "budget-processes.json"), JSON.stringify({ renderer: process.pid, load: load.pid, directory, initialMembership }));
+  await send({ type: "ready" });
+  await exited;
+  // The guardian must distinguish a kernel-enforced failure from this fallback.
+  process.exit(71);
+}
 await writeFile(join(dirname(directory), "worker.json"), JSON.stringify({ pid: process.pid, args: process.execArgv, tmp: process.env.TMPDIR }));
 await send({ type: "ready" });
 if (mode === "duplicate") await send({ type: "ready" });

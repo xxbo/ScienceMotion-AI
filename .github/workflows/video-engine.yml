@@ -42,6 +42,21 @@ jobs:
           path: out/render-resource-capability.json
           if-no-files-found: warn
 
+      - name: Ensure Remotion browser
+        run: npx remotion browser ensure
+
+      - name: Verify render job CPU and memory limits
+        id: render-resources
+        run: bash scripts/fixtures/with-render-cgroup-ci.sh scripts/render-worker-resource-acceptance.ts
+
+      - name: Upload render job resource evidence
+        if: ${{ !cancelled() && (steps.render-resources.outcome == 'success' || steps.render-resources.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: render-worker-resource-evidence
+          path: out/render-worker-resources/
+          if-no-files-found: error
+
   validate-and-render:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -89,8 +104,11 @@ jobs:
 
       - name: Install system dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y fonts-noto-cjk ffmpeg python3-venv
+          # The runner's regional EC2 mirror stalled on the font and FFmpeg packages.
+          sudo sed -i -E 's@mirror\+file:/+etc/apt/apt-mirrors\.txt|http://[^[:space:]]+\.ec2\.archive\.ubuntu\.com/ubuntu/?@https://archive.ubuntu.com/ubuntu/@g' /etc/apt/sources.list.d/ubuntu.sources
+          apt_options=(-o Acquire::Retries=2 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 -o Acquire::Languages=none)
+          sudo apt-get "${apt_options[@]}" update
+          sudo apt-get "${apt_options[@]}" install -y fonts-noto-cjk ffmpeg python3-venv
 
       - name: Set up Mandarin TTS environment
         run: |

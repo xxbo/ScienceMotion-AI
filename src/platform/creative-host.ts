@@ -55,13 +55,14 @@ export async function openCreativeHost(options: OpenCreativeHostOptions): Promis
   const validatePatch = ajv.compile(patchSchema);
   const validateTool = ajv.compile(toolSchema);
   const validatePlugin = ajv.compile(pluginSchema);
+  const ownedRenderer = workerPolicy ? new LocalRenderWorker({ entryPoint: options.renderEntryPoint,
+    policy: { ...workerPolicy, maxOutputBytes: Math.min(workerPolicy.maxOutputBytes, limits.maxArtifactBytes) }, onEvent: options.onRenderWorkerEvent }) : undefined;
   await mkdir(directory, { recursive: true, mode: 0o700 });
   // Locks the whole composition, including the artifact directories. No automatic stale-lock theft.
   const rootLock = await open(join(directory, "host.lock"), "wx", 0o600);
   let workspace: FileSystemProjectWorkspace | undefined;
   let executions: FileSystemToolExecutionStore | undefined;
   let jobs: FileSystemRenderJobStore | undefined;
-  let ownedRenderer: LocalRenderWorker | undefined;
   let closed: Promise<void> | undefined;
   const closeResources = (): Promise<void> => {
     if (!closed) closed = (async () => {
@@ -86,8 +87,6 @@ export async function openCreativeHost(options: OpenCreativeHostOptions): Promis
     const projects = workspace, evidence = executions;
     const registry = new InMemoryAgentToolRegistry();
     const manager = new InMemoryPluginManager(registry, { projectSchemaVersion: "1.1.0", healthCheckTimeoutMs: Math.min(limits.maxTimeoutMs, 5000) });
-    if (workerPolicy) ownedRenderer = new LocalRenderWorker({ entryPoint: options.renderEntryPoint,
-      policy: { ...workerPolicy, maxOutputBytes: Math.min(workerPolicy.maxOutputBytes, limits.maxArtifactBytes) }, onEvent: options.onRenderWorkerEvent });
     const renderer = options.renderer ?? ownedRenderer ?? new RemotionProjectGraphRenderer(options.renderEntryPoint ?? resolve("src/index.ts"));
     const rendering = async <T>(work: () => Promise<T>): Promise<T> => {
       try { return await work(); }
