@@ -7,7 +7,7 @@ import type { ProjectSnapshot } from "../platform/project-snapshots";
 import type { ProjectGraphRenderOutput, ProjectGraphRenderRequest } from "./renderer";
 import type { SnapshotInspectionReport } from "./inspection";
 import type { SnapshotLayoutInspectionReport } from "./layout-inspection";
-import type { CreativeRenderJobs } from "./creative-jobs";
+import type { CreativeRenderJobMaintenance, CreativeRenderJobs } from "./creative-jobs";
 
 export const CREATIVE_PERMISSIONS = [
   "project.read", "project.write", "project.delete", "snapshot.read", "snapshot.write",
@@ -96,6 +96,7 @@ export interface CreativeHost {
     exportLock(): PluginLockDocument;
   };
   readonly maintenance: {
+    readonly renderJobs: CreativeRenderJobMaintenance;
     collectGarbage(olderThanMs?: number): Promise<{ scanned: number; retained: number; deleted: string[]; errors: Array<{ artifactId: string; message: string }> }>;
     releaseSnapshot(projectId: string, snapshotId: string): Promise<void>;
   };

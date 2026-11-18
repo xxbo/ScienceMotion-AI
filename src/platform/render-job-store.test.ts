@@ -289,7 +289,10 @@ for (const afterPublication of [false, true]) {
     const root = await temp(); let store = await FileSystemRenderJobStore.open(root);
     try {
       const { record } = await store.submit(input()), owner = await store.claim("p", record.id);
-      await store.beginPublication("p", record.id, owner.token);
+      const candidate = receipt(record);
+      await store.beginPublication("p", record.id, owner.token, candidate);
+      await assert.rejects(store.finish("p", record.id, owner.token, { state: "succeeded", result: { ...candidate, sizeBytes: candidate.sizeBytes + 1 } }),
+        code("RENDER_JOB_INVALID"));
       const internal = store as unknown as { writeLedger(text: string): Promise<void> }, originalWrite = internal.writeLedger.bind(store);
       internal.writeLedger = async text => { if (afterPublication) await originalWrite(text); throw new Error("Injected filesystem failure"); };
       await assert.rejects(store.finish("p", record.id, owner.token, { state: "succeeded", result: receipt(record) }), code("RENDER_JOB_PERSISTENCE_UNCERTAIN"));
@@ -299,11 +302,39 @@ for (const afterPublication of [false, true]) {
       const recovered = (await store.get("p", record.id))!;
       assert.equal(recovered.state, afterPublication ? "succeeded" : "interrupted");
       assert.equal(recovered.outcomeUnknown, !afterPublication);
+      assert.deepEqual(await store.garbageCollectionProtection(), { artifactIds: [candidate.artifactId], untrackedPublication: undefined });
       assert.deepEqual((await store.submit(input())).record, recovered);
       await assert.rejects(store.finish("p", record.id, owner.token, { state: "succeeded", result: receipt(record) }), code("RENDER_JOB_NOT_OWNED"));
     } finally { await store.close(); await rm(root, { recursive: true, force: true }); }
   });
 }
+
+test("pruning frees detailed-record capacity and keeps checksummed, project-bound submission tombstones", async () => {
+  const root = await temp(), options = { maxJobs: 1, maxLedgerBytes: 18 * 1024 };
+  let store = await FileSystemRenderJobStore.open(root, options);
+  try {
+    const { record } = await store.submit(input());
+    await store.requestStop("p", record.id, "cancelled");
+    await assert.rejects(store.submit(input("next")), code("RENDER_JOB_CAPACITY"));
+    await store.releaseRetention("p", record.id);
+    await store.releaseRetention("p", record.id, true);
+    const pruned = await store.prune("p", record.id, "c".repeat(64));
+    assert.equal((await store.submit(input("next", "foreign"))).created, true);
+    await store.close();
+
+    store = await FileSystemRenderJobStore.open(root, options);
+    assert.deepEqual(await store.findSubmission("p", record.input.submissionId), pruned);
+    assert.equal(await store.inspectRetention("foreign", record.id), undefined);
+    await assert.rejects(store.submit(input()), code("RENDER_JOB_PRUNED"));
+    await store.close();
+
+    const path = join(root, "jobs.json");
+    const { contentHash: _hash, ...saved } = JSON.parse(await readFile(path, "utf8"));
+    delete saved.pruned[0].release.completedAt;
+    await writeFile(path, JSON.stringify({ ...saved, contentHash: hashToolInput(saved) }));
+    await assert.rejects(FileSystemRenderJobStore.open(root, options), code("RENDER_JOB_CORRUPT"));
+  } finally { await store.close(); await rm(root, { recursive: true, force: true }); }
+});
 
 test("actual filesystem rename failure poisons the ledger and never acknowledges or retains an uncommitted submission", async () => {
   const root = await temp(); let store = await FileSystemRenderJobStore.open(root);

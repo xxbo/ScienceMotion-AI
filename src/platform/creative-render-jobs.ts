@@ -1,13 +1,14 @@
 import { createHash } from "node:crypto";
 import type { AgentToolManifest } from "../contracts/agent-tool";
 import type { CreativeJobPolicy, CreativeJobSubmission, CreativeRenderJobs } from "../contracts/creative-jobs";
-import type { RenderJobRecord, RenderJobStore, RenderJobStopReason, RenderJobSubmission } from "../contracts/render-job";
+import type { RenderJobReceipt, RenderJobRecord, RenderJobStore, RenderJobStopReason, RenderJobSubmission } from "../contracts/render-job";
 import type { ProjectGraphRenderOutput, ProjectGraphRenderProgress } from "../contracts/renderer";
 import type { CreativeHostRuntime } from "./creative-host-core";
 import type { ProjectSnapshot } from "./project-snapshots";
 import { creativeJobPolicy, jobRequest, parseJobSubmission, resolvedJobInput } from "./creative-job-input";
 import { activeJobStates, jobCopy, jobFail, jobIdentity, jobInteger, jobObject, validateJobProgress } from "./render-job-validation";
 import { hashToolInput } from "./tool-execution-store";
+import { jobOutputOwner, jobOutputReceipt, verifyJobArtifact } from "./render-job-output";
 
 export interface JobSession {
   projectId: string;
@@ -49,12 +50,8 @@ export class CreativeRenderJobController {
     this.fatalError ??= error; this.ports.fatal(error);
     for (const entry of this.entries.values()) entry.abort.abort(error);
   }
-  private async records(projectId: string): Promise<RenderJobRecord[]> {
-    const records: RenderJobRecord[] = [];
-    for (let offset = 0; ; offset += 200) {
-      const page = await this.store.list(projectId, { offset, limit: 200 }); records.push(...page.jobs);
-      if (offset + page.jobs.length >= page.total) return records;
-    }
+  failOnLedgerError(error: unknown): void {
+    if (["RENDER_JOB_PERSISTENCE_UNCERTAIN", "RENDER_JOB_RECOVERY_REQUIRED"].includes(errorCode(error))) this.fatal(error);
   }
   forSession(actor: JobSession): CreativeRenderJobs {
     const get = async (id: string) => {
@@ -68,7 +65,7 @@ export class CreativeRenderJobController {
       list: async (query: { offset?: number; limit?: number } = {}) => {
         actor.admit(); const q = jobCopy(query); jobObject(q, ["offset", "limit"]);
         const offset = q.offset ?? 0, limit = q.limit ?? 50; jobInteger(offset); jobInteger(limit, 1, 200);
-        const records = await this.records(actor.projectId); actor.admit();
+        const records = await this.store.listProject(actor.projectId); actor.admit();
         const visible = records.filter(record => {
           try { actor.authorize(`render.${record.input.render.operation}`, record.input.toolVersion); return true; } catch { return false; }
         });
@@ -96,10 +93,13 @@ export class CreativeRenderJobController {
     if (this.admissions.size >= this.policy.maxQueuedJobs + this.policy.maxConcurrentJobs) jobFail("HOST_JOB_CAPACITY", "Job admission capacity reached; retry later");
     const admission = this.ports.serial(async () => {
       actor.admit(); const manifest = actor.authorize(request.toolId, request.toolVersion);
-      const existing = (await this.records(actor.projectId)).find(record => record.input.submissionId === request.submissionId);
+      const existing = await this.store.findSubmission(actor.projectId, request.submissionId);
       if (existing) {
-        if (hashToolInput(jobRequest(existing)) !== hashToolInput(request)) jobFail("RENDER_JOB_CONFLICT", "Submission identity is already bound to another request");
-        actor.admit(); return { created: false, record: existing };
+        actor.admit();
+        const previousHash = "prunedAt" in existing ? existing.requestHash : hashToolInput(jobRequest(existing));
+        if (previousHash !== hash) jobFail("RENDER_JOB_CONFLICT", "Submission identity is already bound to another request");
+        if ("prunedAt" in existing) return jobFail("RENDER_JOB_PRUNED", "Submission history was pruned; this identity cannot be re-executed");
+        return { created: false, record: existing };
       }
       // Dispatch reserves slots synchronously, before another admission can consume
       // them. A stopping/publishing job keeps its slot until actual settlement.
@@ -128,7 +128,7 @@ export class CreativeRenderJobController {
     this.pendingSubmissions.set(key, { hash, promise: admission });
     try { return structuredClone(await admission); }
     catch (error) {
-      if (["RENDER_JOB_PERSISTENCE_UNCERTAIN", "RENDER_JOB_RECOVERY_REQUIRED"].includes(errorCode(error))) this.fatal(error);
+      this.failOnLedgerError(error);
       throw error;
     } finally { this.admissions.delete(admission); this.pendingSubmissions.delete(key); }
   }
@@ -213,8 +213,10 @@ export class CreativeRenderJobController {
         if (renderError) throw renderError;
         if (!output) return jobFail("HOST_RENDER_OUTPUT_INVALID", "Renderer did not return output");
         this.validateOutput(input, output);
-        await this.store.beginPublication(projectId, id, owner.token); clearTimeout(timer);
-        const receipt = await this.publish(entry.record, output);
+        const bytes = new Uint8Array(output.bytes), contentHash = createHash("sha256").update(bytes).digest("hex");
+        const receipt = jobOutputReceipt(entry.record, contentHash, bytes.byteLength);
+        await this.store.beginPublication(projectId, id, owner.token, receipt); clearTimeout(timer);
+        await this.publish(entry.record, receipt, bytes, output);
         await this.store.finish(projectId, id, owner.token, { state: "succeeded", result: receipt });
       });
     } catch (error) {
@@ -231,9 +233,8 @@ export class CreativeRenderJobController {
         output.rendererId !== input.renderer.id || output.rendererVersion !== input.renderer.version)
       jobFail("HOST_RENDER_OUTPUT_INVALID", "Renderer output differs from the admitted identity/type/bounds");
   }
-  private async publish(record: RenderJobRecord, output: ProjectGraphRenderOutput) {
+  private async publish(record: RenderJobRecord, receipt: RenderJobReceipt, bytes: Uint8Array, output: ProjectGraphRenderOutput) {
     const { input, id, inputHash } = record, runtime = this.ports.runtime;
-    const bytes = new Uint8Array(output.bytes), contentHash = createHash("sha256").update(bytes).digest("hex");
     const stored = await runtime.artifacts.put({ bytes, kind: input.render.operation === "preview" ? "image" : "video",
       mediaType: output.mediaType, extension: output.extension,
       metadata: { jobId: id, inputHash, snapshotId: input.snapshot.id, snapshotHash: input.snapshot.contentHash,
@@ -241,18 +242,13 @@ export class CreativeRenderJobController {
         ...(output.execution ? { execution: jobCopy(output.execution) } : {}) },
       provenance: { projectId: input.projectId, runId: input.runId, callId: input.callId, toolId: `render.${input.render.operation}`,
         toolVersion: input.toolVersion, pluginId: "builtin.workspace", parametersHash: inputHash } });
-    const saved = await runtime.artifacts.read(stored.id);
-    if (stored.id !== `sha256:${contentHash}` || stored.contentHash !== contentHash || stored.uri !== `artifact://sha256/${contentHash}` ||
-        stored.kind !== (input.render.operation === "preview" ? "image" : "video") || stored.mediaType !== output.mediaType || stored.sizeBytes !== bytes.byteLength || !saved || saved.byteLength !== bytes.byteLength ||
-        createHash("sha256").update(saved).digest("hex") !== contentHash) jobFail("HOST_ARTIFACT_CORRUPT", "Published result failed byte/receipt verification");
-    await runtime.retain({ artifactId: stored.id, ownerType: "tool-run", ownerId: JSON.stringify([input.projectId, input.runId, input.callId]), role: "host-output" });
-    return { jobId: id, inputHash, artifactId: stored.id, contentHash, sizeBytes: bytes.byteLength, mediaType: output.mediaType,
-      rendererId: input.renderer.id, rendererVersion: input.renderer.version };
+    if (stored.id !== receipt.artifactId || !await verifyJobArtifact(runtime.artifacts, receipt))
+      jobFail("HOST_ARTIFACT_CORRUPT", "Published result failed byte/receipt verification");
+    await runtime.retain({ artifactId: receipt.artifactId, ...jobOutputOwner(record) });
   }
   /** Called within host serialization so admission and snapshot release cannot race. */
   async assertSnapshotReleasable(projectId: string, snapshotId: string): Promise<void> {
-    if ((await this.records(projectId)).some(record => record.input.snapshot.id === snapshotId &&
-        (activeJobStates.has(record.state) || record.state === "interrupted" || record.outcomeUnknown)))
+    if (await this.store.snapshotIsPinned(projectId, snapshotId))
       jobFail("HOST_SNAPSHOT_RETAINED", "Snapshot is retained by an active or unreconciled render job");
   }
   async drain(): Promise<void> {
