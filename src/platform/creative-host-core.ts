@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import type { AgentToolPlugin, PluginOperationResult } from "../contracts/agent-plugin";
 import type { AgentToolGateway, AgentToolManifest, AgentToolRegistry, ToolCallContext, ToolExecutionRecord, ToolResult } from "../contracts/agent-tool";
 import type { ArtifactRecord, ArtifactStore } from "../contracts/artifact";
+import type { ArtifactGarbageCollectionOptions, ArtifactReference } from "../contracts/artifact-lifecycle";
 import { CREATIVE_PERMISSIONS, type CreativeHost, type CreativeHostLimits, type CreativeInvocation,
   type CreativePermission, type CreativePluginFactory, type CreativeServices, type CreativeSession,
   type CreativeSessionGrant } from "../contracts/creative-host";
@@ -21,9 +22,11 @@ import type { LayoutFrameMeasurement } from "../contracts/layout-inspection";
 import type { RenderJobStore, RenderJobSubmission } from "../contracts/render-job";
 import type { CreativeJobPolicy } from "../contracts/creative-jobs";
 import { CreativeRenderJobController } from "./creative-render-jobs";
+import { createRenderJobMaintenance } from "./creative-render-job-maintenance";
+import { jobCopy } from "./render-job-validation";
 
 type Revision = { newRevisionId: string; createdAt: string; message: string };
-type Reference = { artifactId: string; ownerType: string; ownerId: string; role: string };
+type Reference = Omit<ArtifactReference, "id" | "createdAt">;
 /** Internal composition port. Production binds the existing Workspace/Registry/Gateway, not substitutes. */
 export interface CreativeHostRuntime {
   jobs: RenderJobStore;
@@ -36,7 +39,7 @@ export interface CreativeHostRuntime {
     getSnapshot(id: string): Promise<ProjectSnapshot | undefined>;
     restoreSnapshot(id: string, baseRevisionId: string, metadata: Revision): Promise<ProjectDocument>;
     releaseSnapshot(id: string): Promise<boolean>;
-    collectGarbage(options?: { olderThanMs?: number }): ReturnType<CreativeHost["maintenance"]["collectGarbage"]>;
+    collectGarbage(options?: ArtifactGarbageCollectionOptions): ReturnType<CreativeHost["maintenance"]["collectGarbage"]>;
   };
   artifacts: Pick<ArtifactStore, "put" | "get" | "read">;
   renderPreview(request: ProjectGraphRenderRequest & { frame: number }): Promise<ProjectGraphRenderOutput>;
@@ -44,6 +47,7 @@ export interface CreativeHostRuntime {
   measureLayout?(request: ProjectGraphLayoutRequest): Promise<LayoutFrameMeasurement[]>;
   references(id: string): Promise<Reference[]>;
   retain(reference: Reference): Promise<void>;
+  releaseJobOutputs(ownerId: string): Promise<void>;
   listExecutions(projectId: string): Promise<ToolExecutionRecord[]>;
   validateProject(document: ProjectDocument): void;
   validatePatch(patch: ProjectPatchDocument): void;
@@ -165,10 +169,12 @@ export async function assembleCreativeHost(runtime: CreativeHostRuntime, factori
     const current = await runtime.projects.get(scope.context.projectId);
     if (current && projectArtifactBindings(current).some((b) => b.artifactId === id)) return;
     for (const ref of await runtime.references(id)) {
-      if (ref.ownerType !== "tool-run" || !["host-output", "host-input"].includes(ref.role)) continue;
+      const arity = ref.ownerType === "tool-run" && ["host-output", "host-input"].includes(ref.role) ? 3
+        : ref.ownerType === "render-job" && ref.role === "host-output" ? 2 : 0;
+      if (!arity) continue;
       try {
         const owner = JSON.parse(ref.ownerId);
-        if (Array.isArray(owner) && owner.length === 3 && owner[0] === scope.context.projectId) return;
+        if (Array.isArray(owner) && owner.length === arity && owner[0] === scope.context.projectId) return;
       } catch { /* Legacy identities are not proof of project ownership. */ }
     }
     fail("HOST_ARTIFACT_DENIED", "Artifact has no authorized project or invocation ownership");
@@ -471,6 +477,13 @@ export async function assembleCreativeHost(runtime: CreativeHostRuntime, factori
   };
   const jobs = new CreativeRenderJobController({ runtime, serial, maxArtifactBytes: limits.maxArtifactBytes, maxTimeoutMs: limits.maxTimeoutMs, maxInputBytes: limits.maxInputBytes,
     validateSnapshot: saved => { document(saved.document); }, fatal: () => { state = "failed"; } }, options.renderJobs);
+  const renderJobMaintenance = createRenderJobMaintenance(runtime);
+  const maintainRenderJobs = async <T>(work: () => Promise<T>): Promise<T> => {
+    admitted();
+    if (calls.getStore() || scopes.getStore()) fail("HOST_JOB_ADMIN_SCOPE", "Render job maintenance cannot run inside a tool invocation");
+    try { return await serial(work); }
+    catch (error) { jobs.failOnLedgerError(error); throw error; }
+  };
   const host: CreativeHost = {
     createSession: (input) => {
       admitted(); exactKeys(input, ["projectId", "permissions", "toolIds", "allowDestructive", "allowHighCost"]); identity(input.projectId);
@@ -579,10 +592,26 @@ export async function assembleCreativeHost(runtime: CreativeHostRuntime, factori
       },
     }),
     maintenance: Object.freeze({
+      renderJobs: Object.freeze<CreativeHost["maintenance"]["renderJobs"]>({
+        inspect: (projectId, jobId) => maintainRenderJobs(() => renderJobMaintenance.inspect(projectId, jobId)),
+        reconcile: async (projectId, jobId, decision) => {
+          const copy = jobCopy(decision);
+          return maintainRenderJobs(() => renderJobMaintenance.reconcile(projectId, jobId, copy));
+        },
+        release: (projectId, jobId) => maintainRenderJobs(() => renderJobMaintenance.release(projectId, jobId)),
+        prune: (projectId, jobId) => maintainRenderJobs(() => renderJobMaintenance.prune(projectId, jobId)),
+      }),
       collectGarbage: (olderThanMs?: number) => {
         admitted();
         if (olderThanMs !== undefined && (!Number.isSafeInteger(olderThanMs) || olderThanMs < 0)) return Promise.reject(new CreativeHostError("HOST_INPUT_INVALID", "Invalid GC retention"));
-        return serial(() => runtime.projects.collectGarbage({ olderThanMs }));
+        return maintainRenderJobs(async () => {
+          const protection = await runtime.jobs.garbageCollectionProtection();
+          if (protection.untrackedPublication) {
+            const { projectId, jobId } = protection.untrackedPublication;
+            fail("HOST_JOB_RECONCILIATION_REQUIRED", `Reconcile historical job ${JSON.stringify([projectId, jobId])} before collecting garbage`);
+          }
+          return runtime.projects.collectGarbage({ olderThanMs, protectedArtifactIds: protection.artifactIds });
+        });
       },
       releaseSnapshot: (projectId: string, snapshotId: string) => {
         admitted(); identity(projectId); identity(snapshotId);

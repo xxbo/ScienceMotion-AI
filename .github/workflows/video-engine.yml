@@ -128,7 +128,7 @@ jobs:
       - name: Validate Creative Host render Artifacts
         run: npm run validate:host-render
 
-      - name: Verify background job API with real PNG and MP4 outputs
+      - name: Verify real PNG/MP4 render jobs, retention release and restart
         run: npm run render:job-smoke
 
       - name: Verify protocol-1.1 worker cancellation and interrupted-host recovery

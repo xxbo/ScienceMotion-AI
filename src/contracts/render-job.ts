@@ -54,18 +54,50 @@ export interface RenderJobRecord {
 export type RenderJobCompletion = { state: "succeeded"; result: RenderJobReceipt } |
   { state: "failed"; diagnostic: RenderJobDiagnostic } | { state: RenderJobStopReason };
 export interface RenderJobPage { jobs: RenderJobRecord[]; total: number; offset: number; limit: number }
+export type RenderJobReconciliationRequest = { action: "discard"; reason: string } |
+  { action: "retain-output"; reason: string; artifactId?: string };
+export type RenderJobReconciliation = { decidedAt: string; reason: string } & (
+  { action: "discard" } | { action: "retain-output"; result: RenderJobReceipt });
+export interface RenderJobRelease { requestedAt: string; completedAt?: string }
+export interface RenderJobRetention {
+  /** Candidate identity persisted before any Artifact write. Availability requires verification. */
+  publication?: RenderJobReceipt;
+  reconciliation?: RenderJobReconciliation;
+  release?: RenderJobRelease;
+}
+export interface PrunedRenderJob {
+  id: string;
+  projectId: string;
+  submissionId: string;
+  inputHash: string;
+  requestHash: string;
+  release: RenderJobRelease & { completedAt: string };
+  prunedAt: string;
+  reconciliation?: RenderJobReconciliation;
+}
+export interface RenderJobEvidence { record: RenderJobRecord; retention: RenderJobRetention }
+
 /** Internal single-writer service. Tokens authorize executor transitions; project scope is mandatory even for reads. */
 export interface RenderJobStore {
   submit(input: RenderJobSubmission): Promise<{ created: boolean; record: RenderJobRecord }>;
+  findSubmission(projectId: string, submissionId: string): Promise<RenderJobRecord | PrunedRenderJob | undefined>;
   get(projectId: string, jobId: string): Promise<RenderJobRecord | undefined>;
   list(projectId: string, query?: { offset?: number; limit?: number }): Promise<RenderJobPage>;
+  listProject(projectId: string): Promise<RenderJobRecord[]>;
   claim(projectId: string, jobId: string): Promise<{ token: string; record: RenderJobRecord }>;
   progress(projectId: string, jobId: string, token: string, value: ProjectGraphRenderProgress): Promise<{ updated: boolean; record: RenderJobRecord }>;
   requestStop(projectId: string, jobId: string, reason: RenderJobStopReason): Promise<{ accepted: boolean; record: RenderJobRecord }>;
   /** Persist the publication barrier after worker cleanup and before any Artifact publication. */
-  beginPublication(projectId: string, jobId: string, token: string): Promise<RenderJobRecord>;
+  beginPublication(projectId: string, jobId: string, token: string, candidate?: RenderJobReceipt): Promise<RenderJobRecord>;
   /** Trusted executor acknowledgement after cleanup/publication; this ledger does not observe OS processes or Artifact bytes. */
   finish(projectId: string, jobId: string, token: string, completion: RenderJobCompletion): Promise<RenderJobRecord>;
+  inspectRetention(projectId: string, jobId: string): Promise<RenderJobEvidence | PrunedRenderJob | undefined>;
+  reconcile(projectId: string, jobId: string, decision: Omit<RenderJobReconciliationRequest, "artifactId">,
+    result?: RenderJobReceipt): Promise<RenderJobReconciliation>;
+  releaseRetention(projectId: string, jobId: string, complete?: boolean): Promise<RenderJobRelease>;
+  prune(projectId: string, jobId: string, requestHash: string): Promise<PrunedRenderJob>;
+  snapshotIsPinned(projectId: string, snapshotId: string): Promise<boolean>;
+  garbageCollectionProtection(): Promise<{ artifactIds: string[]; untrackedPublication?: { projectId: string; jobId: string } }>;
   /** Stop new calls and drain admitted ledger operations. The caller must stop/drain its executors separately. */
   close(): Promise<void>;
 }

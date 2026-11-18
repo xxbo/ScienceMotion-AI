@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
-import { readFile, readdir, rm, open } from "node:fs/promises";
+import { readFile, readdir, rm, open, type FileHandle } from "node:fs/promises";
 import { join } from "node:path";
 import type { ArtifactKind, ArtifactRecord, ArtifactStore } from "../contracts/artifact";
-import type { ArtifactGarbageCollectionResult, ArtifactLifecycleManager, ArtifactReference, ArtifactReferenceStore } from "../contracts/artifact-lifecycle";
+import type { ArtifactGarbageCollectionOptions, ArtifactGarbageCollectionResult, ArtifactLifecycleManager, ArtifactReference, ArtifactReferenceStore } from "../contracts/artifact-lifecycle";
 import type { ProjectDocument } from "../contracts/project";
 import { artifactIdForAsset, assertAssetRemovable, projectArtifactBindings } from "./project-assets";
 import { publishLocalFile } from "./local-file-publication";
@@ -10,7 +10,7 @@ import { publishLocalFile } from "./local-file-publication";
 type Owner = Pick<ArtifactReference, "ownerType" | "ownerId">;
 type ReferenceInput = Omit<ArtifactReference, "id" | "createdAt">;
 type Query = { artifactId?: string; ownerType?: ArtifactReference["ownerType"]; ownerId?: string };
-const ownerTypes = new Set(["project", "tool-run", "plugin", "user", "snapshot", "transaction"]);
+const ownerTypes = new Set(["project", "tool-run", "plugin", "user", "snapshot", "transaction", "render-job"]);
 function assertReferenceId(id: string): string {
   if (!/^ref:[a-f0-9]{64}$/.test(id)) throw new Error("Invalid artifact reference ID");
   return id.slice(4);
@@ -49,9 +49,14 @@ export class FileSystemArtifactReferenceStore implements ArtifactReferenceStore 
   async detach(id: string): Promise<boolean> {
     try { await rm(join(this.rootDirectory, assertReferenceId(id) + ".json")); }
     catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return false; throw error; }
-    const directory = await open(this.rootDirectory, "r");
-    try { await directory.sync(); } finally { await directory.close(); }
+    await this.syncDirectory();
     return true;
+  }
+  async syncDirectory(): Promise<void> {
+    let directory: FileHandle;
+    try { directory = await open(this.rootDirectory, "r"); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return; throw error; }
+    try { await directory.sync(); } finally { await directory.close(); }
   }
   async list(query: Query = {}): Promise<ArtifactReference[]> {
     let names: string[];
@@ -164,8 +169,9 @@ export class LocalArtifactLifecycleManager implements ArtifactLifecycleManager {
     });
     return next;
   }
-  async collectGarbage(options: { olderThanMs?: number; now?: Date } = {}): Promise<ArtifactGarbageCollectionResult> {
+  async collectGarbage(options: ArtifactGarbageCollectionOptions = {}): Promise<ArtifactGarbageCollectionResult> {
     const age = options.olderThanMs ?? 86_400_000; const now = (options.now ?? new Date()).getTime();
+    const protectedIds = new Set(options.protectedArtifactIds);
     if (!Number.isFinite(age) || age < 0 || !Number.isFinite(now)) throw new Error("Invalid garbage collection retention/time");
     return this.exclusive(async () => {
       const candidates = await this.artifacts.list({ limit: Number.MAX_SAFE_INTEGER });
@@ -173,7 +179,7 @@ export class LocalArtifactLifecycleManager implements ArtifactLifecycleManager {
       for (const artifact of candidates) {
         try {
           const elapsed = now - Date.parse(artifact.createdAt);
-          if (!Number.isFinite(elapsed) || elapsed < age || await this.referencesStore.count(artifact.id) > 0) { result.retained++; continue; }
+          if (protectedIds.has(artifact.id) || !Number.isFinite(elapsed) || elapsed < age || await this.referencesStore.count(artifact.id) > 0) { result.retained++; continue; }
           if (await this.artifacts.delete(artifact.id)) result.deleted.push(artifact.id);
         } catch (error) { result.errors.push({ artifactId: artifact.id, message: error instanceof Error ? error.message : String(error) }); }
       }

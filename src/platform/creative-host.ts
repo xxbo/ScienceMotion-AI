@@ -100,8 +100,13 @@ export async function openCreativeHost(options: OpenCreativeHostOptions): Promis
       ...(renderer.measureLayout ? { measureLayout: (request: Parameters<NonNullable<typeof renderer.measureLayout>>[0]) => rendering(() => renderer.measureLayout!(request)) } : {}),
       references: (id) => references.list({ artifactId: id }),
       retain: async (ref) => {
-        if (ref.ownerType !== "tool-run") throw new Error("Unsupported host retention owner");
-        await lifecycle.attach({ ...ref, ownerType: "tool-run" });
+        if (ref.ownerType !== "tool-run" && ref.ownerType !== "render-job") throw new Error("Unsupported host retention owner");
+        await lifecycle.attach(ref);
+      },
+      releaseJobOutputs: async (ownerId) => {
+        await lifecycle.releaseOwner({ ownerType: "render-job", ownerId }, "host-output");
+        // A retry can observe a missing reference after a previous unlink without a directory sync.
+        await references.syncDirectory();
       },
       listExecutions: (id) => evidence.list(id),
       validateProject: (document) => assertValid(validateProject, document, "Project Schema"),

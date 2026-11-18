@@ -6,9 +6,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PassThrough, Writable } from "node:stream";
 import type { CreativeHost, CreativePluginFactory, CreativeSession } from "../contracts/creative-host";
+import type { ProjectDocument } from "../contracts/project";
 import type { CreativeJobSubmission } from "../contracts/creative-jobs";
 import type { ProjectGraphRenderOutput, ProjectGraphRenderRequest, ProjectGraphSnapshotRenderer } from "../contracts/renderer";
-import type { RenderJobRecord } from "../contracts/render-job";
+import type { RenderJobReconciliationRequest, RenderJobRecord } from "../contracts/render-job";
 import type { ToolExecutionRecord } from "../contracts/agent-tool";
 import { openCreativeHost } from "./creative-host";
 import { serveCreativeStdio, parseCreativeRequest } from "./creative-stdio";
@@ -16,6 +17,7 @@ import { readCreativeLocalConfig } from "./creative-local-server";
 import { FileSystemArtifactStore } from "./artifact-store";
 import { FileSystemArtifactReferenceStore, LocalArtifactLifecycleManager } from "./artifact-lifecycle";
 import { FileSystemProjectWorkspace } from "./filesystem-project-workspace";
+import { FileSystemRenderJobStore } from "./filesystem-render-job-store";
 import { createEmptyProject } from "./empty-project";
 
 const deferred = <T = void>() => { let resolve!: (value: T) => void; const promise = new Promise<T>(r => { resolve = r; }); return { promise, resolve }; };
@@ -126,6 +128,10 @@ test("queued cancellation releases capacity; running cancellation waits for actu
       if (++executions === 1) { started.resolve(); await release.promise; } return result(mode);
     }) }); const session = await seed(host);
     const first = await session.jobs.submit(submission()); await started.promise;
+    const active = await host.maintenance.renderJobs.inspect("p", first.record.id);
+    assert.ok(active && "record" in active && active.input.pinnedByJob);
+    await assert.rejects(host.maintenance.renderJobs.release("p", first.record.id), code("RENDER_JOB_STATE"));
+    await assert.rejects(host.maintenance.renderJobs.reconcile("p", first.record.id, { action: "discard", reason: "still running" }), code("RENDER_JOB_STATE"));
     const second = await session.jobs.submit(submission("queued"));
     await assert.rejects(session.jobs.submit(submission("overflow")), code("HOST_JOB_CAPACITY"));
     const cancelled = await session.jobs.cancel(second.record.id); assert.equal(cancelled.accepted, true); assert.equal(cancelled.record.state, "cancelled");
@@ -232,6 +238,9 @@ test("admission pins immutable snapshot dependencies across editing, release att
     const first = await session.jobs.submit(submission()), rendered = await started.promise;
     await invoke(session, "project.patch.remove", { schemaVersion: "1.3.0", projectId: "p", baseRevisionId: "revision-initial", patches: [{ op: "remove-asset", assetId: "source" }] });
     assert.equal(rendered.project.assets[0].contentHash, artifact.contentHash);
+    const retained = await host.maintenance.renderJobs.inspect("p", first.record.id);
+    assert.ok(retained && "record" in retained);
+    assert.deepEqual(retained.input, { retained: true, pinnedByJob: true, artifactIds: [artifact.id] });
     await assert.rejects(host.maintenance.releaseSnapshot("p", "baseline"), code("HOST_SNAPSHOT_RETAINED"));
     assert.equal((await host.maintenance.collectGarbage(0)).deleted.includes(artifact.id), false);
     await session.jobs.cancel(first.record.id); release.resolve(); await state(session, first.record.id, "cancelled");
@@ -343,6 +352,8 @@ test("protocol 1.1 submits, queries and cancels through one live stream while re
 test("protocol 1.0 stays unchanged and trusted 1.1 configuration validates job bounds", async () => {
   assert.throws(() => parseCreativeRequest({ id: "job", method: "jobs.submit", params: submission() }), code("TRANSPORT_METHOD_UNKNOWN"));
   assert.equal(parseCreativeRequest({ id: "job", method: "jobs.submit", params: submission() }, "1.1.0").method, "jobs.submit");
+  for (const method of ["jobs.inspect", "jobs.reconcile", "jobs.release", "jobs.prune"])
+    assert.throws(() => parseCreativeRequest({ id: "admin", method, params: {} }, "1.1.0"), code("TRANSPORT_METHOD_UNKNOWN"));
   const root = await temp(), path = join(root, "config.json");
   const config = { schemaVersion: "1.0.0", protocolVersion: "1.1.0", directory: "host", traceFile: "trace.jsonl", grant: { projectId: "p" }, renderJobs: { maxActiveJobs: 2, timeoutMs: 1000 } };
   try {
@@ -351,4 +362,222 @@ test("protocol 1.0 stays unchanged and trusted 1.1 configuration validates job b
       await writeFile(path, JSON.stringify(bad)); await assert.rejects(readCreativeLocalConfig(path));
     }
   } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test("trusted release and pruning keep shared bytes pinned, conserve job identity and survive reopening", async () => {
+  const root = await temp(); let host: CreativeHost | undefined, executions = 0;
+  const render = renderer(async (_request, mode) => { executions++; return result(mode); });
+  try {
+    host = await openCreativeHost({ directory: root, renderer: render }); let session = await seed(host);
+    const first = await session.jobs.submit(submission()), secondRequest = { ...submission("another"), callId: submission().callId };
+    const second = await session.jobs.submit(secondRequest);
+    const a = await state(session, first.record.id, "succeeded"), b = await state(session, second.record.id, "succeeded");
+    const artifactId = a.result!.artifactId;
+    assert.equal(artifactId, b.result!.artifactId);
+    const refs = new FileSystemArtifactReferenceStore(join(root, "references"));
+    const admin = host.maintenance.renderJobs, info = await admin.inspect("p", a.id);
+    assert.ok(info && "record" in info);
+    assert.deepEqual(info.input, { retained: true, pinnedByJob: false, artifactIds: [] });
+    assert.deepEqual(info.output, { receipt: a.result, availability: "verified", retainedByJob: true, referenceAttached: true, legacySharedReference: false });
+    assert.equal((await refs.list({ artifactId })).length, 2);
+    assert.equal(await admin.inspect("other-project", a.id), undefined);
+    await assert.rejects(admin.release("other-project", a.id), code("RENDER_JOB_NOT_FOUND"));
+    await assert.rejects(admin.prune("p", a.id), code("RENDER_JOB_STATE"));
+
+    const contentHash = a.result!.contentHash;
+    const patch = { schemaVersion: "1.3.0", baseRevisionId: "revision-initial", patches: [
+      { op: "add-asset", asset: { id: "rendered", kind: "image", uri: `artifact://sha256/${contentHash}`, contentHash } },
+    ] };
+    const foreign = actor(host, "other-project");
+    await invoke(foreign, "project.create", { name: "Foreign", episodeId: "approved" });
+    const denied = await foreign.invoke({ toolId: "project.patch.apply", toolVersion: "1.0.0", runId: "foreign", callId: "read",
+      input: { ...patch, projectId: "other-project" } });
+    assert.equal(denied.ok, false, JSON.stringify(denied));
+    await invoke(session, "project.patch.apply", { ...patch, projectId: "p" });
+    const current = await invoke(session, "project.inspect") as ProjectDocument;
+    await invoke(session, "project.patch.remove", { schemaVersion: "1.3.0", projectId: "p",
+      baseRevisionId: current.revisions.at(-1)!.id, patches: [{ op: "remove-asset", assetId: "rendered" }] });
+
+    const [released, repeat] = await Promise.all([admin.release("p", a.id), admin.release("p", a.id)]);
+    assert.deepEqual(released, repeat);
+    assert.ok(released.completedAt);
+    assert.equal((await refs.list({ artifactId })).length, 1);
+    assert.deepEqual(await session.jobs.get(a.id), a);
+    assert.deepEqual((await host.maintenance.collectGarbage(0)).deleted, []);
+    const pruned = await admin.prune("p", a.id);
+    assert.deepEqual(await admin.prune("p", a.id), pruned);
+    assert.deepEqual(await admin.release("p", a.id), released);
+    assert.equal(await session.jobs.get(a.id), undefined);
+    assert.deepEqual((await session.jobs.list()).jobs, [b]);
+    await host.maintenance.releaseSnapshot("p", "baseline");
+    await host.close();
+
+    host = await openCreativeHost({ directory: root, renderer: render }); session = actor(host);
+    const reopened = host.maintenance.renderJobs;
+    assert.deepEqual(await reopened.inspect("p", a.id), pruned);
+    await assert.rejects(session.jobs.submit(submission()), code("RENDER_JOB_PRUNED"));
+    await assert.rejects(session.jobs.submit({ ...submission(), callId: "changed" }), code("RENDER_JOB_CONFLICT"));
+    assert.deepEqual((await session.jobs.submit(secondRequest)).record, b);
+    assert.equal(executions, 2);
+    await reopened.release("p", b.id);
+    assert.deepEqual((await host.maintenance.collectGarbage(0)).deleted, [artifactId]);
+    const collected = await reopened.inspect("p", b.id);
+    assert.ok(collected && "record" in collected);
+    assert.deepEqual(collected.input, { retained: false, pinnedByJob: false, artifactIds: [] });
+    assert.equal(collected.output?.availability, "missing");
+  } finally { await host?.close(); await rm(root, { recursive: true, force: true }); }
+});
+
+test("a publication candidate protects bytes without a reference and can be explicitly retained after a failure", async () => {
+  const root = await temp(); let host: CreativeHost | undefined, executions = 0, failAttachment = true;
+  const attach = FileSystemArtifactReferenceStore.prototype.attach;
+  FileSystemArtifactReferenceStore.prototype.attach = async function (ref) {
+    if (failAttachment && ref.ownerType === "render-job") throw new Error("Injected failure before output reference");
+    return attach.call(this, ref);
+  };
+  const render = renderer(async (_request, mode) => { executions++; return result(mode); });
+  try {
+    host = await openCreativeHost({ directory: root, renderer: render });
+    const session = await seed(host), first = await session.jobs.submit(submission());
+    const failed = await state(session, first.record.id, "failed");
+    assert.ok(failed.outcomeUnknown);
+    await host.close();
+
+    failAttachment = false;
+    host = await openCreativeHost({ directory: root, renderer: render });
+    const admin = host.maintenance.renderJobs, report = await admin.inspect("p", failed.id);
+    assert.ok(report && "record" in report && report.output);
+    const { artifactId, contentHash } = report.output.receipt;
+    const refs = new FileSystemArtifactReferenceStore(join(root, "references"));
+    assert.deepEqual(await refs.list({ artifactId }), []);
+    assert.equal(report.output.availability, "verified");
+    assert.equal(report.output.referenceAttached, false);
+    assert.equal(report.needsReconciliation, true);
+    assert.equal(report.input.pinnedByJob, true);
+    assert.deepEqual((await host.maintenance.collectGarbage(0)).deleted, []);
+    await assert.rejects(admin.release("p", failed.id), code("RENDER_JOB_STATE"));
+    await assert.rejects(host.maintenance.releaseSnapshot("p", "baseline"), code("HOST_SNAPSHOT_RETAINED"));
+
+    const decision = { action: "retain-output", reason: "Reviewed output bytes and publication identity" } as const;
+    await assert.rejects(admin.reconcile("p", failed.id, { ...decision, artifactId: "sha256:" + "0".repeat(64) }), code("HOST_JOB_OUTPUT_UNVERIFIED"));
+    const blob = join(root, "artifacts", "blobs", contentHash.slice(0, 2), contentHash);
+    const bytes = await readFile(blob);
+    await writeFile(blob, "not the admitted output");
+    const corrupt = await admin.inspect("p", failed.id);
+    assert.ok(corrupt && "record" in corrupt && corrupt.needsReconciliation);
+    assert.equal(corrupt.output?.availability, "unverified");
+    await assert.rejects(admin.reconcile("p", failed.id, decision), /Artifact integrity check/);
+    await writeFile(blob, bytes);
+
+    const [resolved, repeated] = await Promise.all([admin.reconcile("p", failed.id, decision), admin.reconcile("p", failed.id, decision)]);
+    assert.deepEqual(resolved, repeated);
+    assert.deepEqual(resolved.action === "retain-output" && resolved.result, report.output.receipt);
+    assert.equal((await refs.list({ artifactId })).length, 1);
+    await assert.rejects(admin.reconcile("p", failed.id, { action: "discard", reason: "another decision" }),
+      code("RENDER_JOB_RECONCILIATION_CONFLICT"));
+    assert.deepEqual(await actor(host).jobs.get(failed.id), failed);
+    await host.maintenance.releaseSnapshot("p", "baseline");
+    await admin.release("p", failed.id);
+    assert.deepEqual((await host.maintenance.collectGarbage(0)).deleted, [artifactId]);
+    await admin.prune("p", failed.id);
+    await host.close(); host = await openCreativeHost({ directory: root, renderer: render });
+    assert.deepEqual(await host.maintenance.renderJobs.reconcile("p", failed.id, decision), resolved);
+    await assert.rejects(actor(host).jobs.submit(submission()), code("RENDER_JOB_PRUNED"));
+    assert.equal(executions, 1);
+  } finally {
+    FileSystemArtifactReferenceStore.prototype.attach = attach;
+    await host?.close(); await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("release intent protects an output when reference unlink succeeds but directory sync fails", async () => {
+  const root = await temp(); let host: CreativeHost | undefined, failSync = true, syncCalls = 0;
+  const sync = FileSystemArtifactReferenceStore.prototype.syncDirectory;
+  FileSystemArtifactReferenceStore.prototype.syncDirectory = async function () {
+    syncCalls++;
+    if (failSync) throw new Error("Injected failure syncing reference deletion");
+    await sync.call(this);
+  };
+  try {
+    host = await openCreativeHost({ directory: root, renderer: renderer(async (_request, mode) => result(mode)) });
+    const session = await seed(host), first = await session.jobs.submit(submission());
+    const done = await state(session, first.record.id, "succeeded"), artifactId = done.result!.artifactId;
+    const admin = host.maintenance.renderJobs;
+    await assert.rejects(admin.release("p", done.id), /syncing reference deletion/);
+    const pending = await admin.inspect("p", done.id);
+    assert.ok(pending && "record" in pending && pending.retention.release);
+    assert.equal(pending.retention.release.completedAt, undefined);
+    const refs = new FileSystemArtifactReferenceStore(join(root, "references"));
+    assert.deepEqual(await refs.list({ artifactId }), []);
+    await assert.rejects(admin.prune("p", done.id), code("RENDER_JOB_STATE"));
+    assert.deepEqual((await host.maintenance.collectGarbage(0)).deleted, []);
+    await host.close();
+
+    failSync = false;
+    host = await openCreativeHost({ directory: root });
+    const reopened = host.maintenance.renderJobs;
+    assert.deepEqual(await reopened.inspect("p", done.id), pending);
+    const beforeRetry = syncCalls, finished = await reopened.release("p", done.id);
+    assert.ok(syncCalls > beforeRetry);
+    assert.equal(finished.requestedAt, pending.retention.release.requestedAt);
+    assert.ok(finished.completedAt);
+    assert.deepEqual((await host.maintenance.collectGarbage(0)).deleted, [artifactId]);
+  } finally {
+    FileSystemArtifactReferenceStore.prototype.syncDirectory = sync;
+    await host?.close(); await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("legacy interruption requires explicit reconciliation and legacy shared references survive release", async () => {
+  const root = await temp(); let host: CreativeHost | undefined;
+  try {
+    const artifacts = new FileSystemArtifactStore(join(root, "artifacts"));
+    const refs = new FileSystemArtifactReferenceStore(join(root, "references"));
+    const lifecycle = new LocalArtifactLifecycleManager(artifacts, refs);
+    const workspace = await FileSystemProjectWorkspace.open(join(root, "projects"), lifecycle);
+    const doc = createEmptyProject({ id: "p", name: "Legacy input", episodeId: "approved", durationFrames: 30 });
+    await workspace.create(doc);
+    const snapshot = await workspace.saveSnapshot("p", "revision-initial", { id: "baseline", createdAt: new Date().toISOString() });
+    await workspace.close();
+    const store = await FileSystemRenderJobStore.open(join(root, "jobs"));
+    const input = { projectId: "p", submissionId: "old", runId: "old-run", callId: "old-call", toolVersion: "1.0.0",
+      snapshot: { id: snapshot.id, revisionId: "revision-initial", contentHash: snapshot.contentHash }, render: { operation: "preview" as const, frame: 0 },
+      profile: { width: 960, height: 540, fps: 30 }, renderer: { id: "test.jobs", version: "1.0.0" } };
+    const { record } = await store.submit(input);
+    const queued = (await store.submit({ ...input, submissionId: "waiting" })).record;
+    const { token } = await store.claim("p", record.id);
+    await store.beginPublication("p", record.id, token);
+    const output = await artifacts.put({ bytes: result("preview").bytes, kind: "image", mediaType: "image/png",
+      metadata: { jobId: record.id, inputHash: record.inputHash }, provenance: { projectId: "p", runId: input.runId,
+        callId: input.callId, toolId: "render.preview", toolVersion: "1.0.0", parametersHash: record.inputHash } });
+    await lifecycle.attach({ artifactId: output.id, ownerType: "tool-run", ownerId: JSON.stringify(["p", input.runId, input.callId]), role: "host-output" });
+    await store.close();
+
+    host = await openCreativeHost({ directory: root });
+    const admin = host.maintenance.renderJobs, legacy = await admin.inspect("p", record.id);
+    assert.ok(legacy && "record" in legacy && legacy.needsReconciliation);
+    assert.equal(legacy.record.interruptedFrom, "publishing");
+    assert.equal(legacy.untrackedPublication, true);
+    assert.equal(legacy.input.pinnedByJob, true);
+    await assert.rejects(host.maintenance.collectGarbage(0), code("HOST_JOB_RECONCILIATION_REQUIRED"));
+    await assert.rejects(host.maintenance.releaseSnapshot("p", "baseline"), code("HOST_SNAPSHOT_RETAINED"));
+    await assert.rejects(admin.reconcile("p", record.id, { action: "retain-output", reason: "missing evidence" }), code("HOST_JOB_OUTPUT_UNVERIFIED"));
+    const adopted = await admin.reconcile("p", record.id, { action: "retain-output", reason: "Verified legacy publisher metadata", artifactId: output.id });
+    assert.equal(adopted.action === "retain-output" && adopted.result.artifactId, output.id);
+    await admin.release("p", record.id);
+    const released = await admin.inspect("p", record.id);
+    assert.ok(released && "record" in released && released.output);
+    assert.equal(released.output.retainedByJob, false);
+    assert.equal(released.output.legacySharedReference, true);
+    assert.deepEqual((await refs.list({ artifactId: output.id })).map(ref => ref.ownerType), ["tool-run"]);
+    assert.deepEqual((await host.maintenance.collectGarbage(0)).deleted, []);
+    await assert.rejects(host.maintenance.releaseSnapshot("p", "baseline"), code("HOST_SNAPSHOT_RETAINED"));
+
+    const discard: RenderJobReconciliationRequest = { action: "discard", reason: "Abandoned before execution" };
+    await assert.rejects(admin.reconcile("p", queued.id, { ...discard, reason: "" }), code("RENDER_JOB_INVALID"));
+    const pending = admin.reconcile("p", queued.id, discard);
+    discard.reason = "caller mutation";
+    assert.equal((await pending).reason, "Abandoned before execution");
+    await host.maintenance.releaseSnapshot("p", "baseline");
+  } finally { await host?.close(); await rm(root, { recursive: true, force: true }); }
 });

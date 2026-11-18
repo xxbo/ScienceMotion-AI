@@ -1,4 +1,6 @@
-import { RENDER_JOB_SCHEMA_VERSION, RENDER_JOB_STATES, type RenderJobRecord, type RenderJobSubmission, type RenderJobReceipt } from "../contracts/render-job";
+import { RENDER_JOB_SCHEMA_VERSION, RENDER_JOB_STATES, type PrunedRenderJob, type RenderJobRecord,
+  type RenderJobSubmission, type RenderJobReceipt, type RenderJobReconciliation, type RenderJobReconciliationRequest,
+  type RenderJobRetention, type RenderJobRelease } from "../contracts/render-job";
 import { assertFiniteJson } from "./project-creative-edits";
 import { hashToolInput } from "./tool-execution-store";
 
@@ -59,11 +61,16 @@ export function validateJobDiagnostic(value: unknown): void {
   jobObject(value, ["code", "message"]); jobIdentity(value.code);
   if (typeof value.message !== "string" || !value.message.trim() || Buffer.byteLength(value.message) > 2048) invalid("Invalid bounded job diagnostic");
 }
-export function validateJobReceipt(receipt: RenderJobReceipt, record: RenderJobRecord): void {
+function validateReceiptIdentity(receipt: RenderJobReceipt, id: string, inputHash: string): void {
   jobObject(receipt, ["jobId", "inputHash", "artifactId", "contentHash", "sizeBytes", "mediaType", "rendererId", "rendererVersion"]);
   hash(receipt.contentHash); jobInteger(receipt.sizeBytes, 8, 64 * 1024 * 1024);
-  if (receipt.jobId !== record.id || receipt.inputHash !== record.inputHash || receipt.artifactId !== `sha256:${receipt.contentHash}` ||
-      receipt.rendererId !== record.input.renderer.id || receipt.rendererVersion !== record.input.renderer.version ||
+  jobIdentity(receipt.rendererId); jobIdentity(receipt.rendererVersion);
+  if (receipt.jobId !== id || receipt.inputHash !== inputHash || receipt.artifactId !== `sha256:${receipt.contentHash}` ||
+      !["image/png", "video/mp4"].includes(receipt.mediaType)) invalid("Invalid result receipt identity");
+}
+export function validateJobReceipt(receipt: RenderJobReceipt, record: RenderJobRecord): void {
+  validateReceiptIdentity(receipt, record.id, record.inputHash);
+  if (receipt.rendererId !== record.input.renderer.id || receipt.rendererVersion !== record.input.renderer.version ||
       receipt.mediaType !== (record.input.render.operation === "preview" ? "image/png" : "video/mp4")) invalid("Result receipt differs from the admitted job identity or output declaration");
 }
 function timestamp(value: unknown): number {
@@ -112,4 +119,70 @@ export function validateJobRecord(record: RenderJobRecord): void {
       (["cancelled", "timed-out"].includes(prior) && (record.stop?.reason !== prior || record.publicationStartedAt))) invalid("Inconsistent job state evidence");
   const uncertain = record.state === "interrupted" ? prior !== "queued" : record.state === "failed" && !!record.publicationStartedAt;
   if (record.outcomeUnknown !== uncertain || (record.state === "queued" ? record.revision !== 0 : record.revision === 0)) invalid("Invalid job revision/uncertainty");
+}
+
+export function needsJobReconciliation(record: RenderJobRecord, retention: RenderJobRetention): boolean {
+  return !retention.reconciliation && (record.state === "interrupted" || record.outcomeUnknown);
+}
+export function hasUntrackedPublication(record: RenderJobRecord, retention: RenderJobRetention): boolean {
+  return needsJobReconciliation(record, retention) && !!record.publicationStartedAt && !retention.publication;
+}
+export function knownJobOutput(record: RenderJobRecord, retention: RenderJobRetention): RenderJobReceipt | undefined {
+  return record.result ?? retention.publication ??
+    (retention.reconciliation?.action === "retain-output" ? retention.reconciliation.result : undefined);
+}
+function validateReason(value: unknown): void {
+  if (typeof value !== "string" || !value.trim() || Buffer.byteLength(value) > 512) invalid("Reconciliation reason must be 1–512 UTF-8 bytes");
+}
+export function validateReconciliationRequest(value: unknown): asserts value is RenderJobReconciliationRequest {
+  jobObject(value, ["action", "reason", "artifactId"]);
+  validateReason(value.reason);
+  if (value.action === "discard") jobObject(value, ["action", "reason"]);
+  else if (value.action !== "retain-output" || (value.artifactId !== undefined &&
+    (typeof value.artifactId !== "string" || !/^sha256:[a-f0-9]{64}$/.test(value.artifactId)))) invalid("Invalid reconciliation action or Artifact identity");
+}
+function validateReconciliation(value: RenderJobReconciliation, id: string, inputHash: string): number {
+  jobObject(value, ["action", "reason", "decidedAt", "result"]);
+  validateReason(value.reason);
+  if (value.action === "discard") jobObject(value, ["action", "reason", "decidedAt"]);
+  else if (value.action === "retain-output") validateReceiptIdentity(value.result, id, inputHash);
+  else invalid("Invalid persisted reconciliation action");
+  return timestamp(value.decidedAt);
+}
+function validateRelease(value: RenderJobRelease, after: number): void {
+  jobObject(value, ["requestedAt", "completedAt"]);
+  const requested = timestamp(value.requestedAt);
+  if (requested < after || (value.completedAt !== undefined && timestamp(value.completedAt) < requested)) invalid("Invalid release timestamps");
+}
+export function validateJobRetention(record: RenderJobRecord, retention: RenderJobRetention): void {
+  jobCopy({ ...record, retention });
+  jobObject(retention as unknown, ["publication", "reconciliation", "release"]);
+  const { publication, reconciliation, release } = retention;
+  if (publication !== undefined) {
+    if (!record.publicationStartedAt) invalid("Publication candidate requires a publication barrier");
+    validateJobReceipt(publication, record);
+    if (record.result && hashToolInput(publication) !== hashToolInput(record.result)) invalid("Result differs from the publication candidate");
+  }
+  if (reconciliation !== undefined) {
+    if (!needsJobReconciliation(record, {}) || validateReconciliation(reconciliation, record.id, record.inputHash) < timestamp(record.completedAt))
+      invalid("Reconciliation requires a completed interrupted or uncertain job");
+    if (reconciliation.action === "retain-output") {
+      if (!record.publicationStartedAt) invalid("Retained output requires a publication barrier");
+      validateJobReceipt(reconciliation.result, record);
+      if (publication && hashToolInput(publication) !== hashToolInput(reconciliation.result)) invalid("Reconciled output differs from the publication candidate");
+    }
+  }
+  if (release !== undefined) {
+    if (activeJobStates.has(record.state) || needsJobReconciliation(record, retention)) invalid("Release requires a resolved terminal job");
+    validateRelease(release, timestamp(reconciliation?.decidedAt ?? record.completedAt));
+  }
+}
+export function validatePrunedJob(value: PrunedRenderJob): void {
+  jobCopy(value);
+  jobObject(value, ["id", "projectId", "submissionId", "inputHash", "requestHash", "reconciliation", "release", "prunedAt"]);
+  jobIdentity(value.id); jobIdentity(value.projectId); jobIdentity(value.submissionId);
+  hash(value.inputHash); hash(value.requestHash);
+  const decided = value.reconciliation === undefined ? -Infinity : validateReconciliation(value.reconciliation, value.id, value.inputHash);
+  validateRelease(value.release, decided);
+  if (timestamp(value.prunedAt) < timestamp(value.release.completedAt)) invalid("Pruning requires completed release");
 }

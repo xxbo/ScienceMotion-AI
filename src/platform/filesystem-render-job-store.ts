@@ -1,8 +1,8 @@
 import { constants } from "node:fs";
 import { mkdir, open, rm, type FileHandle } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { RENDER_JOB_SCHEMA_VERSION, type RenderJobRecord } from "../contracts/render-job";
-import { InMemoryRenderJobStore, type RenderJobStoreOptions } from "./render-job-store";
+import { RENDER_JOB_SCHEMA_VERSION, type PrunedRenderJob } from "../contracts/render-job";
+import { InMemoryRenderJobStore, type PersistedRenderJob, type RenderJobStoreOptions } from "./render-job-store";
 import { jobFail, jobObject, RenderJobError } from "./render-job-validation";
 import { hashToolInput } from "./tool-execution-store";
 import { publishLocalFile } from "./local-file-publication";
@@ -22,15 +22,18 @@ export class FileSystemRenderJobStore extends InMemoryRenderJobStore {
       const text = await store.readLedger();
       if (text === undefined) await store.commit(new Map());
       else {
-        let records: RenderJobRecord[];
+        let records: PersistedRenderJob[], pruned: PrunedRenderJob[];
         try {
           const envelope = JSON.parse(text);
-          jobObject(envelope, ["schemaVersion", "records", "contentHash"]);
+          jobObject(envelope, ["schemaVersion", "records", "pruned", "contentHash"]);
+          const { contentHash, ...data } = envelope;
           if (envelope.schemaVersion !== RENDER_JOB_SCHEMA_VERSION || !Array.isArray(envelope.records) ||
-              envelope.contentHash !== hashToolInput({ schemaVersion: envelope.schemaVersion, records: envelope.records })) throw new Error("Version/checksum mismatch");
+              (envelope.pruned !== undefined && !Array.isArray(envelope.pruned)) ||
+              contentHash !== hashToolInput(data)) throw new Error("Version/checksum mismatch");
           records = envelope.records;
+          pruned = envelope.pruned ?? [];
         } catch { return jobFail("RENDER_JOB_CORRUPT", "Job ledger integrity/version check failed"); }
-        try { await store.restore(records); }
+        try { await store.restore(records, pruned); }
         catch (error) {
           if (error instanceof RenderJobError && error.code === "RENDER_JOB_INVALID") jobFail("RENDER_JOB_CORRUPT", "Persisted job evidence is inconsistent");
           throw error;

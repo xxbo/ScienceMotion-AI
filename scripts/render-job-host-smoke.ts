@@ -10,7 +10,7 @@ import type { ProjectDocument } from "../src/contracts/project";
 import type { RenderJobRecord } from "../src/contracts/render-job";
 import { openCreativeHost } from "../src/platform/creative-host";
 
-// B2 positive host-API integration. B3 separately exercises the worker/CLI cancellation and restart workflow.
+// Real host API rendering, restart and output retention. B3 covers worker/CLI interruption separately.
 const root = await mkdtemp(join(tmpdir(), "sciencemotion-job-smoke-"));
 let host: Awaited<ReturnType<typeof openCreativeHost>> | undefined, callId = 0;
 const grant = { projectId: "job-smoke", permissions: ["project.read", "project.write", "snapshot.write", "snapshot.read", "artifact.write"] as const,
@@ -40,11 +40,12 @@ try {
   ] as Array<[string, unknown]>) await invoke(s, toolId, input);
   const project = await invoke(s, "project.inspect", {}) as ProjectDocument;
   await invoke(s, "project.snapshot.save", { snapshotId: "job-snapshot", revisionId: project.revisions.at(-1)!.id });
-  const records: RenderJobRecord[] = [];
+  const records: RenderJobRecord[] = [], requests: CreativeJobSubmission[] = [];
   for (const mode of ["preview", "video"] as const) {
     const request: CreativeJobSubmission = { submissionId: mode, runId: "job-smoke", callId: `render-${mode}`, toolVersion: "1.0.0",
       ...(mode === "preview" ? { toolId: "render.preview", input: { snapshotId: "job-snapshot", frame: 15 } }
         : { toolId: "render.video", input: { snapshotId: "job-snapshot", startFrame: 0, durationFrames: 30 } }) };
+    requests.push(request);
     const admitted = await s.jobs.submit(request); assert.equal(admitted.record.state, "queued");
     assert.equal((await s.jobs.submit(request)).created, false);
     const done = await completed(s, admitted.record.id), receipt = done.result!; records.push(done);
@@ -64,7 +65,31 @@ try {
   await host.close(); host = await openCreativeHost({ directory: root }); s = session();
   for (const record of records) assert.deepEqual(await s.jobs.get(record.id), record);
   assert.equal((await s.jobs.list()).total, 2); assert.equal((await host.maintenance.collectGarbage(0)).deleted.length, 0);
-  await writeFile("out/job-host-evidence.json", JSON.stringify({ schemaVersion: "1.0.0", scenario: "B2 real in-process host API render and persisted results", records,
-    checks: ["submission-before-render", "idempotent-retry", "verified-png-and-mp4", "frame-count-and-dimensions", "durable-query-after-reopen", "retained-output"] }, null, 2) + "\n");
-  console.log("PASS background host jobs: PNG + 30-frame MP4, verified receipts, retained outputs and exact results after reopen");
+
+  const [preview, video] = records, admin = host.maintenance.renderJobs;
+  const before = await admin.inspect(grant.projectId, preview.id);
+  assert.ok(before && "record" in before && before.output);
+  assert.equal(before.output.availability, "verified");
+  assert.equal(before.output.retainedByJob, true);
+  assert.equal(before.input.retained, true);
+  const released = await admin.release(grant.projectId, preview.id);
+  assert.ok(released.completedAt);
+  const gc = await host.maintenance.collectGarbage(0);
+  assert.deepEqual(gc.deleted, [preview.result!.artifactId]);
+  assert.deepEqual(gc.errors, []);
+  const kept = await admin.inspect(grant.projectId, video.id);
+  assert.ok(kept && "record" in kept && kept.output);
+  assert.equal(kept.output.availability, "verified");
+  assert.equal(kept.output.retainedByJob, true);
+  const pruned = await admin.prune(grant.projectId, preview.id);
+  await host.close(); host = await openCreativeHost({ directory: root }); s = session();
+  assert.deepEqual(await host.maintenance.renderJobs.inspect(grant.projectId, preview.id), pruned);
+  await assert.rejects(s.jobs.submit(requests[0]), { code: "RENDER_JOB_PRUNED" });
+  assert.deepEqual(await s.jobs.get(video.id), video);
+
+  await writeFile("out/job-host-evidence.json", JSON.stringify({ schemaVersion: "1.0.0",
+    scenario: "Real in-process host API render, retention release and durable pruning", records, retention: { before, released, gc, kept, pruned },
+    checks: ["submission-before-render", "idempotent-retry", "verified-png-and-mp4", "frame-count-and-dimensions", "durable-query-after-reopen",
+      "retained-output", "gc-after-explicit-release", "pruned-identity-blocks-replay"] }, null, 2) + "\n");
+  console.log("PASS background host jobs: verified PNG and MP4, targeted release/GC, retained video and durable pruned identity");
 } finally { await host?.close(); await rm(root, { recursive: true, force: true }); }
