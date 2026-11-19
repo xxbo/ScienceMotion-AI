@@ -27,7 +27,7 @@ await mkdir(output, { recursive: true });
 const root = await mkdtemp(join(tmpdir(), "sciencemotion-combined-")), directory = join(root, "host"), staging = join(root, "staging");
 const ffprobe = join(dirname(createRequire(import.meta.url).resolve(`@remotion/compositor-linux-${process.arch}-gnu/package.json`)), "ffprobe");
 const mib = 1024 * 1024, frames = 60;
-const budget = { cpuMillicores: 2000, cpuTimeMs: 22000, memoryBytes: 1536 * mib, temporaryBytes: 128 * mib };
+const budget = { cpuMillicores: 2500, cpuTimeMs: 22000, memoryBytes: 1536 * mib, temporaryBytes: 128 * mib };
 const policy = { maxConcurrentJobs: 2, cgroupParent, temporaryVolumes: volumes, resourceBudget: budget };
 const cases = [
   { name: "cpu", fixture: "budget-cpu", code: "RENDER_WORKER_CPU_TIME_LIMIT", color: "#55d6e8" },
