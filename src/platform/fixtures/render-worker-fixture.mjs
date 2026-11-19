@@ -5,6 +5,7 @@ import { join, dirname } from "node:path";
 
 const directory = process.argv[2], job = JSON.parse(await readFile(join(directory, "request.json"), "utf8"));
 const mode = job.request.project.project.name;
+const combined = process.env.SCIENCEMOTION_COMBINED_RESOURCE_FIXTURE === "1";
 const send = message => new Promise((resolve, reject) => process.send({ protocolVersion: "1.0.0", jobId: job.jobId, ...message }, error => error ? reject(error) : resolve()));
 process.on("SIGTERM", () => {}); // Deliberately non-cooperative test renderer.
 if (mode === "cleanup") {
@@ -20,7 +21,8 @@ if (mode === "budget-cpu" || mode === "budget-memory") {
   const initialMembership = await readFile("/proc/self/cgroup", "utf8");
   const load = spawn(process.execPath, ["-e", `
     const fs = require("node:fs"), mode = process.argv[1], gate = process.argv[2];
-    const deadline = performance.now() + 5000;
+    const combined = process.argv[3] === "combined";
+    const deadline = performance.now() + (combined ? 24000 : 5000);
     const wait = setInterval(() => {
       if (performance.now() >= deadline) process.exit(71);
       if (!fs.existsSync(gate)) return;
@@ -34,7 +36,7 @@ if (mode === "budget-cpu" || mode === "budget-memory") {
       }
       process.exit(71);
     }, 10);
-  `, mode, join(directory, "start-load")], { stdio: "ignore", detached: true });
+  `, mode, join(directory, "start-load"), combined ? "combined" : "individual"], { stdio: "ignore", detached: true });
   const exited = new Promise(resolve => load.once("exit", resolve));
   await writeFile(join(dirname(directory), "budget-processes.json"), JSON.stringify({ renderer: process.pid, load: load.pid, directory, initialMembership }));
   await send({ type: "ready" });
@@ -47,7 +49,7 @@ if (mode === "budget-temporary") {
     const fs = require("node:fs");
     const path = require("node:path");
     const temporary = require("node:os").tmpdir();
-    const deadline = performance.now() + 5000;
+    const deadline = performance.now() + (process.argv[1] === "combined" ? 24000 : 5000);
     process.on("SIGTERM", () => {});
     const wait = setInterval(() => {
       if (performance.now() >= deadline) process.exit(71);
@@ -69,7 +71,7 @@ if (mode === "budget-temporary") {
       } finally { fs.closeSync(fd); }
       process.exit(71);
     }, 10);
-  `], { stdio: ["ignore", "ignore", "ignore", "ipc"], detached: true });
+  `, combined ? "combined" : "individual"], { stdio: ["ignore", "ignore", "ignore", "ipc"], detached: true });
   const result = new Promise(resolve => {
     load.once("message", resolve);
     load.once("exit", () => resolve(null));

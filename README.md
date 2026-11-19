@@ -6,7 +6,7 @@ An extensible science-video creation framework for AI agents: discover typed too
 
 Watch the [30-second CPU-cache capability sample](docs/showcase/cpu-cache-30s.mp4) ([download MP4](https://raw.githubusercontent.com/xxbo/ScienceMotion-AI/main/docs/showcase/cpu-cache-30s.mp4)). It combines four scenes, text, shapes, paths, keyframes and a data-driven chart using the current public tools. Mandarin narration is added by a separate finishing script. [Reproduction, evidence and limits](docs/showcase/README.md).
 
-Main is the delivery baseline. P1.2-A's render-worker lifecycle was delivered on `b4e5bc9fa47111ce8a8324f69b14559d25d4f1de`. [CI #44002989900](https://github.com/xxbo/ScienceMotion-AI/actions/runs/44002989900) passed 223 tests and the real-render regressions. **P1.1 engineering is delivered and human review is deferred to final acceptance. P1.2 includes worker lifecycle, concurrent jobs and Linux per-job CPU, memory and temporary-disk budgets. D4 combined acceptance is next.**
+Main is the delivery baseline. P1.2-A's render-worker lifecycle was delivered on `b4e5bc9fa47111ce8a8324f69b14559d25d4f1de`. [CI #44002989900](https://github.com/xxbo/ScienceMotion-AI/actions/runs/44002989900) passed 223 tests and the real-render regressions. **P1.1 engineering is delivered and human review is deferred to final acceptance. P1.2 includes worker lifecycle, concurrent jobs and combined Linux resource limits. P1.2-E performance evidence is next.**
 
 | Stage | Implemented scope |
 | --- | --- |
@@ -29,7 +29,8 @@ Main is the delivery baseline. P1.2-A's render-worker lifecycle was delivered on
 | P1.2-D1 | Trusted per-job budget contract and Linux capability evidence for cgroup delegation and bounded storage. [D1 resources](docs/P1.2-D1-RESOURCE-CAPABILITY.md) |
 | P1.2-D2 | Delegated cgroup v2 CPU bandwidth, cumulative CPU time and memory budgets, with typed failure and cleanup. [D2 CPU and memory](docs/P1.2-D2-CPU-MEMORY.md) |
 | P1.2-D3 | Dedicated ext4 loop volumes, kernel disk exhaustion, typed failure and reclamation. [D3 temporary disk](docs/P1.2-D3-TEMPORARY-DISK.md) |
-| P1.2-D4–E | Combined real-worker acceptance and measured performance. [Plan](docs/P1.2-PLAN.md) |
+| P1.2-D4 | Combined resource limits, parallel rendering through each failure, and verified slot and volume reuse. [D4 acceptance](docs/P1.2-D4-COMBINED-RESOURCES.md) |
+| P1.2-E | Performance measurements and justified reuse. [Plan](docs/P1.2-PLAN.md#e--performance-evidence-and-justified-reuse) |
 | P1.3+ | Broader tools/professional engines and general autonomous visual iteration |
 
 The built-in workspace plugin now includes initial scene, text, shape, transform and keyframe tools. The generic Project Graph composition is a first 2D slice; the CPU-cache Episode renderer remains separate. The [two-topic acceptance scenario](docs/P1.1-CREATIVE-LOOP.md) creates 12-second cache and water-cycle fixtures through public tools, detects/repairs seeded defects, edits text/motion and verifies export/restart/restore including original data dependencies. CI preserves six baseline/edited/restored MP4s, 18 previews, manifests and invocation evidence. These technical fixtures are silent and scripted.
@@ -98,6 +99,8 @@ npm run --silent probe:render-resources
 `probe:render-resources` reports Linux controller availability and can verify temporary filesystem capacity on a disposable file-backed loop volume. Set `renderWorker.cgroupParent` and `renderWorker.resourceBudget` to enforce CPU and memory budgets on the delegated Linux runtime. CI verifies throttling, OOM, cleanup and a real budgeted MP4. [D1 capability probe](docs/P1.2-D1-RESOURCE-CAPABILITY.md) · [D2 configuration and evidence](docs/P1.2-D2-CPU-MEMORY.md).
 
 Set `renderWorker.temporaryVolumes` and `renderWorker.resourceBudget.temporaryBytes` to give each job a dedicated temporary filesystem. CI verifies kernel `ENOSPC`, durable failure, capacity reclamation and a production render on the same volume. [D3 configuration and evidence](docs/P1.2-D3-TEMPORARY-DISK.md).
+
+The combined acceptance enables all resource budgets in the same host, verifies CPU, memory and disk failures in separate rounds, and checks a parallel video and a queued preview after each failure. [D4 combined acceptance](docs/P1.2-D4-COMBINED-RESOURCES.md).
 
 ## Design and documentation
 
