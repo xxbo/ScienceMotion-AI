@@ -14,6 +14,7 @@ import time
 
 sys.dont_write_bytecode = True
 from render_worker_cgroup import RenderCgroup, ResourceError, check_support, fork_in_group
+from render_worker_storage import check_storage, lease_volume
 
 
 def direct_children():
@@ -36,6 +37,7 @@ def direct_children():
 
 def main():
     node, script, directory, heap_mb, grace_ms, expected_parent, *resource = sys.argv[1:]
+    config = json.loads(resource[0]) if resource else {}
     stopping_at = None
     force = False
 
@@ -57,17 +59,34 @@ def main():
         if libc.prctl(option, value, 0, 0, 0) != 0:
             raise OSError(ctypes.get_errno(), "Could not configure Linux worker guardian")
     group = None
+    storage = None
     failure = None
     usage = None
+    result = None
+
+    def sample_resources():
+        counters = group.sample() if group else {}
+        if storage:
+            counters.update(storage.sample())
+        return counters
+
+    def check_resources(counters, final=False):
+        if group:
+            group.check(counters)
+        if storage:
+            storage.check(final)
 
     def exec_renderer():
         # Keep the guardian's final accounting report off the renderer's IPC
         # channel and out of reach of its stdout and inherited descendants.
-        if group:
+        if resource:
             null = os.open(os.devnull, os.O_WRONLY)
             os.dup2(null, 1)
             os.close(null)
-        os.execv(node, [node, "--max-old-space-size=" + heap_mb, "--import", "tsx", script, directory])
+        args = [node, "--max-old-space-size=" + heap_mb, "--import", "tsx", script]
+        if storage:
+            os.execve(node, [*args, storage.directory], storage.environment())
+        os.execv(node, [*args, directory])
 
     def supervise():
         nonlocal force
@@ -104,8 +123,8 @@ def main():
                         stop(None, None)
                         force = True
                 owned = direct_children()
-                if group and stopping_at is None:
-                    group.check(group.sample())
+                if resource and stopping_at is None:
+                    check_resources(sample_resources())
                 if node_result is not None and not owned:
                     return node_result if node_result >= 0 else 128 - node_result
                 if stopping_at is not None:
@@ -132,26 +151,35 @@ def main():
         if os.getppid() != int(expected_parent) or stopping_at is not None:
             return 1  # Parent died or requested stop during startup.
         direct_children()  # Verify procfs access before forking any work.
-        if resource:
-            group = RenderCgroup(resource[0], json.loads(resource[1]))
+        if config.get("temporaryVolumes"):
+            storage = lease_volume(config["temporaryVolumes"], config["resourceBudget"]["temporaryBytes"])
+            storage.stage(os.path.join(directory, "request.json"))
+        if config.get("cgroupParent"):
+            group = RenderCgroup(config["cgroupParent"], config["resourceBudget"])
         if stopping_at is not None:
             return 1
-        return supervise()
+        result = supervise()
+        return result
     except ResourceError as error:
         failure = error
         return 70
     finally:
-        if group:
+        if group or storage:
             try:
-                try:
-                    usage = group.sample()
-                    if failure is None:
-                        group.check(usage)
-                finally:
-                    group.close()
+                usage = sample_resources()
+                if failure is None:
+                    check_resources(usage, final=True)
+                    if storage and result == 0 and os.getppid() == int(expected_parent):
+                        storage.copy_output(os.path.join(directory, "output.bin"), config["maxOutputBytes"])
             except ResourceError as error:
-                if failure is None or error.code == "RENDER_WORKER_CLEANUP":
-                    failure = error
+                failure = failure or error
+            finally:
+                for owned in (group, storage):
+                    if owned:
+                        try:
+                            owned.close()
+                        except ResourceError as error:
+                            failure = error  # Uncertain cleanup takes precedence over a render error.
         if resource:
             report = {}
             if usage is not None:
@@ -178,10 +206,15 @@ def reap_children():
 
 
 if __name__ == "__main__":
-    if sys.argv[1] == "--check-cgroup":
+    if sys.argv[1] == "--check-resources":
         try:
-            check_support(sys.argv[2], json.loads(sys.argv[3]))
-        except ResourceError as error:
+            config = json.loads(sys.argv[2])
+            budget = config["resourceBudget"]
+            if config.get("cgroupParent"):
+                check_support(config["cgroupParent"], budget)
+            if config.get("temporaryVolumes"):
+                check_storage(config["temporaryVolumes"], budget["temporaryBytes"])
+        except (ResourceError, OSError) as error:
             print(str(error)[:512], file=sys.stderr)
             sys.exit(1)
         sys.exit(0)

@@ -24,6 +24,8 @@ export interface RenderWorkerPolicy {
   resourceBudget?: RenderWorkerResourceBudget;
   /** Absolute path to an operator-delegated cgroup v2 parent for budgeted jobs. */
   cgroupParent?: string;
+  /** Dedicated ext4 loop mount roots that can be leased by disk-budgeted jobs. */
+  temporaryVolumes?: readonly string[];
 }
 export interface RenderWorkerEvent {
   jobId: string; operation: RenderWorkerOperation; projectId: string; snapshotHash: string;

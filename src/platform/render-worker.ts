@@ -23,20 +23,25 @@ const budgetBounds: Record<keyof RenderWorkerResourceBudget, [number, number]> =
   memoryBytes: [1, Number.MAX_SAFE_INTEGER],
   temporaryBytes: [1, Number.MAX_SAFE_INTEGER],
 };
+const absolutePath = (path: unknown): path is string => typeof path === "string" && isAbsolute(path) && !path.includes("\0");
 
 export function renderWorkerPolicy(value: Partial<RenderWorkerPolicy> = {}): Readonly<RenderWorkerPolicy> {
   if (!value || typeof value !== "object" || Array.isArray(value) ||
-      Object.keys(value).some(k => k !== "resourceBudget" && k !== "cgroupParent" && !Object.hasOwn(defaults, k)))
+      Object.keys(value).some(k => !["resourceBudget", "cgroupParent", "temporaryVolumes"].includes(k) && !Object.hasOwn(defaults, k)))
     fail("RENDER_WORKER_CONFIG", "Unknown render worker policy field");
-  const { resourceBudget, cgroupParent, ...worker } = value;
+  const { resourceBudget, cgroupParent, temporaryVolumes, ...worker } = value;
   const policy = { ...defaults, ...worker };
   const bounds: Record<keyof typeof defaults, [number, number]> = {
     timeoutMs: [1, 300000], maxConcurrentJobs: [1, 4], maxOutputBytes: [1024, 64 * 1024 * 1024], maxOldSpaceMb: [128, 4096], killGraceMs: [0, 1000],
   };
   for (const key of Object.keys(bounds) as (keyof typeof defaults)[])
     if (!Number.isSafeInteger(policy[key]) || policy[key] < bounds[key][0] || policy[key] > bounds[key][1]) fail("RENDER_WORKER_CONFIG", `Invalid ${key}`);
-  if (cgroupParent !== undefined && (typeof cgroupParent !== "string" || !isAbsolute(cgroupParent) || cgroupParent.includes("\0")))
+  if (cgroupParent !== undefined && !absolutePath(cgroupParent))
     fail("RENDER_WORKER_CONFIG", "cgroupParent must be an absolute cgroup v2 path");
+  if (temporaryVolumes !== undefined && (!Array.isArray(temporaryVolumes) || temporaryVolumes.length < policy.maxConcurrentJobs ||
+      temporaryVolumes.length > 4 || !Array.from(temporaryVolumes).every(absolutePath) ||
+      new Set(temporaryVolumes.map(path => resolve(path))).size !== temporaryVolumes.length))
+    fail("RENDER_WORKER_CONFIG", "temporaryVolumes must supply distinct absolute paths for every worker slot");
   if (resourceBudget !== undefined) {
     if (!resourceBudget || typeof resourceBudget !== "object" || Array.isArray(resourceBudget) ||
         ![Object.prototype, null].includes(Object.getPrototypeOf(resourceBudget)) ||
@@ -47,31 +52,45 @@ export function renderWorkerPolicy(value: Partial<RenderWorkerPolicy> = {}): Rea
       if (typeof amount !== "number" || !Number.isSafeInteger(amount) || amount < minimum || amount > maximum)
         fail("RENDER_WORKER_CONFIG", `Invalid resourceBudget.${key}`);
     }
-    if (resourceBudget.temporaryBytes !== undefined)
-      fail("RENDER_WORKER_RESOURCE_UNAVAILABLE", "The local render worker does not yet enforce temporaryBytes");
-    if (!cgroupParent)
-      fail("RENDER_WORKER_RESOURCE_UNAVAILABLE", "Resource budgets require a delegated cgroupParent. Run npm run probe:render-resources for host capability evidence.");
-    return Object.freeze({ ...policy, cgroupParent, resourceBudget: Object.freeze({ ...resourceBudget }) });
+    const needsCgroup = resourceBudget.cpuMillicores !== undefined || resourceBudget.cpuTimeMs !== undefined || resourceBudget.memoryBytes !== undefined;
+    if (needsCgroup && !cgroupParent)
+      fail("RENDER_WORKER_RESOURCE_UNAVAILABLE", "CPU and memory budgets require a delegated cgroupParent");
+    if (resourceBudget.temporaryBytes !== undefined && !temporaryVolumes)
+      fail("RENDER_WORKER_RESOURCE_UNAVAILABLE", "temporaryBytes requires dedicated ext4 temporaryVolumes");
+    if (!needsCgroup && cgroupParent !== undefined) fail("RENDER_WORKER_CONFIG", "cgroupParent requires a CPU or memory budget");
+    if (temporaryVolumes !== undefined && resourceBudget.temporaryBytes === undefined)
+      fail("RENDER_WORKER_CONFIG", "temporaryVolumes requires resourceBudget.temporaryBytes");
+    return Object.freeze({ ...policy, resourceBudget: Object.freeze({ ...resourceBudget }), ...(cgroupParent ? { cgroupParent } : {}),
+      ...(temporaryVolumes ? { temporaryVolumes: Object.freeze([...temporaryVolumes]) } : {}) });
   }
   if (cgroupParent !== undefined) fail("RENDER_WORKER_CONFIG", "cgroupParent requires resourceBudget");
+  if (temporaryVolumes !== undefined) fail("RENDER_WORKER_CONFIG", "temporaryVolumes requires resourceBudget.temporaryBytes");
   return Object.freeze(policy);
 }
 
+function resourceConfiguration({ cgroupParent, resourceBudget, temporaryVolumes, maxOutputBytes }: Readonly<RenderWorkerPolicy>) {
+  return JSON.stringify({ cgroupParent, resourceBudget, temporaryVolumes, maxOutputBytes });
+}
+
 /** Verify delegation and the selected controls before opening persistent host state. */
-export function checkRenderWorkerResources({ cgroupParent, resourceBudget }: Readonly<RenderWorkerPolicy>): void {
-  if (!cgroupParent || !resourceBudget) return;
-  let type: number | undefined;
-  try { type = statfsSync(cgroupParent).type; } catch { /* Missing or inaccessible parent. */ }
-  if (process.platform !== "linux" || type !== 0x63677270) // CGROUP2_SUPER_MAGIC
-    fail("RENDER_WORKER_RESOURCE_UNAVAILABLE", "cgroupParent must be accessible on a Linux cgroup v2 filesystem");
-  const result = spawnSync("python3", [supervisor, "--check-cgroup", cgroupParent, JSON.stringify(resourceBudget)], {
+export function checkRenderWorkerResources(policy: Readonly<RenderWorkerPolicy>): void {
+  if (!policy.resourceBudget) return;
+  if (process.platform !== "linux") fail("RENDER_WORKER_RESOURCE_UNAVAILABLE", "Render resource budgets require Linux");
+  if (policy.cgroupParent) {
+    let type: number | undefined;
+    try { type = statfsSync(policy.cgroupParent).type; } catch { /* Missing or inaccessible parent. */ }
+    if (type !== 0x63677270) // CGROUP2_SUPER_MAGIC
+      fail("RENDER_WORKER_RESOURCE_UNAVAILABLE", "cgroupParent must be accessible on a Linux cgroup v2 filesystem");
+  }
+  const result = spawnSync("python3", [supervisor, "--check-resources", resourceConfiguration(policy)], {
     encoding: "utf8", timeout: 5000, maxBuffer: 4096,
   });
   if (result.status !== 0) fail("RENDER_WORKER_RESOURCE_UNAVAILABLE",
-    `Could not enforce the render resource budget: ${(result.error?.message || result.stderr || "cgroup preflight failed").trim().slice(0, 512)}`);
+    `Could not enforce the render resource budget: ${(result.error?.message || result.stderr || "resource preflight failed").trim().slice(0, 512)}`);
 }
 
 const resourceFailureCodes = new Set(["RENDER_WORKER_CPU_TIME_LIMIT", "RENDER_WORKER_MEMORY_LIMIT",
+  "RENDER_WORKER_TEMPORARY_LIMIT", "RENDER_WORKER_BUSY", "RENDER_WORKER_OUTPUT_INVALID",
   "RENDER_WORKER_RESOURCE_UNAVAILABLE", "RENDER_WORKER_RESOURCE_ACCOUNTING", "RENDER_WORKER_CLEANUP"]);
 function readResourceReport(raw: string, exitCode: number | null, budget: RenderWorkerResourceBudget): {
   usage?: RenderWorkerResourceUsage; failure?: RenderWorkerError;
@@ -88,14 +107,16 @@ function readResourceReport(raw: string, exitCode: number | null, budget: Render
         ...(budget.cpuMillicores !== undefined || budget.cpuTimeMs !== undefined ? ["cpuUsageUsec"] : []),
         ...(budget.cpuMillicores !== undefined ? ["cpuThrottledPeriods"] : []),
         ...(budget.memoryBytes !== undefined ? ["memoryOomEvents", "memoryOomKills"] : []),
+        ...(budget.temporaryBytes !== undefined ? ["temporaryCapacityBytes", "temporaryMinimumAvailableBytes", "temporaryMinimumAvailableInodes"] : []),
       ];
-      if (!usage || typeof usage !== "object" || Object.keys(usage).length !== fields.length ||
-          fields.some(key => typeof usage[key] !== "string" || !/^\d{1,20}$/.test(usage[key]))) throw new Error();
+      if (!usage || typeof usage !== "object" || Array.isArray(usage) ||
+          (!failure && Object.keys(usage).length !== fields.length) ||
+          Object.keys(usage).some(key => !fields.includes(key) || typeof usage[key] !== "string" || !/^\d{1,20}$/.test(usage[key]))) throw new Error();
       Object.freeze(usage);
     }
     return { usage, failure: failure ? new RenderWorkerError(failure.code, failure.message) : undefined };
   } catch {
-    return { failure: new RenderWorkerError("RENDER_WORKER_CLEANUP", "Render worker exited without a valid cgroup cleanup report") };
+    return { failure: new RenderWorkerError("RENDER_WORKER_CLEANUP", "Render worker exited without a valid resource cleanup report") };
   }
 }
 
@@ -153,7 +174,7 @@ export class LocalRenderWorker implements ProjectGraphSnapshotRenderer {
     let childClosed: Promise<number | null> | undefined;
     let receipt: RenderWorkerReceipt | undefined;
     let resourceUsage: RenderWorkerResourceUsage | undefined;
-    const { resourceBudget, cgroupParent } = this.policy;
+    const { resourceBudget } = this.policy;
     const notify = (state: RenderWorkerEvent["state"], extra: Partial<RenderWorkerEvent> = {}) => {
       try { this.options.onEvent?.({ jobId, operation, projectId: data.project.project.id, snapshotHash: data.snapshotHash,
         state, processId: child?.pid, elapsedMs: Math.round(performance.now() - started), ...extra }); } catch { /* Observers cannot change the job outcome. */ }
@@ -173,6 +194,7 @@ export class LocalRenderWorker implements ProjectGraphSnapshotRenderer {
     const accountResourceFailure = (error: RenderWorkerError) => {
       // A renderer error from a dying descendant can precede confirmation of OOM.
       const acceptedStop = failure?.code === "RENDER_WORKER_CANCELLED" || failure?.code === "RENDER_WORKER_TIMEOUT";
+      if (error.code === "RENDER_WORKER_TEMPORARY_LIMIT" && failure?.code === error.code) return;
       if (!acceptedStop || error.code === "RENDER_WORKER_CLEANUP") failure = error;
     };
     const cancel = () => stop(new RenderWorkerError("RENDER_WORKER_CANCELLED", "Render was cancelled"));
@@ -190,8 +212,8 @@ export class LocalRenderWorker implements ProjectGraphSnapshotRenderer {
         child = spawn("python3", [supervisor, process.execPath,
           this.options.workerScript ?? fileURLToPath(new URL("../renderers/remotion/render-worker-entry.ts", import.meta.url)), directory,
           String(this.policy.maxOldSpaceMb), String(this.policy.killGraceMs), String(process.pid),
-          ...(cgroupParent ? [cgroupParent, JSON.stringify(resourceBudget)] : [])], {
-          detached: true, stdio: ["ignore", cgroupParent ? "pipe" : "ignore", "ignore", "ipc"],
+          ...(resourceBudget ? [resourceConfiguration(this.policy)] : [])], {
+          detached: true, stdio: ["ignore", resourceBudget ? "pipe" : "ignore", "ignore", "ipc"],
           env: { ...process.env, TMPDIR: directory, TMP: directory, TEMP: directory },
         });
         let report = "";
@@ -217,7 +239,9 @@ export class LocalRenderWorker implements ProjectGraphSnapshotRenderer {
               return;
             }
             if (m.type === "error" && typeof m.message === "string") {
-              stop(new RenderWorkerError(m.code === "RENDER_WORKER_OUTPUT_LIMIT" ? m.code : "RENDER_WORKER_EXECUTION_FAILED", m.message.slice(0, 2048))); return;
+              const code = m.code === "RENDER_WORKER_OUTPUT_LIMIT" ||
+                (m.code === "RENDER_WORKER_TEMPORARY_LIMIT" && resourceBudget?.temporaryBytes !== undefined) ? m.code : "RENDER_WORKER_EXECUTION_FAILED";
+              stop(new RenderWorkerError(code, m.message.slice(0, 2048))); return;
             }
             if (m.type !== "result" || m.operation !== operation || m.projectId !== data.project.project.id || m.revisionId !== data.revisionId || m.snapshotHash !== data.snapshotHash ||
                 m.rendererId !== this.id || m.rendererVersion !== this.version || !Number.isSafeInteger(m.bytes) || (m.bytes as number) < 1 ||
@@ -228,7 +252,7 @@ export class LocalRenderWorker implements ProjectGraphSnapshotRenderer {
         });
         const code = await childClosed;
         exited = true;
-        // These handlers are installed before the guardian can create a cgroup.
+        // These handlers are installed before the guardian can claim resources.
         const stoppedBeforeSetup = child.signalCode && ["SIGTERM", "SIGINT", "SIGUSR1"].includes(child.signalCode);
         if (resourceBudget && child.pid && (report || !stoppedBeforeSetup)) {
           const resources = readResourceReport(report, code, resourceBudget);

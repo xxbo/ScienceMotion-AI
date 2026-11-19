@@ -9,6 +9,7 @@ import { RemotionProjectGraphRenderer } from "./remotion-project-graph-renderer"
 // Parent/guardian own deadlines and descendant cleanup; IPC loss also ends normal workers.
 process.on("disconnect", () => process.exit(1));
 const directory = process.argv[2];
+const boundedTemporaryStorage = process.env.SCIENCEMOTION_BOUNDED_TEMPORARY === "1";
 let job: RenderWorkerJob | undefined;
 const send = (message: Record<string, unknown>, exitCode?: number) => {
   if (!process.send) process.exit(1);
@@ -30,7 +31,7 @@ try {
     const now = Date.now();
     if (progress.phase !== lastPhase || now - lastProgressAt >= 100) { lastPhase = progress.phase; lastProgressAt = now; send({ type: "progress", ...progress }); }
   };
-  const renderer = new RemotionProjectGraphRenderer(job.entryPoint), request = { ...job.request, onProgress };
+  const renderer = new RemotionProjectGraphRenderer(job.entryPoint, boundedTemporaryStorage), request = { ...job.request, onProgress };
   const bytes = job.operation === "layout" ? Buffer.from(JSON.stringify(await renderer.measureLayout(request as ProjectGraphLayoutRequest)))
     : Buffer.from((await (job.operation === "preview" ? renderer.renderPreview(request as ProjectGraphPreviewRequest) : renderer.renderVideo(request as ProjectGraphVideoRequest))).bytes);
   if (!bytes.length || bytes.length > job.maxOutputBytes) { send({ type: "error", code: "RENDER_WORKER_OUTPUT_LIMIT", message: "Worker output exceeds its byte limit" }, 1); }
@@ -40,4 +41,9 @@ try {
       snapshotHash: job.request.snapshotHash, rendererId: renderer.id, rendererVersion: renderer.version, bytes: bytes.length,
       sha256: createHash("sha256").update(bytes).digest("hex") }, 0);
   }
-} catch (error) { send({ type: "error", code: "RENDER_WORKER_EXECUTION_FAILED", message: (error instanceof Error ? error.message : String(error)).slice(0, 2048) }, 1); }
+} catch (error) {
+  const message = error instanceof Error ? error.message : String(error);
+  const noSpace = (error as NodeJS.ErrnoException | undefined)?.code === "ENOSPC" || /\bENOSPC\b|No space left on device/i.test(message);
+  send({ type: "error", code: boundedTemporaryStorage && noSpace ? "RENDER_WORKER_TEMPORARY_LIMIT" : "RENDER_WORKER_EXECUTION_FAILED",
+    message: message.slice(0, 2048) }, 1);
+}

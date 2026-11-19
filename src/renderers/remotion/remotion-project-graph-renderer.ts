@@ -11,9 +11,15 @@ import type { ProjectGraphLayoutRequest, ProjectGraphPreviewRequest, ProjectGrap
 export class RemotionProjectGraphRenderer implements ProjectGraphSnapshotRenderer {
   readonly id = "remotion.project-graph"; readonly version = "1.0.0";
   private serveUrlPromise?: Promise<string>;
-  constructor(private readonly entryPoint = resolve("src/index.ts")) {}
+  private readonly browserOptions: { onBrowserDownload?: () => never };
+  constructor(private readonly entryPoint = resolve("src/index.ts"), private readonly boundedTemporaryStorage = false) {
+    this.browserOptions = boundedTemporaryStorage ? {
+      onBrowserDownload: () => { throw new Error("Install the Remotion browser before running disk-budgeted jobs"); },
+    } : {};
+  }
   private serveUrl(): Promise<string> {
-    if (!this.serveUrlPromise) this.serveUrlPromise = bundle({ entryPoint: this.entryPoint }).catch(error => { this.serveUrlPromise = undefined; throw error; });
+    if (!this.serveUrlPromise) this.serveUrlPromise = bundle({ entryPoint: this.entryPoint, enableCaching: !this.boundedTemporaryStorage })
+      .catch(error => { this.serveUrlPromise = undefined; throw error; });
     return this.serveUrlPromise;
   }
   private report(request: ProjectGraphRenderRequest, phase: ProjectGraphRenderProgress["phase"], fraction?: number) {
@@ -38,11 +44,11 @@ export class RemotionProjectGraphRenderer implements ProjectGraphSnapshotRendere
       const serveUrl = await this.serveUrl(), token = randomUUID();
       const inputProps = { project: structuredClone(request.project), sceneId: undefined, layoutInspection: { token } };
       this.stage(request, "selecting");
-      const composition = await selectComposition({ serveUrl, id: "ProjectGraph", inputProps });
+      const composition = await selectComposition({ serveUrl, id: "ProjectGraph", inputProps, ...this.browserOptions });
       const measurements = new Map<number, LayoutFrameMeasurement>();
       this.stage(request, "rendering", 0);
       await renderFrames({ composition, serveUrl, inputProps, frames: request.frames, imageFormat: "none", outputDir: null,
-        concurrency: 1, muted: true, cancelSignal: cancellation.cancelSignal, timeoutInMilliseconds: 20000,
+        concurrency: 1, muted: true, cancelSignal: cancellation.cancelSignal, timeoutInMilliseconds: 20000, ...this.browserOptions,
         onStart: () => {}, onFrameUpdate: count => this.report(request, "rendering", count / request.frames.length),
         onArtifact: artifact => {
           if (!artifact.filename.startsWith(`layout-${token}-`)) return;
@@ -61,10 +67,10 @@ export class RemotionProjectGraphRenderer implements ProjectGraphSnapshotRendere
       this.stage(request, "bundling");
       const serveUrl = await this.serveUrl(), inputProps = { project: structuredClone(request.project), sceneId: request.sceneId };
       this.stage(request, "selecting");
-      const composition = await selectComposition({ serveUrl, id: "ProjectGraph", inputProps });
+      const composition = await selectComposition({ serveUrl, id: "ProjectGraph", inputProps, ...this.browserOptions });
       directory = await mkdtemp(join(tmpdir(), "sciencemotion-preview-")); const output = join(directory, "preview.png");
       this.stage(request, "rendering", 0);
-      await renderStill({ composition, serveUrl, output, frame: request.frame, inputProps, cancelSignal: cancellation.cancelSignal });
+      await renderStill({ composition, serveUrl, output, frame: request.frame, inputProps, cancelSignal: cancellation.cancelSignal, ...this.browserOptions });
       this.stage(request, "rendering", 1);
       return { bytes: new Uint8Array(await readFile(output)), mediaType: "image/png", extension: "png", rendererId: this.id, rendererVersion: this.version };
     } finally { cancellation.dispose(); if (directory) await rm(directory, { recursive: true, force: true }); }
@@ -75,11 +81,12 @@ export class RemotionProjectGraphRenderer implements ProjectGraphSnapshotRendere
       this.stage(request, "bundling");
       const serveUrl = await this.serveUrl(), inputProps = { project: structuredClone(request.project), sceneId: request.sceneId };
       this.stage(request, "selecting");
-      const composition = await selectComposition({ serveUrl, id: "ProjectGraph", inputProps });
+      const composition = await selectComposition({ serveUrl, id: "ProjectGraph", inputProps, ...this.browserOptions });
       directory = await mkdtemp(join(tmpdir(), "sciencemotion-video-")); const output = join(directory, "render.mp4");
       this.stage(request, "rendering", 0);
       await renderMedia({ composition, serveUrl, codec: "h264", outputLocation: output, inputProps,
         frameRange: [request.startFrame, request.startFrame + request.durationFrames - 1], pixelFormat: "yuv420p", cancelSignal: cancellation.cancelSignal,
+        disableSharedMemoryCapture: this.boundedTemporaryStorage, ...this.browserOptions,
         onProgress: p => this.report(request, p.renderedDoneIn === null ? "rendering" : "encoding", p.progress) });
       request.signal?.throwIfAborted();
       return { bytes: new Uint8Array(await readFile(output)), mediaType: "video/mp4", extension: "mp4", rendererId: this.id, rendererVersion: this.version };

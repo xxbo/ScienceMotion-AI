@@ -148,6 +148,16 @@ test("resource budget validation distinguishes invalid limits from unavailable e
   resourceBudget.cpuTimeMs = 500;
   assert.deepEqual(policy.resourceBudget, { cpuTimeMs: 2000 });
   assert.ok(Object.isFrozen(policy.resourceBudget));
+  const temporaryVolumes = [resolve("volume")];
+  assert.throws(() => renderWorkerPolicy({ temporaryVolumes }), { code: "RENDER_WORKER_CONFIG" });
+  assert.throws(() => renderWorkerPolicy({ temporaryVolumes, maxConcurrentJobs: 2, resourceBudget: { temporaryBytes: 1024 } }),
+    { code: "RENDER_WORKER_CONFIG" });
+  assert.throws(() => renderWorkerPolicy({ temporaryVolumes: [...temporaryVolumes, temporaryVolumes[0] + "/."], resourceBudget: { temporaryBytes: 1024 } }),
+    { code: "RENDER_WORKER_CONFIG" });
+  const diskOnly = renderWorkerPolicy({ temporaryVolumes, resourceBudget: { temporaryBytes: 1024 } });
+  temporaryVolumes[0] = resolve("other-volume");
+  assert.deepEqual(diskOnly.temporaryVolumes, [resolve("volume")]);
+  assert.ok(Object.isFrozen(diskOnly.temporaryVolumes));
 });
 
 test("native and stdio resource requests fail before creating workspace or trace files", async () => {
@@ -155,7 +165,8 @@ test("native and stdio resource requests fail before creating workspace or trace
   const directory = join(root, "workspace"), traceFile = join(root, "trace.jsonl");
   const renderWorker = { resourceBudget: { cpuMillicores: 500, memoryBytes: 128 * 1024 * 1024 } };
   try {
-    for (const policy of [renderWorker, { ...renderWorker, cgroupParent: root }]) {
+    for (const policy of [renderWorker, { ...renderWorker, cgroupParent: root },
+      { temporaryVolumes: [root], resourceBudget: { temporaryBytes: 32 * 1024 * 1024 } }]) {
       await assert.rejects(openCreativeHost({ directory, renderWorker: policy }), { code: "RENDER_WORKER_RESOURCE_UNAVAILABLE" });
       const config = join(root, "config.json");
       await writeFile(config, JSON.stringify({ schemaVersion: "1.0.0", directory, traceFile, grant: { projectId: "resource-fixture" }, renderWorker: policy }));
