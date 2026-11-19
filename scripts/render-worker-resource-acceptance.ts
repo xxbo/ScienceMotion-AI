@@ -26,8 +26,9 @@ const events: RenderWorkerEvent[] = [], records: RenderJobRecord[] = [];
 const observed: Array<{ jobId: string; group: string; processes: ObservedProcess[] }> = [];
 const fixtureBudget = { cpuMillicores: 500, cpuTimeMs: 750, memoryBytes: 192 * 1024 * 1024 };
 const videoBudget = { cpuMillicores: 1500, memoryBytes: 1536 * 1024 * 1024 };
+const videoTimeoutMs = 60_000;
 const artifacts = new FileSystemArtifactStore(join(directory, "artifacts"));
-const evidence: Record<string, unknown> = { schemaVersion: "1.0.0", cgroupParent, fixtureBudget, videoBudget, events, records, observed };
+const evidence: Record<string, unknown> = { schemaVersion: "1.0.0", cgroupParent, fixtureBudget, videoBudget, videoTimeoutMs, events, records, observed };
 let host: CreativeHost | undefined, worker: LocalRenderWorker | undefined;
 let sequence = 0, observerFailure: unknown;
 
@@ -53,7 +54,7 @@ async function render(projectId: string, name: string, video = false): Promise<R
     ...(video ? { toolId: "render.video", input: { snapshotId, startFrame: 0, durationFrames } }
       : { toolId: "render.preview", input: { snapshotId, frame: 0 } }),
   });
-  const deadline = Date.now() + 45000;
+  const deadline = Date.now() + (video ? videoTimeoutMs + 15_000 : 45_000);
   while (Date.now() < deadline) {
     const record = (await s.jobs.get(admitted.id))!;
     if (!["queued", "running", "stopping", "publishing"].includes(record.state)) {
@@ -147,7 +148,8 @@ try {
 
   let lastSample = 0;
   const binaries = new Set<string>();
-  host = await openCreativeHost({ directory, renderWorker: { cgroupParent, resourceBudget: videoBudget }, onRenderWorkerEvent: event => {
+  host = await openCreativeHost({ directory, renderJobs: { timeoutMs: videoTimeoutMs },
+    renderWorker: { cgroupParent, resourceBudget: videoBudget, timeoutMs: videoTimeoutMs }, onRenderWorkerEvent: event => {
     // Persist transitions and terminal counters. Look for long-lived Chrome and FFmpeg during frame progress.
     if (!event.progress) events.push(event);
     if (!event.progress || !(event.progress.fraction! > 0) || binaries.size === 2 || Date.now() - lastSample < 80) return;
