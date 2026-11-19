@@ -57,6 +57,18 @@ jobs:
           path: out/render-worker-resources/
           if-no-files-found: error
 
+      - name: Verify render job temporary disk limits
+        id: render-temporary
+        run: bash scripts/fixtures/accept-render-temporary-ci.sh
+
+      - name: Upload render job temporary disk evidence
+        if: ${{ !cancelled() && (steps.render-temporary.outcome == 'success' || steps.render-temporary.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: render-worker-temporary-evidence
+          path: out/render-worker-temporary/
+          if-no-files-found: error
+
   validate-and-render:
     runs-on: ubuntu-24.04
     timeout-minutes: 20

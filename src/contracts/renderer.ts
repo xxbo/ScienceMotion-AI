@@ -65,6 +65,9 @@ export interface RenderWorkerResourceUsage {
   cpuThrottledPeriods?: string;
   memoryOomEvents?: string;
   memoryOomKills?: string;
+  temporaryCapacityBytes?: string;
+  temporaryMinimumAvailableBytes?: string;
+  temporaryMinimumAvailableInodes?: string;
 }
 export interface ProjectGraphRenderOutput { bytes: Uint8Array; mediaType: "image/png" | "video/mp4"; extension: "png" | "mp4"; rendererId: string; rendererVersion: string;
   execution?: { kind: "local-process"; protocolVersion: "1.0.0"; jobId: string; processId: number; elapsedMs: number; resourceUsage?: RenderWorkerResourceUsage } }

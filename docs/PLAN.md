@@ -1,6 +1,6 @@
 # Development Plan
 
-Last updated 2026-11-18
+Last updated 2026-11-19
 
 ## Goal and current priority
 
@@ -10,7 +10,7 @@ Prioritize a small demonstrated creation-and-repair workflow on Remotion. Progra
 
 [Platform Vision](PLATFORM_VISION.md) owns durable principles, [Architecture](ARCHITECTURE.md) implementation boundaries, and [P1.1 Acceptance](P1.1-ACCEPTANCE.md) measurable exit gates. Test counts and catalogue size are not product-completion percentages.
 
-P1.2-D2 adds per-job CPU and memory enforcement to the Linux worker. D3 covers temporary storage. Human effect review is assigned to the final acceptance workstream. [D2 CPU and memory](P1.2-D2-CPU-MEMORY.md) · [P1.2 plan](P1.2-PLAN.md).
+P1.2-D1–D3 provide Linux worker resource controls and capacity evidence. D4 verifies combined limits and parallel isolation. Human effect review is assigned to the final acceptance workstream. [D2 CPU and memory](P1.2-D2-CPU-MEMORY.md) · [D3 temporary disk](P1.2-D3-TEMPORARY-DISK.md) · [P1.2 plan](P1.2-PLAN.md).
 
 ## Main is the delivery baseline
 
@@ -66,7 +66,8 @@ P1.1's engineering gates have evidence; full visual closure is deferred to the f
 | 8c — implemented | P1.2-C3 concurrent editing/maintenance acceptance | Actual old/new snapshot rendering, retained-input GC protection, queue-pressure/lifecycle stress and restart evidence |
 | 9a — implemented | P1.2-D1 budget contract and capability | Typed failure at startup for unavailable enforcement, delegated CPU and memory controls, and bounded disk capacity verified by CI |
 | 9b — implemented | P1.2-D2 process-tree CPU and memory | CPU bandwidth and cumulative limits, charged memory ceiling, typed failure and cleanup |
-| 9c–d — D3 next | P1.2-D3/D4 temporary disk and combined real-worker acceptance | Enforced temporary capacity, aggregate resource failure and recovery evidence with real workers |
+| 9c — implemented | P1.2-D3 temporary disk | Leased, bounded temporary volumes, kernel exhaustion evidence, reclamation and real rendering |
+| 9d — next implementation | P1.2-D4 combined real-worker acceptance | Distinct resource failures, parallel healthy work and admission recovery with all budgets configured |
 | 10 — pending | P1.2-E performance evidence | Comparable measurements; justified bundle/worker reuse only if correctness and isolation are preserved |
 | Final acceptance workstream — deferred | Consolidated human effect review | Review both P1.1 fixtures and representative later outputs, record defects/fixes and final reviewed main evidence |
 
@@ -139,7 +140,7 @@ Project/plugin operation remains trusted and single-writer. The [P1.2 first slic
 
 | Stage | Responsibility |
 | --- | --- |
-| P1.2 | A, B, C, D1 and D2 implemented. D3 is next. [P1.2 plan](P1.2-PLAN.md) |
+| P1.2 | A, B, C and D1–D3 implemented. D4 is next. [P1.2 plan](P1.2-PLAN.md) |
 | P1.3 | Broader project/timeline, geometry, SVG/charts, animation, audio/captions and inspection tools |
 | P1.4 | Provider-independent planning and autonomous inspection/repair |
 | P1.5 | Multi-tool composition, performance evidence and new engines without orchestration rewrites |

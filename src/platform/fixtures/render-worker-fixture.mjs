@@ -42,6 +42,45 @@ if (mode === "budget-cpu" || mode === "budget-memory") {
   // The guardian must distinguish a kernel-enforced failure from this fallback.
   process.exit(71);
 }
+if (mode === "budget-temporary") {
+  const load = spawn(process.execPath, ["-e", `
+    const fs = require("node:fs");
+    const path = require("node:path");
+    const temporary = require("node:os").tmpdir();
+    const deadline = performance.now() + 5000;
+    process.on("SIGTERM", () => {});
+    const wait = setInterval(() => {
+      if (performance.now() >= deadline) process.exit(71);
+      if (!fs.existsSync(path.join(temporary, "start-load"))) return;
+      clearInterval(wait);
+      const fd = fs.openSync(path.join(temporary, "fill"), "wx");
+      let written = 0;
+      try {
+        const block = Buffer.alloc(1024 * 1024, 1);
+        for (let i = 0; i < 256; i++) {
+          written += fs.writeSync(fd, block);
+          fs.fsyncSync(fd);
+        }
+      } catch (error) {
+        if (error.code !== "ENOSPC") throw error;
+        process.send({ code: error.code, written });
+        setInterval(() => {}, 1000);
+        return;
+      } finally { fs.closeSync(fd); }
+      process.exit(71);
+    }, 10);
+  `], { stdio: ["ignore", "ignore", "ignore", "ipc"], detached: true });
+  const result = new Promise(resolve => {
+    load.once("message", resolve);
+    load.once("exit", () => resolve(null));
+  });
+  await writeFile(join(dirname(directory), "budget-processes.json"), JSON.stringify({ renderer: process.pid, load: load.pid, directory, tmp: process.env.TMPDIR }));
+  await send({ type: "ready" });
+  const failure = await result;
+  if (failure?.code === "ENOSPC")
+    await send({ type: "error", code: "RENDER_WORKER_TEMPORARY_LIMIT", message: `Detached write/fsync returned ENOSPC after ${failure.written} bytes` });
+  process.exit(71);
+}
 await writeFile(join(dirname(directory), "worker.json"), JSON.stringify({ pid: process.pid, args: process.execArgv, tmp: process.env.TMPDIR }));
 await send({ type: "ready" });
 if (mode === "duplicate") await send({ type: "ready" });
