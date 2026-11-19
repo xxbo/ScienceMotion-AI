@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { mkdir, mkdtemp, readdir, realpath, rm, statfs, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
@@ -87,9 +87,23 @@ async function settled(session: CreativeSession, record: RenderJobRecord) {
     }
   });
 }
-function proc(pid: number, file: "cmdline" | "environ" | "cgroup") {
-  try { return readFileSync(`/proc/${pid}/${file}`, "utf8"); }
+function readLive(path: string) {
+  try { return readFileSync(path, "utf8"); }
   catch (error) { if (!["ENOENT", "ESRCH"].includes((error as NodeJS.ErrnoException).code ?? "")) throw error; }
+}
+const proc = (pid: number, file: "cmdline" | "cgroup") => readLive(`/proc/${pid}/${file}`);
+function locateWorker(jobId: string) {
+  for (const volume of volumes) {
+    for (const job of readdirSync(volume).filter(name => name.startsWith("sciencemotion-disk-"))) {
+      const work = join(volume, job, "work"), marker = readLive(join(work, "worker-scope.json"));
+      if (!marker) continue;
+      const reported = JSON.parse(marker) as { jobId: string; pid: number; temporary: string };
+      if (reported.jobId === jobId) {
+        assert.equal(reported.temporary, work, "The Node renderer inherits the leased temporary directory");
+        return { pid: reported.pid, work, volume };
+      }
+    }
+  }
 }
 const eventKey = (projectId: string, operation: string) => `${projectId}/${operation}`;
 async function observeScope(projectId: string, operation: "preview" | "video", marker: string) {
@@ -97,14 +111,12 @@ async function observeScope(projectId: string, operation: "preview" | "video", m
     const event = latest.get(eventKey(projectId, operation));
     if (!event || event.state === "starting") return;
     assert.equal(event.state, "running", JSON.stringify(event));
-    const guardian = event.processId!;
+    const location = locateWorker(event.jobId);
+    if (!location || !existsSync(join(location.work, marker))) return;
+    const { work, volume } = location, guardian = event.processId!;
     const tree = processes(guardian);
-    const renderer = tree.find(p => p.parent === guardian);
-    if (!renderer) return;
-    const work = proc(renderer.pid, "environ")?.split("\0").find(entry => entry.startsWith("TMPDIR="))?.slice("TMPDIR=".length);
-    if (!work || !existsSync(join(work, marker))) return;
-    const volume = dirname(dirname(work));
-    assert.ok(volumes.includes(volume), `Expected bounded temporary storage for ${projectId}`);
+    const renderer = tree.find(p => p.pid === location.pid && p.parent === guardian);
+    assert.ok(renderer, "The reported Node process is the guardian's child");
     const membership = proc(renderer.pid, "cgroup")?.trim();
     assert.ok(membership?.startsWith("0::/"));
     const group = join("/sys/fs/cgroup", membership!.slice(3));

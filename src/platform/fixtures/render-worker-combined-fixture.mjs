@@ -1,9 +1,13 @@
-import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, renameSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const directory = process.argv[2];
 const job = JSON.parse(readFileSync(join(directory, "request.json"), "utf8"));
 const pressureCases = ["budget-cpu", "budget-memory", "budget-temporary"];
+const scope = join(directory, "worker-scope.json");
+writeFileSync(scope + ".tmp", JSON.stringify({ jobId: job.jobId, pid: process.pid, temporary: tmpdir() }), { flag: "wx" });
+renameSync(scope + ".tmp", scope);
 
 if (pressureCases.includes(job.request.project.project.name)) {
   process.env.SCIENCEMOTION_COMBINED_RESOURCE_FIXTURE = "1";
