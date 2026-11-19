@@ -1,4 +1,4 @@
-"""Compare both production snapshot renderers in isolated Linux process trees."""
+"""Compare production snapshot renders in isolated Linux process trees."""
 import argparse
 import ctypes
 import hashlib
@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CASE = ROOT / "scripts/fixtures/render-performance-case.ts"
 INTERVAL = 0.1
 MIB = 1024 ** 2
-MODES = ("in-process", "worker")
+COMPARISONS = {"execution": ("in-process", "worker"), "bundle": ("worker", "worker-prepared")}
 PREVIEWS = ("cold-preview", "repeat-preview", "recovery-preview")
 
 
@@ -223,22 +223,23 @@ def span(values):
     return f"{statistics.median(values):.1f} [{min(values):.1f}–{max(values):.1f}]"
 
 
-def summary(report):
+def summary(report, modes):
     environment, runs = report["environment"], report["runs"]
     checkout = " with local changes" if environment["dirty"] else ""
-    lines = ["# Render performance baseline", "",
+    title = "Render bundle reuse comparison" if report["comparison"] == "bundle" else "Render performance baseline"
+    lines = [f"# {title}", "",
              f"Commit `{environment['commit']}`{checkout} · {environment['os']} · Node {environment['node']} · {report['pairs']} paired repetitions", "",
              "Times are milliseconds. Values show the median and observed range. Raw fields are in `baseline.json`.", "",
              "| Operation | Mode | Total | Request to bundle | Bundle stage | Composition selection | Render to settlement |",
              "| --- | --- | ---: | ---: | ---: | ---: | ---: |"]
     for name in (call["name"] for call in runs[0]["calls"]):
-        for mode in MODES:
+        for mode in modes:
             calls = [call for run in runs if run["mode"] == mode for call in run["calls"] if call["name"] == name]
             fields = ("totalMs", "startupMs", "bundleMs", "selectionMs", "renderToSettleMs")
             lines.append(f"| {name} | {mode} | " + " | ".join(span([call[key] for call in calls]) for key in fields) + " |")
     lines += ["", "| Mode | Cancel to rejection | Cancel to reaping confirmation | Host startup | Shutdown to reaping | Scratch reclamation |",
               "| --- | ---: | ---: | ---: | ---: | ---: |"]
-    for mode in MODES:
+    for mode in modes:
         own = [run for run in runs if run["mode"] == mode]
         cancelled = [call for run in own for call in run["calls"] if call["status"] == "cancelled"]
         spans = [span([call[field] for call in cancelled]) for field in ("abortToRejectionMs", "abortToReapConfirmationMs")]
@@ -246,12 +247,19 @@ def summary(report):
         lines.append(f"| {mode} | " + " | ".join(spans) + " |")
     lines += ["", "| Mode | Process tree CPU (s) | Peak tree RSS (MiB) | Peak temporary space (MiB) | Peak workspace cache (MiB) |",
               "| --- | ---: | ---: | ---: | ---: |"]
-    for mode in MODES:
+    for mode in modes:
         own = [run for run in runs if run["mode"] == mode]
         spans = [span([sum(run["cpuSeconds"].values()) for run in own])]
         spans += [span([run[field] / MIB for run in own]) for field in
                   ("peakProcessTreeRssBytes", "peakTemporaryBytes", "peakBundleCacheBytes")]
         lines.append(f"| {mode} | " + " | ".join(spans) + " |")
+    if report["comparison"] == "bundle":
+        prepared = [r for r in runs if r["mode"] == "worker-prepared"]
+        build_ms = [r["preparation"]["elapsedMs"] for r in prepared]
+        totals = {mode: span([r["hostWallMs"] for r in runs if r["mode"] == mode]) for mode in modes}
+        lines += ["", f"Preparation before the first request (ms): {span(build_ms)}.", "",
+                  "| Mode | Whole sample including preparation and shutdown (ms) |", "| --- | ---: |",
+                  *[f"| {mode} | {totals[mode]} |" for mode in modes]]
     lines += ["", "Preview bytes, decoded video frames and layout measurements matched across all runs. Every cancelled video",
               "rejected after live frame progress and its observed processes were reaped before the recovery preview.", ""]
     return "\n".join(lines)
@@ -260,7 +268,8 @@ def summary(report):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--samples", type=int, default=3, help="paired repetitions")
-    parser.add_argument("--output", type=Path, default=ROOT / "out/render-performance")
+    parser.add_argument("--compare", choices=COMPARISONS, default="execution", help="execution modes or worker bundle reuse")
+    parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     if args.samples < 1 or sys.platform != "linux":
         parser.error("Run on Linux and specify at least one paired repetition")
@@ -272,8 +281,11 @@ def main():
         raise InterruptedError("The performance baseline was stopped")
 
     signal.signal(signal.SIGTERM, interrupt)
-    args.output.mkdir(parents=True, exist_ok=True)
-    report = {"schemaVersion": "1.0.0", "status": "running", "pairs": args.samples, "sampleIntervalMs": INTERVAL * 1000, "runs": []}
+    output = args.output or ROOT / "out" / ("render-bundle-reuse" if args.compare == "bundle" else "render-performance")
+    output.mkdir(parents=True, exist_ok=True)
+    modes = COMPARISONS[args.compare]
+    report = {"schemaVersion": "1.0.0", "status": "running", "comparison": args.compare, "pairs": args.samples,
+              "sampleIntervalMs": INTERVAL * 1000, "runs": []}
     try:
         report["environment"] = installed_environment()
         arch = {"x86_64": "x64", "aarch64": "arm64"}[platform.machine()]
@@ -282,8 +294,8 @@ def main():
         report["environment"]["ffmpeg"] = command(str(ffmpeg), "-version").splitlines()[0]
         reference = None
         for index in range(args.samples):
-            for mode in (MODES if index % 2 == 0 else reversed(MODES)):
-                with tempfile.TemporaryDirectory(prefix="sm-e1-") as directory:
+            for mode in (modes if index % 2 == 0 else reversed(modes)):
+                with tempfile.TemporaryDirectory(prefix="sm-render-bench-") as directory:
                     row, results = measure(mode, Path(directory))
                     row["pair"] = index + 1
                     row["outputVerification"] = fingerprint(row, results, ffprobe, ffmpeg)
@@ -293,15 +305,15 @@ def main():
                         raise ValueError(f"Output mismatch in pair {index + 1}, {mode}")
                     print(f"Pair {index + 1}/{args.samples} {mode}: {row['hostWallMs'] / 1000:.1f}s", flush=True)
         report["status"] = "passed"
-        (args.output / "summary.md").write_text(summary(report), encoding="utf8")
+        (output / "summary.md").write_text(summary(report, modes), encoding="utf8")
     except (Exception, KeyboardInterrupt) as error:
         report.update(status="failed", failure=str(error))
-        (args.output / "summary.md").write_text(
+        (output / "summary.md").write_text(
             "# Render performance baseline\n\nThe benchmark failed. See `baseline.json` for the failure and completed samples.\n",
             encoding="utf8")
         raise
     finally:
-        (args.output / "baseline.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf8")
+        (output / "baseline.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf8")
 
 
 if __name__ == "__main__":

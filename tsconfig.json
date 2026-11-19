@@ -33,6 +33,7 @@
     "scripts/render-worker-temporary-acceptance.ts",
     "scripts/render-worker-combined-acceptance.ts",
     "scripts/probe-render-resources.ts",
+    "scripts/prepare-render-bundle.ts",
     "scripts/fixtures/**/*.ts"
   ]
 }

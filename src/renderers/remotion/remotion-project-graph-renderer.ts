@@ -12,14 +12,17 @@ export class RemotionProjectGraphRenderer implements ProjectGraphSnapshotRendere
   readonly id = "remotion.project-graph"; readonly version = "1.0.0";
   private serveUrlPromise?: Promise<string>;
   private readonly browserOptions: { onBrowserDownload?: () => never };
-  constructor(private readonly entryPoint = resolve("src/index.ts"), private readonly boundedTemporaryStorage = false) {
+  constructor(private readonly entryPoint = resolve("src/index.ts"), private readonly boundedTemporaryStorage = false,
+    private readonly prepareBundle?: () => Promise<string>) {
     this.browserOptions = boundedTemporaryStorage ? {
       onBrowserDownload: () => { throw new Error("Install the Remotion browser before running disk-budgeted jobs"); },
     } : {};
   }
   private serveUrl(): Promise<string> {
-    if (!this.serveUrlPromise) this.serveUrlPromise = bundle({ entryPoint: this.entryPoint, enableCaching: !this.boundedTemporaryStorage })
-      .catch(error => { this.serveUrlPromise = undefined; throw error; });
+    if (!this.serveUrlPromise) {
+      const load = this.prepareBundle ?? (() => bundle({ entryPoint: this.entryPoint, enableCaching: !this.boundedTemporaryStorage }));
+      this.serveUrlPromise = load().catch(error => { this.serveUrlPromise = undefined; throw error; });
+    }
     return this.serveUrlPromise;
   }
   private report(request: ProjectGraphRenderRequest, phase: ProjectGraphRenderProgress["phase"], fraction?: number) {

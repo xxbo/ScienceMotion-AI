@@ -8,11 +8,12 @@ import type { ProjectGraphRenderProgress } from "../../src/contracts/renderer";
 import type { RenderWorkerEvent } from "../../src/contracts/render-worker";
 import { hashProject } from "../../src/platform/project-snapshots";
 import { LocalRenderWorker } from "../../src/platform/render-worker";
+import { prepareRenderBundle } from "../../src/renderers/remotion/prepared-render-bundle";
 import { RemotionProjectGraphRenderer } from "../../src/renderers/remotion/remotion-project-graph-renderer";
 import { processes, waitReaped, type ObservedProcess } from "./owned-processes";
 
 const [mode, evidence] = process.argv.slice(2);
-assert.ok(mode === "in-process" || mode === "worker");
+assert.ok(mode === "in-process" || mode === "worker" || mode === "worker-prepared");
 assert.ok(evidence);
 const fixture = JSON.parse(await readFile("examples/project-graph-demo.props.json", "utf8")) as { project: ProjectDocument };
 const project = fixture.project;
@@ -21,8 +22,14 @@ const snapshotHash = hashProject(project);
 const request = { project, snapshotHash, revisionId: project.revisions.at(-1)!.id, profile: { width, height, fps } };
 const previewFrame = 45, videoFrames = 30, cancelFrames = 180, layoutFrames = [0, 45, 90];
 const entryPoint = resolve("src/index.ts");
+const round = (ms: number) => Math.round(ms * 10) / 10;
+const preparationStarted = performance.now();
+const preparedBundle = mode === "worker-prepared" ? await prepareRenderBundle(entryPoint, join(tmpdir(), "prepared-bundle")) : undefined;
+const preparation = preparedBundle && { elapsedMs: round(performance.now() - preparationStarted), sha256: preparedBundle.sha256 };
 let workerEvents: RenderWorkerEvent[] = [];
-const worker = mode === "worker" ? new LocalRenderWorker({ entryPoint, onEvent: event => workerEvents.push(event) }) : undefined;
+const worker = mode === "in-process" ? undefined : new LocalRenderWorker({ entryPoint,
+  ...(preparedBundle ? { policy: { preparedBundle } } : {}), onEvent: event => workerEvents.push(event) });
+const workerProcesses = new Set<number>();
 const renderer = worker ?? new RemotionProjectGraphRenderer(entryPoint);
 const calls: Array<{
   name: string; status: "completed" | "cancelled";
@@ -30,7 +37,6 @@ const calls: Array<{
   renderToSettleMs: number; lastProgressToSettleMs: number; firstEncodingAtMs?: number;
   abortToRejectionMs?: number; abortToReapConfirmationMs?: number; observedCommands?: string[];
 }> = [];
-const round = (ms: number) => Math.round(ms * 10) / 10;
 
 async function render(name: string, operation: "preview" | "video" | "layout", cancel = false) {
   workerEvents = [];
@@ -98,6 +104,9 @@ async function render(name: string, operation: "preview" | "video" | "layout", c
     calls.push({ name, ...timings, status: "completed" });
   }
   if (worker) {
+    const processId = workerEvents.find(event => event.state === "starting")?.processId;
+    assert.ok(processId && !workerProcesses.has(processId), "Every render uses a fresh worker process");
+    workerProcesses.add(processId);
     assert.equal(worker.status().activeJobs, 0);
     assert.deepEqual((await readdir(tmpdir())).filter(entry => entry.startsWith("sciencemotion-worker-")), []);
   }
@@ -112,7 +121,7 @@ try {
   await render("layout", "layout");
   await render("cancel-video", "video", true);
   await render("recovery-preview", "preview");
-  await writeFile(join(evidence, "calls.json"), JSON.stringify({ mode, fixture: {
+  await writeFile(join(evidence, "calls.json"), JSON.stringify({ mode, ...(preparation ? { preparation } : {}), fixture: {
     projectId: project.project.id, revisionId: request.revisionId, snapshotHash, profile: request.profile,
     previewFrame, videoFrames, cancelFrames, layoutFrames,
   }, calls }, null, 2), { flag: "wx" });

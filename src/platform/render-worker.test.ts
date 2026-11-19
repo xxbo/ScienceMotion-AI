@@ -160,6 +160,19 @@ test("resource budget validation distinguishes invalid limits from unavailable e
   assert.ok(Object.isFrozen(diskOnly.temporaryVolumes));
 });
 
+test("prepared bundle policy pins an absolute directory and verified-format identity", () => {
+  const bundle = { directory: resolve("bundle"), sha256: "a".repeat(64) };
+  for (const preparedBundle of [{ directory: "relative", sha256: bundle.sha256 },
+    { ...bundle, sha256: "ABC" }, { ...bundle, extra: true }]) {
+    assert.throws(() => renderWorkerPolicy({ preparedBundle }), { code: "RENDER_WORKER_CONFIG" });
+  }
+  const policy = renderWorkerPolicy({ preparedBundle: bundle });
+  assert.deepEqual(policy.preparedBundle, bundle);
+  assert.ok(Object.isFrozen(policy.preparedBundle));
+  bundle.directory = resolve("other-bundle");
+  assert.equal(policy.preparedBundle?.directory, resolve("bundle"));
+});
+
 test("native and stdio resource requests fail before creating workspace or trace files", async () => {
   const root = await mkdtemp(join(tmpdir(), "science-worker-resource-config-"));
   const directory = join(root, "workspace"), traceFile = join(root, "trace.jsonl");

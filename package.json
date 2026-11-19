@@ -36,6 +36,7 @@
     "accept:render-scheduler": "tsx scripts/render-job-scheduler-acceptance.ts",
     "accept:render-maintenance": "tsx scripts/render-job-maintenance-acceptance.ts",
     "probe:render-resources": "tsx scripts/probe-render-resources.ts",
+    "prepare:render-bundle": "tsx scripts/prepare-render-bundle.ts",
     "bench:render": "python3 scripts/render-performance-baseline.py"
   },
   "dependencies": {
