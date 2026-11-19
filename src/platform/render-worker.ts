@@ -27,10 +27,10 @@ const absolutePath = (path: unknown): path is string => typeof path === "string"
 
 export function renderWorkerPolicy(value: Partial<RenderWorkerPolicy> = {}): Readonly<RenderWorkerPolicy> {
   if (!value || typeof value !== "object" || Array.isArray(value) ||
-      Object.keys(value).some(k => !["resourceBudget", "cgroupParent", "temporaryVolumes"].includes(k) && !Object.hasOwn(defaults, k)))
+      Object.keys(value).some(k => !["resourceBudget", "cgroupParent", "temporaryVolumes", "preparedBundle"].includes(k) && !Object.hasOwn(defaults, k)))
     fail("RENDER_WORKER_CONFIG", "Unknown render worker policy field");
-  const { resourceBudget, cgroupParent, temporaryVolumes, ...worker } = value;
-  const policy = { ...defaults, ...worker };
+  const { resourceBudget, cgroupParent, temporaryVolumes, preparedBundle, ...worker } = value;
+  const policy = { ...defaults, ...worker, ...(preparedBundle === undefined ? {} : { preparedBundle: validatePreparedBundle(preparedBundle) }) };
   const bounds: Record<keyof typeof defaults, [number, number]> = {
     timeoutMs: [1, 300000], maxConcurrentJobs: [1, 4], maxOutputBytes: [1024, 64 * 1024 * 1024], maxOldSpaceMb: [128, 4096], killGraceMs: [0, 1000],
   };
@@ -66,6 +66,14 @@ export function renderWorkerPolicy(value: Partial<RenderWorkerPolicy> = {}): Rea
   if (cgroupParent !== undefined) fail("RENDER_WORKER_CONFIG", "cgroupParent requires resourceBudget");
   if (temporaryVolumes !== undefined) fail("RENDER_WORKER_CONFIG", "temporaryVolumes requires resourceBudget.temporaryBytes");
   return Object.freeze(policy);
+}
+
+function validatePreparedBundle(value: NonNullable<RenderWorkerPolicy["preparedBundle"]>) {
+  if (!value || typeof value !== "object" || ![Object.prototype, null].includes(Object.getPrototypeOf(value)) ||
+      Object.keys(value).length !== 2 || !Object.hasOwn(value, "directory") || !Object.hasOwn(value, "sha256") ||
+      !absolutePath(value.directory) || typeof value.sha256 !== "string" || !/^[a-f0-9]{64}$/.test(value.sha256))
+    fail("RENDER_WORKER_CONFIG", "preparedBundle requires an absolute directory and a SHA-256 identity");
+  return Object.freeze({ directory: resolve(value.directory), sha256: value.sha256 });
 }
 
 function resourceConfiguration({ cgroupParent, resourceBudget, temporaryVolumes, maxOutputBytes }: Readonly<RenderWorkerPolicy>) {
@@ -165,7 +173,9 @@ export class LocalRenderWorker implements ProjectGraphSnapshotRenderer {
     const { signal, onProgress, ...fields } = request;
     const provided = Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== undefined)) as typeof fields;
     const jobId = randomUUID(), started = performance.now();
-    const job: RenderWorkerJob = { protocolVersion: "1.0.0", jobId, operation, entryPoint: resolve(this.options.entryPoint ?? "src/index.ts"), maxOutputBytes: this.policy.maxOutputBytes, request: provided };
+    const preparedBundle = this.policy.preparedBundle;
+    const job: RenderWorkerJob = { protocolVersion: "1.0.0", jobId, operation, entryPoint: resolve(this.options.entryPoint ?? "src/index.ts"),
+      ...(preparedBundle ? { preparedBundle } : {}), maxOutputBytes: this.policy.maxOutputBytes, request: provided };
     let text: string, data: RenderWorkerJob["request"];
     try { assertFiniteJson(job); text = JSON.stringify(job); if (Buffer.byteLength(text) > 12 * 1024 * 1024) fail("RENDER_WORKER_INPUT_LIMIT", "Worker request exceeds 12 MiB"); data = JSON.parse(text).request; }
     catch (error) { return Promise.reject(error); }
@@ -240,6 +250,7 @@ export class LocalRenderWorker implements ProjectGraphSnapshotRenderer {
             }
             if (m.type === "error" && typeof m.message === "string") {
               const code = m.code === "RENDER_WORKER_OUTPUT_LIMIT" ||
+                (m.code === "RENDER_WORKER_BUNDLE_INVALID" && preparedBundle !== undefined) ||
                 (m.code === "RENDER_WORKER_TEMPORARY_LIMIT" && resourceBudget?.temporaryBytes !== undefined) ? m.code : "RENDER_WORKER_EXECUTION_FAILED";
               stop(new RenderWorkerError(code, m.message.slice(0, 2048))); return;
             }

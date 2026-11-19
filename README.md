@@ -6,7 +6,7 @@ An extensible science-video creation framework for AI agents: discover typed too
 
 Watch the [30-second CPU-cache capability sample](docs/showcase/cpu-cache-30s.mp4) ([download MP4](https://raw.githubusercontent.com/xxbo/ScienceMotion-AI/main/docs/showcase/cpu-cache-30s.mp4)). It combines four scenes, text, shapes, paths, keyframes and a data-driven chart using the current public tools. Mandarin narration is added by a separate finishing script. [Reproduction, evidence and limits](docs/showcase/README.md).
 
-Main is the delivery baseline. P1.2-A's render-worker lifecycle was delivered on `b4e5bc9fa47111ce8a8324f69b14559d25d4f1de`. [CI #44002989900](https://github.com/xxbo/ScienceMotion-AI/actions/runs/44002989900) passed 223 tests and the real-render regressions. **P1.1 engineering is delivered and human review is deferred to final acceptance. P1.2 includes worker lifecycle, concurrent jobs, combined Linux resource limits and a render performance baseline. E2 reuse evaluation is next.**
+Main is the delivery baseline. P1.2-A's render-worker lifecycle was delivered on `b4e5bc9fa47111ce8a8324f69b14559d25d4f1de`. [CI #44002989900](https://github.com/xxbo/ScienceMotion-AI/actions/runs/44002989900) passed 223 tests and the real-render regressions. **P1.1 engineering is delivered and human review is deferred to final acceptance. P1.2 includes worker lifecycle, concurrent jobs, combined Linux resource limits, a render performance baseline and prepared bundle reuse.**
 
 | Stage | Implemented scope |
 | --- | --- |
@@ -31,7 +31,7 @@ Main is the delivery baseline. P1.2-A's render-worker lifecycle was delivered on
 | P1.2-D3 | Dedicated ext4 loop volumes, kernel disk exhaustion, typed failure and reclamation. [D3 temporary disk](docs/P1.2-D3-TEMPORARY-DISK.md) |
 | P1.2-D4 | Combined resource limits, parallel rendering through each failure, and verified slot and volume reuse. [D4 acceptance](docs/P1.2-D4-COMBINED-RESOURCES.md) |
 | P1.2-E1 | Reproducible paired performance measurements with media, layout and cancellation verification. [E1 baseline](docs/P1.2-E1-PERFORMANCE-BASELINE.md) |
-| P1.2-E2 | Reuse evaluation against the baseline. [Plan](docs/P1.2-PLAN.md#e--performance-evidence-and-justified-reuse) |
+| P1.2-E2 | Opt-in prepared bundle reuse with disposable workers, invalidation and isolation checks. [E2 bundle reuse](docs/P1.2-E2-BUNDLE-REUSE.md) |
 | P1.3+ | Broader tools/professional engines and general autonomous visual iteration |
 
 The built-in workspace plugin now includes initial scene, text, shape, transform and keyframe tools. The generic Project Graph composition is a first 2D slice; the CPU-cache Episode renderer remains separate. The [two-topic acceptance scenario](docs/P1.1-CREATIVE-LOOP.md) creates 12-second cache and water-cycle fixtures through public tools, detects/repairs seeded defects, edits text/motion and verifies export/restart/restore including original data dependencies. CI preserves six baseline/edited/restored MP4s, 18 previews, manifests and invocation evidence. These technical fixtures are silent and scripted.
@@ -104,6 +104,8 @@ Set `renderWorker.temporaryVolumes` and `renderWorker.resourceBudget.temporaryBy
 The combined acceptance enables all resource budgets in the same host, verifies CPU, memory and disk failures in separate rounds, and checks a parallel video and a queued preview after each failure. [D4 combined acceptance](docs/P1.2-D4-COMBINED-RESOURCES.md).
 
 `npm run bench:render` compares isolated in-process and worker runs over the same snapshot. It writes raw timings and a summary under `out/render-performance/`. [E1 reproduction and metrics](docs/P1.2-E1-PERFORMANCE-BASELINE.md).
+
+`npm run bench:render -- --compare bundle` compares worker requests with and without a prepared bundle and includes build time in the sample totals. [E2 preparation and metrics](docs/P1.2-E2-BUNDLE-REUSE.md).
 
 ## Design and documentation
 

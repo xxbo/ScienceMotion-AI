@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { mkdir, mkdtemp, readdir, realpath, rm, statfs, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { isAbsolute, join, resolve } from "node:path";
@@ -12,6 +12,7 @@ import type { RenderWorkerEvent } from "../src/contracts/render-worker";
 import { FileSystemArtifactStore } from "../src/platform/artifact-store";
 import { openCreativeHost } from "../src/platform/creative-host";
 import { LocalRenderWorker } from "../src/platform/render-worker";
+import { prepareRenderBundle } from "../src/renderers/remotion/prepared-render-bundle";
 import { assertReaped, processes, type ObservedProcess } from "./fixtures/owned-processes";
 
 const { values } = parseArgs({ options: { "temporary-volume": { type: "string" } } });
@@ -167,9 +168,27 @@ try {
   await writeFile(join(output, "budgeted.mp4"), bytes);
   await clean();
   await host.close();
+
+  const preparedBundle = await prepareRenderBundle(resolve("src/index.ts"), join(root, "prepared-bundle"));
+  let preparedStagingPath: string | undefined;
+  host = await openCreativeHost({ directory, renderWorker: { ...policy, preparedBundle }, onRenderWorkerEvent: event => {
+    if (!event.progress) events.push(event);
+    if (event.progress?.phase !== "selecting") return;
+    const jobRoot = activeRoot();
+    if (!jobRoot) return;
+    const path = join(jobRoot, "work", "sciencemotion-prepared-bundle");
+    if (existsSync(join(path, "index.html"))) preparedStagingPath = path;
+  } });
+  const preview = await render("disk-prepared-preview", "Disk-budgeted prepared preview");
+  assert.equal(preview.state, "succeeded", JSON.stringify(preview));
+  assert.ok(preparedStagingPath, "The verified bundle copy must be on the leased volume");
+  assert.equal(events.at(-1)!.resourceUsage?.temporaryCapacityBytes, String(temporaryBytes));
+  const preparedReclaimed = await clean();
+  await host.close();
   host = await openCreativeHost({ directory });
   for (const record of records) assert.deepEqual(await actor(record.input.projectId).jobs.get(record.id), record);
-  Object.assign(evidence, { status: "passed", kernelErrno: "ENOSPC", bytesWritten: Number(kernelError[1]), reclaimed, mediaPaths, artifact, exactJobsAfterReopen: true });
+  Object.assign(evidence, { status: "passed", kernelErrno: "ENOSPC", bytesWritten: Number(kernelError[1]), reclaimed, mediaPaths, artifact,
+    preparedPreview: { bundleSha256: preparedBundle.sha256, stagingPath: preparedStagingPath, reclaimed: preparedReclaimed }, exactJobsAfterReopen: true });
   console.log("PASS: detached writer hit ENOSPC, volume and worker reused, Chromium/FFmpeg rendered on the volume, records survived reopening");
 } catch (error) {
   Object.assign(evidence, { status: "failed", failure: error instanceof Error ? error.stack : String(error) });

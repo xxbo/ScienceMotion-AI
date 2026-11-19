@@ -111,6 +111,21 @@ jobs:
           path: out/render-performance/
           if-no-files-found: error
 
+      - name: Compare disposable workers with a prepared bundle
+        id: render-bundle-reuse
+        run: npm run bench:render -- --compare bundle
+
+      - name: Verify prepared bundle isolation and invalidation
+        run: npx tsx scripts/fixtures/render-bundle-reuse-acceptance.ts
+
+      - name: Upload render bundle reuse evidence
+        if: ${{ !cancelled() && (steps.render-bundle-reuse.outcome == 'success' || steps.render-bundle-reuse.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: render-bundle-reuse
+          path: out/render-bundle-reuse/
+          if-no-files-found: error
+
   validate-and-render:
     runs-on: ubuntu-24.04
     timeout-minutes: 20

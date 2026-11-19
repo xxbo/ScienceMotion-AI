@@ -14,6 +14,11 @@ export interface RenderWorkerResourceBudget {
   /** Capacity of the job's dedicated temporary filesystem, in bytes. */
   temporaryBytes?: number;
 }
+/** A locally prepared, content-addressed Remotion bundle from a trusted deployment. */
+export interface RenderWorkerPreparedBundle {
+  directory: string;
+  sha256: string;
+}
 export interface RenderWorkerPolicy {
   timeoutMs: number;
   maxConcurrentJobs: number;
@@ -26,6 +31,7 @@ export interface RenderWorkerPolicy {
   cgroupParent?: string;
   /** Dedicated ext4 loop mount roots that can be leased by disk-budgeted jobs. */
   temporaryVolumes?: readonly string[];
+  preparedBundle?: Readonly<RenderWorkerPreparedBundle>;
 }
 export interface RenderWorkerEvent {
   jobId: string; operation: RenderWorkerOperation; projectId: string; snapshotHash: string;
@@ -36,6 +42,7 @@ export interface RenderWorkerEvent {
 /** Private file/IPC protocol between trusted application-owned processes. No workspace/store handles. */
 export interface RenderWorkerJob {
   protocolVersion: "1.0.0"; jobId: string; operation: RenderWorkerOperation; entryPoint: string;
+  preparedBundle?: Readonly<RenderWorkerPreparedBundle>;
   maxOutputBytes: number; request: SerializedRequest<RenderWorkerRequest>;
 }
 export interface RenderWorkerReceipt {
