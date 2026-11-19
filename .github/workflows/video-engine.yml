@@ -81,6 +81,36 @@ jobs:
           path: out/render-worker-combined/
           if-no-files-found: error
 
+  render-performance-baseline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install --no-package-lock
+
+      - name: Ensure Remotion browser
+        run: npx remotion browser ensure
+
+      - name: Measure paired render performance and verify results
+        id: render-performance
+        run: npm run bench:render
+
+      - name: Upload render performance baseline
+        if: ${{ !cancelled() && (steps.render-performance.outcome == 'success' || steps.render-performance.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: render-performance-baseline
+          path: out/render-performance/
+          if-no-files-found: error
+
   validate-and-render:
     runs-on: ubuntu-24.04
     timeout-minutes: 20

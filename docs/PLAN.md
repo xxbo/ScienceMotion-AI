@@ -10,7 +10,7 @@ Prioritize a small demonstrated creation-and-repair workflow on Remotion. Progra
 
 [Platform Vision](PLATFORM_VISION.md) owns durable principles, [Architecture](ARCHITECTURE.md) implementation boundaries, and [P1.1 Acceptance](P1.1-ACCEPTANCE.md) measurable exit gates. Test counts and catalogue size are not product-completion percentages.
 
-P1.2-D provides Linux worker resource limits and verifies parallel isolation and recovery with all limits enabled. P1.2-E measures performance and evaluates justified reuse. Human effect review is assigned to the final acceptance workstream. [D4 combined resources](P1.2-D4-COMBINED-RESOURCES.md) · [P1.2 plan](P1.2-PLAN.md).
+P1.2-D provides Linux worker resource limits and verifies parallel isolation and recovery with all limits enabled. E1 measures rendering performance. E2 evaluates reuse against that baseline. Human effect review is assigned to the final acceptance workstream. [D4 combined resources](P1.2-D4-COMBINED-RESOURCES.md) · [E1 baseline](P1.2-E1-PERFORMANCE-BASELINE.md) · [P1.2 plan](P1.2-PLAN.md).
 
 ## Main is the delivery baseline
 
@@ -68,7 +68,8 @@ P1.1's engineering gates have evidence; full visual closure is deferred to the f
 | 9b — implemented | P1.2-D2 process-tree CPU and memory | CPU bandwidth and cumulative limits, charged memory ceiling, typed failure and cleanup |
 | 9c — implemented | P1.2-D3 temporary disk | Leased, bounded temporary volumes, kernel exhaustion evidence, reclamation and real rendering |
 | 9d — implemented | P1.2-D4 combined real-worker acceptance | Distinct resource failures, parallel healthy work and admission recovery with all budgets configured |
-| 10 — next implementation | P1.2-E performance evidence | Comparable measurements and justified reuse that preserves correctness and isolation |
+| 10a — implemented | P1.2-E1 performance baseline | Paired measurements of both execution modes with verified media, layout, cancellation and recovery |
+| 10b — next implementation | P1.2-E2 reuse evaluation | Compare benefits with the baseline and verify correctness and isolation for any selected reuse |
 | Final acceptance workstream — deferred | Consolidated human effect review | Review both P1.1 fixtures and representative later outputs, record defects/fixes and final reviewed main evidence |
 
 Land each verified increment independently. I2 is a bounded measurement feature, not a new Studio UI or a general autonomous video critic. Additional infrastructure needs an acceptance case that depends on it.
@@ -140,7 +141,7 @@ Project/plugin operation remains trusted and single-writer. The [P1.2 first slic
 
 | Stage | Responsibility |
 | --- | --- |
-| P1.2 | A–D implemented. E is next. [P1.2 plan](P1.2-PLAN.md) |
+| P1.2 | A–D and E1 implemented. E2 is next. [P1.2 plan](P1.2-PLAN.md) |
 | P1.3 | Broader project/timeline, geometry, SVG/charts, animation, audio/captions and inspection tools |
 | P1.4 | Provider-independent planning and autonomous inspection/repair |
 | P1.5 | Multi-tool composition, performance evidence and new engines without orchestration rewrites |

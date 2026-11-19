@@ -5,6 +5,10 @@ import { readFile } from "node:fs/promises";
 
 export interface ObservedProcess { pid: number; parent: number; group: number; command: string; startTicks: string }
 const startTicks = (stat: string) => stat.slice(stat.lastIndexOf(")") + 2).split(" ")[19];
+const disappeared = (error: unknown) => {
+  const code = (error as NodeJS.ErrnoException).code;
+  return code === "ENOENT" || code === "ESRCH";
+};
 export function processes(root: number): ObservedProcess[] {
   const ps = spawnSync("ps", ["-eo", "pid=,ppid=,pgid=,comm="], { encoding: "utf8", timeout: 5000 });
   assert.equal(ps.status, 0, ps.stderr);
@@ -19,12 +23,12 @@ export function processes(root: number): ObservedProcess[] {
   }
   return entries.filter(p => owned.has(p.pid)).flatMap(p => {
     try { return [{ ...p, startTicks: startTicks(readFileSync(`/proc/${p.pid}/stat`, "utf8")) }]; }
-    catch (e) { if ((e as NodeJS.ErrnoException).code === "ENOENT") return []; throw e; }
+    catch (error) { if (disappeared(error)) return []; throw error; }
   });
 }
 export async function stillOwned(p: ObservedProcess): Promise<boolean> {
   try { return startTicks(await readFile(`/proc/${p.pid}/stat`, "utf8")) === p.startTicks; }
-  catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return false; throw error; }
+  catch (error) { if (disappeared(error)) return false; throw error; }
 }
 export async function assertReaped(observed: ObservedProcess[]) {
   for (const p of observed) assert.equal(await stillOwned(p), false, `Owned process ${p.pid} (${p.command}) was not reaped`);

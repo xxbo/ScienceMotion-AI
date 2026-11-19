@@ -35,7 +35,8 @@
     "accept:render-jobs": "python3 scripts/fixtures/owned-process-harness.py node --import tsx scripts/render-job-cli-acceptance.ts",
     "accept:render-scheduler": "tsx scripts/render-job-scheduler-acceptance.ts",
     "accept:render-maintenance": "tsx scripts/render-job-maintenance-acceptance.ts",
-    "probe:render-resources": "tsx scripts/probe-render-resources.ts"
+    "probe:render-resources": "tsx scripts/probe-render-resources.ts",
+    "bench:render": "python3 scripts/render-performance-baseline.py"
   },
   "dependencies": {
     "@remotion/cli": "^4.0.0",
