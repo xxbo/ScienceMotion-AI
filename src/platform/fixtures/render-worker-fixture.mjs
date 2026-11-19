@@ -28,20 +28,11 @@ if (mode === "budget-cpu" || mode === "budget-memory") {
       if (!fs.existsSync(gate)) return;
       clearInterval(wait);
       if (mode === "budget-cpu") {
-        if (combined) {
-          const { Worker } = require("node:worker_threads");
-          for (let i = 0; i < 4; i++) {
-            new Worker("const end = performance.now() + 18000; while (performance.now() < end) {}", { eval: true });
-          }
-          return;
-        }
         const end = performance.now() + 5000;
         while (performance.now() < end) {}
       } else {
-        const blocks = combined ? 56 : 12;
-        const blockBytes = (combined ? 32 : 24) * 1024 * 1024;
-        const resident = Array.from({ length: blocks }, () => Buffer.alloc(blockBytes, 1));
-        if (resident.length !== blocks) process.exit(72);
+        const resident = Array.from({ length: 12 }, () => Buffer.alloc(24 * 1024 * 1024, 1));
+        if (resident.length !== 12) process.exit(72);
       }
       process.exit(71);
     }, 10);

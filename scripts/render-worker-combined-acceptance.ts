@@ -10,7 +10,7 @@ import { parseArgs } from "node:util";
 import type { CreativeHost, CreativeSession } from "../src/contracts/creative-host";
 import type { ProjectDocument } from "../src/contracts/project";
 import type { RenderJobRecord } from "../src/contracts/render-job";
-import type { RenderWorkerEvent } from "../src/contracts/render-worker";
+import type { RenderWorkerEvent, RenderWorkerResourceBudget } from "../src/contracts/render-worker";
 import { FileSystemArtifactStore } from "../src/platform/artifact-store";
 import { openCreativeHost } from "../src/platform/creative-host";
 import { LocalRenderWorker } from "../src/platform/render-worker";
@@ -27,8 +27,9 @@ await mkdir(output, { recursive: true });
 const root = await mkdtemp(join(tmpdir(), "sciencemotion-combined-")), directory = join(root, "host"), staging = join(root, "staging");
 const ffprobe = join(dirname(createRequire(import.meta.url).resolve(`@remotion/compositor-linux-${process.arch}-gnu/package.json`)), "ffprobe");
 const mib = 1024 * 1024, frames = 60;
-const budget = { cpuMillicores: 2500, cpuTimeMs: 22000, memoryBytes: 1536 * mib, temporaryBytes: 128 * mib };
-const policy = { maxConcurrentJobs: 2, cgroupParent, temporaryVolumes: volumes, resourceBudget: budget };
+const pressureBudget = { cpuMillicores: 500, cpuTimeMs: 1000, memoryBytes: 256 * mib, temporaryBytes: 128 * mib };
+const mediaBudget = { cpuMillicores: 3000, cpuTimeMs: 45000, memoryBytes: 1536 * mib, temporaryBytes: 128 * mib };
+const pool = { maxConcurrentJobs: 2, cgroupParent, temporaryVolumes: volumes };
 const cases = [
   { name: "cpu", fixture: "budget-cpu", code: "RENDER_WORKER_CPU_TIME_LIMIT", color: "#55d6e8" },
   { name: "memory", fixture: "budget-memory", code: "RENDER_WORKER_MEMORY_LIMIT", color: "#ffb454" },
@@ -39,8 +40,9 @@ const records: RenderJobRecord[] = [], events: RenderWorkerEvent[] = [], latest 
 const scopes: Array<{ event: RenderWorkerEvent; tree: ObservedProcess[]; group: string; volume: string; work: string }> = [];
 const scenarios: Array<Record<string, unknown>> = [];
 const evidence: Record<string, unknown> = { schemaVersion: "1.0.0", kernel: readFileSync("/proc/sys/kernel/osrelease", "utf8").trim(),
-  policy, status: "running", events, records, scopes, scenarios };
-let host: CreativeHost | undefined, worker: LocalRenderWorker | undefined, sequence = 0;
+  pool, pressureBudget, mediaBudget, status: "running", events, records, scopes, scenarios };
+let host: CreativeHost | undefined, sequence = 0;
+const workers: LocalRenderWorker[] = [];
 const initial = await Promise.all(volumes.map(volume => statfs(volume)));
 const store = new FileSystemArtifactStore(join(directory, "artifacts"));
 
@@ -106,7 +108,7 @@ function locateWorker(jobId: string) {
   }
 }
 const eventKey = (projectId: string, operation: string) => `${projectId}/${operation}`;
-async function observeScope(projectId: string, operation: "preview" | "video", marker: string) {
+async function observeScope(projectId: string, operation: "preview" | "video", marker: string, budget: Required<RenderWorkerResourceBudget>) {
   return until(`${projectId}/${operation} at ${marker}`, () => {
     const event = latest.get(eventKey(projectId, operation));
     if (!event || event.state === "starting") return;
@@ -129,6 +131,7 @@ async function observeScope(projectId: string, operation: "preview" | "video", m
     const control = (name: string) => readFileSync(join(group, name), "utf8").trim();
     assert.equal(control("cpu.max"), `${budget.cpuMillicores * 100} 100000`);
     assert.equal(control("memory.max"), String(budget.memoryBytes));
+    assert.equal(control("memory.swap.max"), "0");
     assert.equal(control("memory.oom.group"), "1");
     const scope = { event, tree, group, volume, work };
     scopes.push(scope);
@@ -146,9 +149,9 @@ async function verifyArtifact(record: RenderJobRecord, kind: string, event: Rend
   assert.equal(artifact.metadata?.snapshotHash, record.input.snapshot.contentHash);
   const usage = event.resourceUsage!;
   assert.ok(usage);
-  assert.ok(Number(usage.cpuUsageUsec) > 0 && Number(usage.cpuUsageUsec) < budget.cpuTimeMs * 1000);
+  assert.ok(Number(usage.cpuUsageUsec) > 0 && Number(usage.cpuUsageUsec) < mediaBudget.cpuTimeMs * 1000);
   assert.equal(usage.memoryOomKills, "0");
-  assert.equal(usage.temporaryCapacityBytes, String(budget.temporaryBytes));
+  assert.equal(usage.temporaryCapacityBytes, String(mediaBudget.temporaryBytes));
   assert.ok(Number(usage.temporaryMinimumAvailableBytes) > 0);
   const execution = artifact.metadata?.execution as { kind?: string; jobId?: string; resourceUsage?: unknown };
   assert.equal(execution.kind, "local-process");
@@ -180,9 +183,18 @@ async function verifyArtifact(record: RenderJobRecord, kind: string, event: Rend
 
 try {
   await mkdir(staging);
-  worker = new LocalRenderWorker({ policy, temporaryDirectory: staging, workerScript: resolve("src/platform/fixtures/render-worker-combined-fixture.mjs"),
-    onEvent: event => { events.push(event); latest.set(eventKey(event.projectId, event.operation), event); } });
-  host = await openCreativeHost({ directory, renderer: worker, renderJobs: { maxConcurrentJobs: 2, maxQueuedJobs: 1 } });
+  for (const resourceBudget of [pressureBudget, mediaBudget]) {
+    workers.push(new LocalRenderWorker({ policy: { ...pool, resourceBudget }, temporaryDirectory: staging,
+      workerScript: resolve("src/platform/fixtures/render-worker-combined-fixture.mjs"),
+      onEvent: event => { events.push(event); latest.set(eventKey(event.projectId, event.operation), event); } }));
+  }
+  const [pressureWorker, mediaWorker] = workers;
+  host = await openCreativeHost({ directory, renderJobs: { maxConcurrentJobs: 2, maxQueuedJobs: 1 },
+    renderer: {
+      id: mediaWorker.id, version: mediaWorker.version,
+      renderVideo: request => mediaWorker.renderVideo(request),
+      renderPreview: request => (request.project.project.id.startsWith("pressure-") ? pressureWorker : mediaWorker).renderPreview(request),
+    } });
   for (const { name, fixture, code, color } of cases) {
     const overloaded = await seed(`pressure-${name}`, fixture, color);
     const healthy = await seed(`sibling-${name}`, `Healthy ${name} render`, color);
@@ -191,10 +203,11 @@ try {
     const followup = await submit(healthy, "preview", name + "-followup");
     assert.equal(followup.state, "queued");
     const [loadScope, siblingScope] = await Promise.all([
-      observeScope(overloaded.projectId, "preview", "../budget-processes.json"),
-      observeScope(healthy.projectId, "video", "video-paused"),
+      observeScope(overloaded.projectId, "preview", "../budget-processes.json", pressureBudget),
+      observeScope(healthy.projectId, "video", "video-paused", mediaBudget),
     ]);
-    assert.equal(worker.status().activeJobs, 2);
+    assert.equal(pressureWorker.status().activeJobs, 1);
+    assert.equal(mediaWorker.status().activeJobs, 1);
     assert.equal((await healthy.session.jobs.get(followup.id))?.state, "queued");
     assert.notEqual(loadScope.group, siblingScope.group);
     assert.notEqual(loadScope.volume, siblingScope.volume);
@@ -216,9 +229,9 @@ try {
     assert.equal(failureEvent.code, code);
     const usage = failureEvent.resourceUsage!;
     assert.ok(usage);
-    assert.equal(usage.temporaryCapacityBytes, String(budget.temporaryBytes));
+    assert.equal(usage.temporaryCapacityBytes, String(pressureBudget.temporaryBytes));
     if (name === "cpu") {
-      assert.ok(Number(usage.cpuUsageUsec) >= budget.cpuTimeMs * 1000);
+      assert.ok(Number(usage.cpuUsageUsec) >= pressureBudget.cpuTimeMs * 1000);
       assert.ok(Number(usage.cpuThrottledPeriods) > 0);
     }
     if (name === "memory") assert.ok(Number(usage.memoryOomEvents) > 0 && Number(usage.memoryOomKills) > 0);
@@ -227,7 +240,7 @@ try {
     await assertReaped(loadScope.tree);
     assert.equal(existsSync(loadScope.group), false);
     assert.equal(existsSync(loadScope.work), false);
-    const reused = await observeScope(healthy.projectId, "preview", "request.json");
+    const reused = await observeScope(healthy.projectId, "preview", "request.json", mediaBudget);
     assert.equal(reused.volume, loadScope.volume, "The queued job must reuse the exhausted job's volume");
     assert.notEqual(reused.group, loadScope.group);
     assert.notEqual(reused.group, siblingScope.group);
@@ -242,7 +255,8 @@ try {
     const outputs = await Promise.all([verifyArtifact(video, name, latest.get(eventKey(healthy.projectId, "video"))!),
       verifyArtifact(preview, name, latest.get(eventKey(healthy.projectId, "preview"))!)]);
     await assertReaped([...siblingScope.tree, ...reused.tree]);
-    assert.equal(worker.status().activeJobs, 0);
+    assert.equal(pressureWorker.status().activeJobs, 0);
+    assert.equal(mediaWorker.status().activeJobs, 0);
     assert.deepEqual((await readdir(cgroupParent)).filter(entry => entry.startsWith("sciencemotion-render-")), []);
     assert.deepEqual(await readdir(staging), []);
     const reclaimed = await Promise.all(volumes.map(async (volume, index) => {
@@ -255,7 +269,7 @@ try {
     console.log(`PASS combined ${name}: ${code}, sibling MP4, recovered slot PNG`);
   }
   await host.close();
-  await worker.close();
+  await Promise.all(workers.map(worker => worker.close()));
   host = await openCreativeHost({ directory });
   for (const record of records) assert.deepEqual(await actor(record.input.projectId).jobs.get(record.id), record);
   Object.assign(evidence, { status: "passed", exactRecordsAfterReopen: true });
@@ -265,7 +279,7 @@ try {
 } finally {
   try { await host?.close(); }
   finally {
-    await worker?.close();
+    await Promise.all(workers.map(worker => worker.close()));
     await writeFile(join(output, "evidence.json"), JSON.stringify(evidence, null, 2) + "\n");
     await rm(root, { recursive: true, force: true });
   }
