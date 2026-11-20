@@ -8,6 +8,8 @@ import type { LayoutFrameMeasurement } from "../../contracts/layout-inspection";
 import type { ProjectGraphLayoutRequest, ProjectGraphPreviewRequest, ProjectGraphRenderProgress, ProjectGraphRenderRequest,
   ProjectGraphSnapshotRenderer, ProjectGraphRenderOutput, ProjectGraphVideoRequest } from "../../contracts/renderer";
 import { verifiedPngSources } from "../../platform/png-render-inputs";
+import { verifiedRenderWavAssets } from "../../platform/wav-render-inputs";
+import { serveRenderWavSources } from "./render-wav-sources";
 
 export class RemotionProjectGraphRenderer implements ProjectGraphSnapshotRenderer {
   readonly id = "remotion.project-graph"; readonly version = "1.0.0";
@@ -86,19 +88,28 @@ export class RemotionProjectGraphRenderer implements ProjectGraphSnapshotRendere
   }
   async renderVideo(request: ProjectGraphVideoRequest): Promise<ProjectGraphRenderOutput> {
     const cancellation = this.cancellation(request); let directory: string | undefined;
+    let wavServer: Awaited<ReturnType<typeof serveRenderWavSources>> | undefined;
     try {
       this.stage(request, "bundling");
-      const inputProps = this.inputProps(request), serveUrl = await this.serveUrl();
+      const props = this.inputProps(request), { clips, files } = verifiedRenderWavAssets(request);
+      if (files.size) wavServer = await serveRenderWavSources(files);
+      const inputProps = wavServer ? { ...props, audioClips: clips.map(({ clip, source }) => ({ clip, src: wavServer!.url(source.artifactId) })) } : props;
+      const serveUrl = await this.serveUrl();
       this.stage(request, "selecting");
       const composition = await selectComposition({ serveUrl, id: "ProjectGraph", inputProps, ...this.browserOptions });
       directory = await mkdtemp(join(tmpdir(), "sciencemotion-video-")); const output = join(directory, "render.mp4");
       this.stage(request, "rendering", 0);
       await renderMedia({ composition, serveUrl, codec: "h264", outputLocation: output, inputProps,
         frameRange: [request.startFrame, request.startFrame + request.durationFrames - 1], pixelFormat: "yuv420p", cancelSignal: cancellation.cancelSignal,
+        ...(wavServer ? { audioCodec: "aac" as const } : {}),
         disableSharedMemoryCapture: this.boundedTemporaryStorage, ...this.browserOptions,
         onProgress: p => this.report(request, p.renderedDoneIn === null ? "rendering" : "encoding", p.progress) });
       request.signal?.throwIfAborted();
       return { bytes: new Uint8Array(await readFile(output)), mediaType: "video/mp4", extension: "mp4", rendererId: this.id, rendererVersion: this.version };
-    } finally { cancellation.dispose(); if (directory) await rm(directory, { recursive: true, force: true }); }
+    } finally {
+      cancellation.dispose();
+      try { await wavServer?.close(); }
+      finally { if (directory) await rm(directory, { recursive: true, force: true }); }
+    }
   }
 }

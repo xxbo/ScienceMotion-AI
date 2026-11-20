@@ -1,6 +1,6 @@
 import type { Clip, ProjectDocument, Sequence, Shot } from "../contracts/project";
 import type { ProjectPatchOperation, TimelinePatchOperation } from "../contracts/project-patch";
-import { pngArtifactForAsset } from "./project-assets";
+import { narrationAsset, pngArtifactForAsset } from "./project-assets";
 
 type FrameInterval = { id: string; startFrame: number; durationFrames: number };
 
@@ -10,32 +10,44 @@ export function firstSequenceShots(project: ProjectDocument): Shot[] {
   return (project.shots ?? []).filter(shot => ids.has(shot.id));
 }
 
-/** Return image layers in their sequence track order. */
-export function firstSequencePngClips(project: ProjectDocument): { clip: Clip; artifactId: string }[] {
+function firstSequenceClips(project: ProjectDocument, kind: "video" | "audio") {
   const ids = project.sequences[0]?.trackIds;
   if (!ids?.length) return [];
   const tracks = new Map(project.tracks?.map(track => [track.id, track]));
   const clips = new Map(project.clips?.map(clip => [clip.id, clip]));
   const assets = new Map(project.assets.map(asset => [asset.id, asset]));
-  const layers: { clip: Clip; artifactId: string }[] = [];
-  for (const id of ids) {
+  return ids.flatMap(id => {
     const track = tracks.get(id);
-    if (track?.kind !== "video") continue;
-    for (const clipId of track.clipIds) {
+    if (track?.kind !== kind) return [];
+    return track.clipIds.flatMap(clipId => {
       const clip = clips.get(clipId);
-      const artifactId = clip && pngArtifactForAsset(assets.get(clip.assetId));
-      if (clip && artifactId) layers.push({ clip, artifactId });
-    }
-  }
-  return layers;
+      return clip ? [{ clip, asset: assets.get(clip.assetId) }] : [];
+    });
+  });
+}
+
+/** Return image layers in their sequence track order. */
+export function firstSequencePngClips(project: ProjectDocument) {
+  return firstSequenceClips(project, "video").flatMap(({ clip, asset }) => {
+    const artifactId = pngArtifactForAsset(asset);
+    return artifactId ? [{ clip, artifactId }] : [];
+  });
+}
+
+export function firstSequenceAudioClips(project: ProjectDocument) {
+  return firstSequenceClips(project, "audio").flatMap(({ clip, asset }) => {
+    const source = narrationAsset(asset);
+    return source ? [{ clip, source }] : [];
+  });
 }
 
 export const isTimelineOperation = (operation: ProjectPatchOperation): operation is TimelinePatchOperation =>
   operation.op === "move-shot" || operation.op === "trim-shot" || operation.op === "reorder-shots" ||
-  operation.op === "place-clip" || operation.op === "set-transition";
+  operation.op === "place-clip" || operation.op === "set-caption" || operation.op === "set-transition";
 
 function placeClip(project: ProjectDocument, sequence: Sequence, edit: Extract<TimelinePatchOperation, { op: "place-clip" }>) {
-  const { id, assetId, startFrame, durationFrames } = edit.clip;
+  const { id, assetId, startFrame, durationFrames, inFrame, gain } = edit.clip;
+  const kind = project.assets.find(asset => asset.id === assetId)?.kind === "audio" ? "audio" : "video";
   if (typeof edit.trackId !== "string" || !edit.trackId.trim() || edit.trackId.includes("\0"))
     throw new Error("Invalid timeline track ID");
   const trackIds = sequence.trackIds ??= [];
@@ -46,18 +58,18 @@ function placeClip(project: ProjectDocument, sequence: Sequence, edit: Extract<T
   if (previous >= 0 && !owner) throw new Error(`Clip is outside the first sequence timeline: ${id}`);
   let target = tracks.find(track => track.id === edit.trackId);
   if (target) {
-    if (target.kind !== "video") throw new Error("PNG placement requires a video track");
+    if (target.kind !== kind) throw new Error(kind === "audio" ? "WAV placement requires an audio track" : "PNG placement requires a video track");
     if (!trackIds.includes(target.id)) {
       if (target.clipIds.length || project.sequences.some(seq => seq.trackIds?.includes(edit.trackId)))
         throw new Error(`Track is outside the first sequence timeline: ${target.id}`);
       trackIds.push(target.id);
     }
   } else {
-    target = { id: edit.trackId, name: edit.trackId, kind: "video", clipIds: [] };
+    target = { id: edit.trackId, name: edit.trackId, kind, clipIds: [] };
     tracks.push(target);
     trackIds.push(target.id);
   }
-  const clip = { id, assetId, startFrame, durationFrames };
+  const clip = { id, assetId, startFrame, durationFrames, ...(inFrame === undefined ? {} : { inFrame }), ...(gain === undefined ? {} : { gain }) };
   if (previous < 0) clips.push(clip);
   else clips[previous] = clip;
   if (owner !== target) {
@@ -67,7 +79,7 @@ function placeClip(project: ProjectDocument, sequence: Sequence, edit: Extract<T
 }
 
 /** Apply one edit to the private working copy of a revisioned patch. */
-export function applyTimelineOperation(project: ProjectDocument, edit: TimelinePatchOperation, changed: { shots: Set<string>; clips: Set<string> }) {
+export function applyTimelineOperation(project: ProjectDocument, edit: TimelinePatchOperation, changed: { shots: Set<string>; clips: Set<string>; captions: Set<string> }) {
   const sequence = project.sequences[0];
   if (!sequence) throw new Error("Timeline editing requires a first sequence");
   switch (edit.op) {
@@ -103,6 +115,16 @@ export function applyTimelineOperation(project: ProjectDocument, edit: TimelineP
       placeClip(project, sequence, edit);
       changed.clips.add(edit.clip.id);
       break;
+    case "set-caption": {
+      const { captionId: id, caption } = edit;
+      if (!id.trim() || id.includes("\0") || id.length > 256) throw new Error("Invalid caption ID");
+      const cues = (sequence.captions ?? []).filter(cue => cue.id !== id);
+      if (caption !== null) cues.push({ id, text: caption.text, startFrame: caption.startFrame, durationFrames: caption.durationFrames });
+      if (cues.length) sequence.captions = cues;
+      else delete sequence.captions;
+      changed.captions.add(id);
+      break;
+    }
     case "set-transition": {
       const { fromShotId, toShotId, transition } = edit;
       if (fromShotId === toShotId || !sequence.shotIds.includes(fromShotId) || !sequence.shotIds.includes(toShotId))
@@ -135,6 +157,20 @@ export function orderEditedShots(project: ProjectDocument) {
   sequence.shotIds = orderedIntervals(firstSequenceShots(project), sequence.durationFrames, "Shot").map(shot => shot.id);
 }
 
+export function assertSequenceCaptions(sequence: Sequence): void {
+  if (sequence.captions === undefined) return;
+  if (!Array.isArray(sequence.captions)) throw new Error("Invalid sequence captions");
+  const ids = new Set<string>();
+  for (const cue of sequence.captions) {
+    if (!cue || typeof cue.id !== "string" || !cue.id.trim() || cue.id.includes("\0") || cue.id.length > 256 || ids.has(cue.id))
+      throw new Error("Invalid or duplicate caption ID");
+    if (typeof cue.text !== "string" || !cue.text.trim() || cue.text.includes("\0") || Array.from(cue.text).length > 256)
+      throw new Error(`Invalid caption text: ${cue.id}`);
+    ids.add(cue.id);
+  }
+  orderedIntervals(sequence.captions, sequence.durationFrames, "Caption");
+}
+
 export function assertSequenceTransitions(sequence: Sequence, shots: ReadonlyMap<string, Shot>): void {
   if (sequence.transitions === undefined) return;
   if (!Array.isArray(sequence.transitions)) throw new Error("Invalid sequence transitions");
@@ -163,22 +199,35 @@ export function assertTimelineTracks(project: ProjectDocument): void {
   const assets = new Map(project.assets.map(asset => [asset.id, asset]));
   const assignedTracks = new Set<string>(), assignedClips = new Set<string>();
   for (const sequence of project.sequences) {
+    const narration: Clip[] = [];
     if (sequence.trackIds !== undefined && !Array.isArray(sequence.trackIds)) throw new Error("Invalid sequence track list");
     for (const id of sequence.trackIds ?? []) {
       const track = tracks.get(id);
-      if (!track || track.kind !== "video" || assignedTracks.has(id)) throw new Error(`Invalid video track membership: ${id}`);
+      if (!track || (track.kind !== "video" && track.kind !== "audio") || assignedTracks.has(id)) throw new Error(`Invalid media track membership: ${id}`);
       assignedTracks.add(id);
       if (!Array.isArray(track.clipIds)) throw new Error(`Invalid clip list in track: ${id}`);
       const placements = track.clipIds.map(clipId => {
         const clip = clips.get(clipId);
         if (!clip || assignedClips.has(clipId)) throw new Error(`Invalid clip membership: ${clipId}`);
-        if (!pngArtifactForAsset(assets.get(clip.assetId)) || (clip.inFrame ?? 0) !== 0 || clip.gain !== undefined)
+        const asset = assets.get(clip.assetId);
+        if (track.kind === "audio") {
+          const source = narrationAsset(asset), inFrame = clip.inFrame ?? 0;
+          if (!source) throw new Error(`Narration clips require a retained PCM WAV asset: ${clipId}`);
+          const sourceFrames = Math.floor(source.sampleCount * sequence.fps / source.sampleRate);
+          if (!Number.isSafeInteger(inFrame) || inFrame < 0 || clip.durationFrames > sourceFrames - inFrame)
+            throw new Error(`Narration clip exceeds the WAV source duration: ${clipId}`);
+          if (clip.gain !== undefined && (!Number.isFinite(clip.gain) || clip.gain < 0 || clip.gain > 2))
+            throw new Error(`Invalid narration gain: ${clipId}`);
+          narration.push(clip);
+        } else if (!pngArtifactForAsset(asset) || (clip.inFrame ?? 0) !== 0 || clip.gain !== undefined) {
           throw new Error(`Video timeline clips require a still PNG asset: ${clipId}`);
+        }
         assignedClips.add(clipId);
         return clip;
       });
-      orderedIntervals(placements, sequence.durationFrames, "Clip");
+      if (track.kind === "video") orderedIntervals(placements, sequence.durationFrames, "Clip");
     }
+    orderedIntervals(narration, sequence.durationFrames, "Narration clip");
   }
   for (const track of tracks.values()) {
     if (!assignedTracks.has(track.id) && track.clipIds.some(id => assignedClips.has(id)))

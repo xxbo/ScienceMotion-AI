@@ -49,18 +49,22 @@ const timelineSchema = JSON.parse(await readFile("schemas/project-timeline-patch
 const validateTimeline = ajv.compile(timelineSchema);
 const crossfade = { op: "set-transition", fromShotId: "shot-new", toShotId: "shot-2",
   transition: { type: "crossfade", durationFrames: 5 } };
+const caption = { op: "set-caption", captionId: "narration", caption: { text: "Caption", startFrame: 0, durationFrames: 3 } };
 const timeline = [
   { op: "move-shot", shotId: "shot-new", startFrame: 0 },
   { op: "trim-shot", shotId: "shot-new", inFrame: 5, durationFrames: 12 },
   { op: "reorder-shots", shotIds: ["shot-new", "shot-2"] },
   { op: "place-clip", trackId: "video", clip: { id: "clip", assetId: "asset-test", startFrame: 0, durationFrames: 3 } },
   crossfade, { ...crossfade, transition: null },
+  { op: "place-clip", trackId: "audio", clip: { id: "voice", assetId: "wave", startFrame: 0, durationFrames: 12, inFrame: 3, gain: 0.5 } },
+  caption, { ...caption, caption: null },
 ];
 const batch = { ...base, schemaVersion: "1.4.0", patches: timeline };
 check(batch, true, "Timeline batch", validateTimeline);
 check(batch, false, "Legacy schema must reject Patch 1.4");
 for (const operation of [node, { ...timeline[0], startFrame: -1 }, { ...timeline[1], durationFrames: 0 },
   { ...timeline[2], shotIds: ["shot-new", "shot-new"] }, { ...timeline[3], path: "extra.png" },
+  { ...caption, caption: { ...caption.caption, durationFrames: 0 } },
   { ...crossfade, transition: { type: "crossfade", durationFrames: 1 } }]) {
   check({ ...batch, patches: [operation] }, false, `Invalid Timeline Patch ${operation.op}`, validateTimeline);
 }

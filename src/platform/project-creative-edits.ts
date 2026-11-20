@@ -2,13 +2,13 @@ import type { CreativePatchOperation, ProjectPatchOperation } from "../contracts
 import type { ProjectDocument } from "../contracts/project";
 import { validateAnimationTrack } from "./animation";
 import { assertAssetReferences, assertProjectAsset } from "./project-assets";
-import { assertSequenceTransitions, assertTimelineTracks } from "./project-timeline";
+import { assertSequenceCaptions, assertSequenceTransitions, assertTimelineTracks } from "./project-timeline";
 
 export const creativeOperations = new Set([
   "add-scene", "update-scene", "remove-scene", "add-shot", "update-shot", "remove-shot", "put-animation-track", "remove-animation-track",
 ]);
 export const isCreativeOperation = (op: ProjectPatchOperation): op is CreativePatchOperation => creativeOperations.has(op.op);
-export interface CreativeChanges { scenes: Set<string>; shots: Set<string>; animations: Set<string>; clips: Set<string> }
+export interface CreativeChanges { scenes: Set<string>; shots: Set<string>; animations: Set<string>; clips: Set<string>; captions: Set<string> }
 const nonempty = (value: unknown, label: string): void => { if (typeof value !== "string" || !value.trim() || value.includes("\0")) throw new Error(`Invalid ${label}`); };
 const integer = (value: number, label: string, min = 1): void => { if (!Number.isSafeInteger(value) || value < min) throw new Error(`Invalid ${label}`); };
 function onlyKeys(value: object, allowed: string[]): void {
@@ -143,6 +143,7 @@ export function assertCreativeDocument(project: ProjectDocument): void {
           shot.durationFrames > seq.durationFrames - shot.startFrame) throw new Error(`Shot exceeds scene/sequence bounds: ${id}`);
     }
     assertSequenceTransitions(seq, shots);
+    assertSequenceCaptions(seq);
   }
   if (memberships.size !== shots.size) throw new Error("Every shot must belong to exactly one sequence");
   assertTimelineTracks(project);

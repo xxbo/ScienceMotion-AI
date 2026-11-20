@@ -7,7 +7,7 @@ import type { ArtifactGarbageCollectionOptions, ArtifactReference } from "../con
 import { CREATIVE_PERMISSIONS, type ArtifactUpload, type CreativeHost, type CreativeHostLimits, type CreativeInvocation,
   type CreativePermission, type CreativePluginFactory, type CreativeServices, type CreativeSession,
   type CreativeSessionGrant } from "../contracts/creative-host";
-import type { ProjectDocument } from "../contracts/project";
+import type { PcmWavInfo, ProjectDocument } from "../contracts/project";
 import type { ProjectPatchDocument, ProjectPatchResult } from "../contracts/project-patch";
 import type { ProjectSnapshot } from "./project-snapshots";
 import { applyProjectPatch } from "./project-patches";
@@ -43,6 +43,7 @@ export interface CreativeHostRuntime {
   };
   artifacts: Pick<ArtifactStore, "put" | "get" | "read">;
   readApprovedPng(projectId: string, sourceId: string): Promise<{ bytes: Uint8Array; width: number; height: number; license?: string; attribution?: string }>;
+  readApprovedWav(projectId: string, sourceId: string): Promise<PcmWavInfo & { bytes: Uint8Array; license?: string; attribution?: string }>;
   renderPreview(request: ProjectGraphRenderRequest & { frame: number }): Promise<ProjectGraphRenderOutput>;
   renderVideo(request: ProjectGraphRenderRequest & { startFrame: number; durationFrames: number }): Promise<ProjectGraphRenderOutput>;
   measureLayout?(request: ProjectGraphLayoutRequest): Promise<LayoutFrameMeasurement[]>;
@@ -304,6 +305,13 @@ export async function assembleCreativeHost(runtime: CreativeHostRuntime, factori
         const record = await storeArtifact(scope, { bytes, kind: "image", mediaType: "image/png", extension: "png",
           metadata: { sourceId, width, height }, ...(license === undefined ? {} : { license }), ...(attribution === undefined ? {} : { attribution }) });
         return { record, width, height, license, attribution };
+      }),
+      importWav: (sourceId) => task(["artifact.write"], async (scope) => {
+        identity(sourceId);
+        const { bytes, license, attribution, ...info } = await runtime.readApprovedWav(scope.context.projectId, sourceId);
+        const record = await storeArtifact(scope, { bytes, kind: "audio", mediaType: "audio/wav", extension: "wav",
+          metadata: { sourceId, ...info }, ...(license === undefined ? {} : { license }), ...(attribution === undefined ? {} : { attribution }) });
+        return { record, license, attribution, ...info };
       }),
       read: (id: string, snapshotId?: string) => task(["artifact.read"], async (scope) => {
         if (snapshotId !== undefined) { check(scope, ["snapshot.read"]); const saved = await snapshot(scope, snapshotId);

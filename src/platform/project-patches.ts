@@ -66,7 +66,7 @@ export function applyProjectPatch(
     }
   }
   const project = clone(source);
-  const creative: CreativeChanges = { scenes: new Set(), shots: new Set(), animations: new Set(), clips: new Set() };
+  const creative: CreativeChanges = { scenes: new Set(), shots: new Set(), animations: new Set(), clips: new Set(), captions: new Set() };
   const changed = new Set<string>(); const changedAssets = new Set<string>();
   for (const operation of patch.patches) {
     if (isTimelineOperation(operation)) {
@@ -167,5 +167,6 @@ export function applyProjectPatch(
     ...(creative.scenes.size ? { changedSceneIds: [...creative.scenes] } : {}),
     ...(creative.shots.size ? { changedShotIds: [...creative.shots] } : {}),
     ...(creative.clips.size ? { changedClipIds: [...creative.clips] } : {}),
+    ...(creative.captions.size ? { changedCaptionIds: [...creative.captions] } : {}),
     ...(creative.animations.size ? { changedAnimationTrackIds: [...creative.animations] } : {}), revisionId: options.newRevisionId };
 }

@@ -253,6 +253,18 @@ jobs:
           path: out/animation/
           if-no-files-found: error
 
+      - name: Verify narration timing and burned-in caption boundaries
+        id: narration
+        run: npm run accept:narration
+
+      - name: Upload narration and caption acceptance evidence
+        if: ${{ !cancelled() && (steps.narration.outcome == 'success' || steps.narration.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: narration-evidence
+          path: out/narration/
+          if-no-files-found: error
+
       - name: Verify recorded AI trial and deterministic stdio replay
         # Replay is a regression of the retained interaction, not a new model trial.
         run: npm run accept:ai-trial
