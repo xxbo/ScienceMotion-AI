@@ -193,7 +193,8 @@
                     "text",
                     "shape",
                     "path",
-                    "chart"
+                    "chart",
+                    "image"
                   ]
                 },
                 "opacity": {

@@ -56,7 +56,12 @@ export interface ProjectGraphRenderer {
 
 /** Immutable Project Graph render contract; renderers never rewrite editorial meaning. */
 export interface ProjectGraphRenderProgress { phase: "bundling" | "selecting" | "rendering" | "encoding"; fraction?: number }
-export interface ProjectGraphRenderRequest { project: ProjectDocument; revisionId: string; snapshotHash: string; sceneId?: string; profile?: { width: number; height: number; fps?: number }; signal?: AbortSignal; onProgress?: (progress: ProjectGraphRenderProgress) => void }
+export interface ProjectGraphRenderRequest {
+  project: ProjectDocument; revisionId: string; snapshotHash: string; sceneId?: string;
+  /** Immutable PNG bytes in base64, keyed by the snapshot's canonical artifact IDs. */
+  imageAssets?: Readonly<Record<string, string>>;
+  profile?: { width: number; height: number; fps?: number }; signal?: AbortSignal; onProgress?: (progress: ProjectGraphRenderProgress) => void;
+}
 export interface ProjectGraphPreviewRequest extends ProjectGraphRenderRequest { frame: number }
 export interface ProjectGraphVideoRequest extends ProjectGraphRenderRequest { startFrame: number; durationFrames: number }
 /** Final cgroup counters for the enabled resource controls, in decimal to preserve kernel precision. */

@@ -1,4 +1,4 @@
-import type { CreativeHostLimits, CreativeInvocation, CreativeSessionGrant } from "./creative-host";
+import type { CreativeAssetImport, CreativeHostLimits, CreativeInvocation, CreativeSessionGrant } from "./creative-host";
 import type { ToolSearchQuery } from "./agent-tool";
 import type { RenderWorkerPolicy } from "./render-worker";
 import type { CreativeJobPolicy, CreativeJobSubmission } from "./creative-jobs";
@@ -28,6 +28,7 @@ export interface CreativeLocalConfig {
   directory: string;
   traceFile: string;
   grant: CreativeSessionGrant;
+  assetImports?: readonly CreativeAssetImport[];
   limits?: Partial<CreativeHostLimits>;
   renderWorker?: Partial<RenderWorkerPolicy>;
   renderJobs?: Partial<CreativeJobPolicy>;

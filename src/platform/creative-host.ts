@@ -2,7 +2,7 @@ import Ajv, { type ValidateFunction } from "ajv";
 import { mkdir, open, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import type { AgentToolPlugin } from "../contracts/agent-plugin";
-import type { CreativeHost, CreativeHostLimits, CreativePluginFactory } from "../contracts/creative-host";
+import type { CreativeAssetImport, CreativeHost, CreativeHostLimits, CreativePluginFactory } from "../contracts/creative-host";
 import { FileSystemArtifactStore } from "./artifact-store";
 import { FileSystemArtifactReferenceStore, LocalArtifactLifecycleManager } from "./artifact-lifecycle";
 import { FileSystemProjectWorkspace } from "./filesystem-project-workspace";
@@ -11,13 +11,16 @@ import { InMemoryPluginManager } from "./plugin-manager";
 import { InMemoryAgentToolRegistry, LocalAgentToolGateway } from "./tool-registry";
 import { assembleCreativeHost, CreativeHostError, resolveCreativeLimits, type CreativeHostRuntime } from "./creative-host-core";
 import { workspacePlugin } from "./workspace-tools";
-import type { ProjectGraphSnapshotRenderer } from "../contracts/renderer";
+import type { ProjectGraphRenderRequest, ProjectGraphSnapshotRenderer } from "../contracts/renderer";
 import { RemotionProjectGraphRenderer } from "../renderers/remotion/remotion-project-graph-renderer";
 import { LocalRenderWorker, RenderWorkerError, renderWorkerPolicy } from "./render-worker";
 import type { RenderWorkerEvent, RenderWorkerPolicy } from "../contracts/render-worker";
 import type { CreativeJobPolicy } from "../contracts/creative-jobs";
 import { FileSystemRenderJobStore } from "./filesystem-render-job-store";
 import { creativeJobPolicy } from "./creative-job-input";
+import { approvedAssetImports, readApprovedPng } from "./approved-asset-imports";
+import { loadRenderPngAssets } from "./png-render-inputs";
+import { PngInputError } from "./png-input";
 import projectSchema from "../../schemas/project.schema.json";
 import patchSchema from "../../schemas/project-patch.schema.json";
 import toolSchema from "../../schemas/tool-manifest.schema.json";
@@ -26,6 +29,7 @@ import pluginSchema from "../../schemas/plugin-manifest.schema.json";
 export interface OpenCreativeHostOptions {
   /** Trusted application configuration only; tools/sessions never accept filesystem paths. */
   directory: string;
+  assetImports?: readonly CreativeAssetImport[];
   plugins?: readonly CreativePluginFactory[];
   limits?: Partial<CreativeHostLimits>;
   renderer?: ProjectGraphSnapshotRenderer;
@@ -42,6 +46,7 @@ function assertValid(validate: ValidateFunction, value: unknown, label: string):
 /** Assemble one local, exclusive-writer host using the delivered F storage and execution implementations. */
 export async function openCreativeHost(options: OpenCreativeHostOptions): Promise<CreativeHost> {
   const limits = resolveCreativeLimits(options.limits);
+  const assetImports = approvedAssetImports(options.assetImports);
   const jobPolicy = creativeJobPolicy(options.renderJobs);
   if (options.renderWorker !== undefined && options.renderer) throw new Error("Choose a custom renderer or renderWorker, not both");
   const workerPolicy = options.renderWorker === undefined ? undefined : renderWorkerPolicy(options.renderWorker);
@@ -88,15 +93,26 @@ export async function openCreativeHost(options: OpenCreativeHostOptions): Promis
     const registry = new InMemoryAgentToolRegistry();
     const manager = new InMemoryPluginManager(registry, { projectSchemaVersion: "1.1.0", healthCheckTimeoutMs: Math.min(limits.maxTimeoutMs, 5000) });
     const renderer = options.renderer ?? ownedRenderer ?? new RemotionProjectGraphRenderer(options.renderEntryPoint ?? resolve("src/index.ts"));
-    const rendering = async <T>(work: () => Promise<T>): Promise<T> => {
-      try { return await work(); }
-      catch (error) { if (error instanceof RenderWorkerError) throw new CreativeHostError(error.code, error.message); throw error; }
+    const rendering = async <Request extends ProjectGraphRenderRequest, T>(request: Request, work: (input: Request) => Promise<T>): Promise<T> => {
+      try {
+        const imageAssets = await loadRenderPngAssets(request, artifacts);
+        return await work(imageAssets ? { ...request, imageAssets } : request);
+      } catch (error) {
+        if (error instanceof RenderWorkerError || error instanceof PngInputError) throw new CreativeHostError(error.code, error.message);
+        throw error;
+      }
     };
     const runtime: CreativeHostRuntime = {
       projects, artifacts, jobs, rendererIdentity: { id: renderer.id, version: renderer.version },
-      renderPreview: (request) => rendering(() => renderer.renderPreview(request)),
-      renderVideo: (request) => rendering(() => renderer.renderVideo(request)),
-      ...(renderer.measureLayout ? { measureLayout: (request: Parameters<NonNullable<typeof renderer.measureLayout>>[0]) => rendering(() => renderer.measureLayout!(request)) } : {}),
+      readApprovedPng: (projectId, sourceId) => {
+        const source = assetImports.find(source => source.projectId === projectId && source.sourceId === sourceId);
+        if (!source) throw new CreativeHostError("HOST_ASSET_IMPORT_DENIED", "No approved PNG source with this ID in the project");
+        return readApprovedPng(source, limits.maxArtifactBytes);
+      },
+      renderPreview: (request) => rendering(request, input => renderer.renderPreview(input)),
+      renderVideo: (request) => rendering(request, input => renderer.renderVideo(input)),
+      ...(renderer.measureLayout ? { measureLayout: (request: Parameters<NonNullable<typeof renderer.measureLayout>>[0]) =>
+        rendering(request, input => renderer.measureLayout!(input)) } : {}),
       references: (id) => references.list({ artifactId: id }),
       retain: async (ref) => {
         if (ref.ownerType !== "tool-run" && ref.ownerType !== "render-job") throw new Error("Unsupported host retention owner");

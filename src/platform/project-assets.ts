@@ -1,4 +1,4 @@
-import type { ProjectAsset, ProjectDocument } from "../contracts/project";
+import type { ProjectAsset, ProjectDocument, SceneNode } from "../contracts/project";
 
 const kinds = new Set(["image", "video", "audio", "font", "model", "texture", "data", "other"]);
 
@@ -23,6 +23,29 @@ export function artifactIdForAsset(asset: Pick<ProjectAsset, "id" | "uri" | "con
     throw new Error(`Artifact URI/hash conflict for asset ${asset.id}`);
   }
   return `sha256:${match[1]}`;
+}
+
+export function pngArtifactForAsset(asset: ProjectAsset | undefined): string | undefined {
+  if (asset?.kind === "image" && asset.metadata?.mediaType === "image/png") return artifactIdForAsset(asset);
+}
+
+export function projectImagePlacement(node: SceneNode) {
+  if (node.type !== "image") return undefined;
+  const image = node.components.find(component => component.kind === "image")?.data;
+  const { assetId, width, height } = image ?? {};
+  if (typeof assetId === "string" && assetId && typeof width === "number" && width > 0 && width <= 10000 &&
+      typeof height === "number" && height > 0 && height <= 10000) return { assetId, width, height };
+}
+
+export function projectPngArtifactIds(project: ProjectDocument): string[] {
+  const assets = new Map(project.assets.map(asset => [asset.id, asset]));
+  const ids = new Set<string>();
+  for (const node of project.nodes) {
+    const image = projectImagePlacement(node);
+    const id = image && pngArtifactForAsset(assets.get(image.assetId));
+    if (id) ids.add(id);
+  }
+  return [...ids];
 }
 
 /** Component references use assetId/assetIds; custom references must declare dependency edges. */

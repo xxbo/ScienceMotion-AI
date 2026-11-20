@@ -32,7 +32,8 @@ Main is the delivery baseline. P1.2-A's render-worker lifecycle was delivered on
 | P1.2-D4 | Combined resource limits, parallel rendering through each failure, and verified slot and volume reuse. [D4 acceptance](docs/P1.2-D4-COMBINED-RESOURCES.md) |
 | P1.2-E1 | Reproducible paired performance measurements with media, layout and cancellation verification. [E1 baseline](docs/P1.2-E1-PERFORMANCE-BASELINE.md) |
 | P1.2-E2 | Opt-in prepared bundle reuse with disposable workers, invalidation and isolation checks. [E2 bundle reuse](docs/P1.2-E2-BUNDLE-REUSE.md) |
-| P1.3+ | Broader tools/professional engines and general autonomous visual iteration |
+| P1.3-A | Approved PNG import, placement and snapshot rendering in the host and independent workers. [P1.3 plan](docs/P1.3-PLAN.md) |
+| P1.3-B+ | Timeline, geometry, animation, audio, captions and inspection. [Roadmap](docs/PLAN.md#later-roadmap) |
 
 The built-in workspace plugin now includes initial scene, text, shape, transform and keyframe tools. The generic Project Graph composition is a first 2D slice; the CPU-cache Episode renderer remains separate. The [two-topic acceptance scenario](docs/P1.1-CREATIVE-LOOP.md) creates 12-second cache and water-cycle fixtures through public tools, detects/repairs seeded defects, edits text/motion and verifies export/restart/restore including original data dependencies. CI preserves six baseline/edited/restored MP4s, 18 previews, manifests and invocation evidence. These technical fixtures are silent and scripted.
 

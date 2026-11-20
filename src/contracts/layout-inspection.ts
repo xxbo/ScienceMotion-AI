@@ -2,7 +2,7 @@
 export interface LayoutRect { x: number; y: number; width: number; height: number }
 export interface LayoutNodeMeasurement {
   nodeId: string;
-  type: "text" | "shape" | "path" | "chart";
+  type: "text" | "shape" | "path" | "chart" | "image";
   opacity: number;
   declared: { width: number; height: number };
   elementBounds: LayoutRect;

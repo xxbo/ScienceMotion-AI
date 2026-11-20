@@ -8,6 +8,7 @@ import { assertFiniteJson } from "./project-creative-edits";
 import { CreativeTransportError, serveCreativeStdio, type CreativeTraceSink } from "./creative-stdio";
 import { checkRenderWorkerResources, renderWorkerPolicy } from "./render-worker";
 import { creativeJobPolicy } from "./creative-job-input";
+import { approvedAssetImports } from "./approved-asset-imports";
 
 function bounded(value: unknown, fallback: number, maximum: number): number {
   const n = value ?? fallback;
@@ -19,7 +20,7 @@ export async function readCreativeLocalConfig(path: string): Promise<CreativeLoc
   const value = JSON.parse(await readFile(path, "utf8")) as CreativeLocalConfig;
   assertFiniteJson(value);
   if (!value || typeof value !== "object" || Array.isArray(value) || value.schemaVersion !== "1.0.0" ||
-      Object.keys(value).some(k => !["schemaVersion", "protocolVersion", "directory", "traceFile", "grant", "limits", "renderWorker", "renderJobs", "maxRequestBytes", "maxTraceBytes", "metadata"].includes(k)) ||
+      Object.keys(value).some(k => !["schemaVersion", "protocolVersion", "directory", "traceFile", "grant", "assetImports", "limits", "renderWorker", "renderJobs", "maxRequestBytes", "maxTraceBytes", "metadata"].includes(k)) ||
       typeof value.directory !== "string" || !value.directory.trim() || typeof value.traceFile !== "string" || !value.traceFile.trim())
     throw new Error("Invalid local launch configuration");
   if (value.metadata !== undefined && (!value.metadata || typeof value.metadata !== "object" || Array.isArray(value.metadata))) throw new Error("Invalid launch metadata");
@@ -27,6 +28,7 @@ export async function readCreativeLocalConfig(path: string): Promise<CreativeLoc
   if (value.protocolVersion !== undefined && ![CREATIVE_CLIENT_PROTOCOL, CREATIVE_CLIENT_JOB_PROTOCOL].includes(value.protocolVersion)) throw new Error("Unsupported local protocol");
   if (value.renderJobs !== undefined) creativeJobPolicy(value.renderJobs);
   return { ...value, directory: resolve(dirname(path), value.directory), traceFile: resolve(dirname(path), value.traceFile),
+    ...(value.assetImports === undefined ? {} : { assetImports: approvedAssetImports(value.assetImports, dirname(path)) }),
     maxRequestBytes: bounded(value.maxRequestBytes, 1024 * 1024, 1024 * 1024),
     maxTraceBytes: bounded(value.maxTraceBytes, 64 * 1024 * 1024, 128 * 1024 * 1024) };
 }
@@ -43,7 +45,8 @@ export async function runCreativeLocalServer(configPath: string, streams: { inpu
   } };
   let host: Awaited<ReturnType<typeof openCreativeHost>> | undefined;
   try {
-    host = await openCreativeHost({ directory: config.directory, limits: config.limits, renderWorker: config.renderWorker, renderJobs: config.renderJobs });
+    host = await openCreativeHost({ directory: config.directory, assetImports: config.assetImports,
+      limits: config.limits, renderWorker: config.renderWorker, renderJobs: config.renderJobs });
     const session = host.createSession(config.grant);
     const abort = () => { session.revoke(); streams.input.destroy(); };
     streams.signal?.addEventListener("abort", abort, { once: true });

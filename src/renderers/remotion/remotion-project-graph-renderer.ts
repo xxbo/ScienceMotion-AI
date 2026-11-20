@@ -7,6 +7,7 @@ import { join, resolve } from "node:path";
 import type { LayoutFrameMeasurement } from "../../contracts/layout-inspection";
 import type { ProjectGraphLayoutRequest, ProjectGraphPreviewRequest, ProjectGraphRenderProgress, ProjectGraphRenderRequest,
   ProjectGraphSnapshotRenderer, ProjectGraphRenderOutput, ProjectGraphVideoRequest } from "../../contracts/renderer";
+import { verifiedPngSources } from "../../platform/png-render-inputs";
 
 export class RemotionProjectGraphRenderer implements ProjectGraphSnapshotRenderer {
   readonly id = "remotion.project-graph"; readonly version = "1.0.0";
@@ -40,12 +41,17 @@ export class RemotionProjectGraphRenderer implements ProjectGraphSnapshotRendere
     request.signal?.addEventListener("abort", cancel, { once: true });
     return { cancelSignal, dispose: () => request.signal?.removeEventListener("abort", cancel) };
   }
+  private inputProps(request: ProjectGraphRenderRequest) {
+    const imageSources = verifiedPngSources(request);
+    return { project: structuredClone(request.project), sceneId: request.sceneId, ...(imageSources ? { imageSources } : {}) };
+  }
   async measureLayout(request: ProjectGraphLayoutRequest): Promise<LayoutFrameMeasurement[]> {
     const cancellation = this.cancellation(request);
     try {
       this.stage(request, "bundling");
+      const renderProps = this.inputProps(request);
       const serveUrl = await this.serveUrl(), token = randomUUID();
-      const inputProps = { project: structuredClone(request.project), sceneId: undefined, layoutInspection: { token } };
+      const inputProps = { ...renderProps, sceneId: undefined, layoutInspection: { token } };
       this.stage(request, "selecting");
       const composition = await selectComposition({ serveUrl, id: "ProjectGraph", inputProps, ...this.browserOptions });
       const measurements = new Map<number, LayoutFrameMeasurement>();
@@ -68,7 +74,7 @@ export class RemotionProjectGraphRenderer implements ProjectGraphSnapshotRendere
     const cancellation = this.cancellation(request); let directory: string | undefined;
     try {
       this.stage(request, "bundling");
-      const serveUrl = await this.serveUrl(), inputProps = { project: structuredClone(request.project), sceneId: request.sceneId };
+      const inputProps = this.inputProps(request), serveUrl = await this.serveUrl();
       this.stage(request, "selecting");
       const composition = await selectComposition({ serveUrl, id: "ProjectGraph", inputProps, ...this.browserOptions });
       directory = await mkdtemp(join(tmpdir(), "sciencemotion-preview-")); const output = join(directory, "preview.png");
@@ -82,7 +88,7 @@ export class RemotionProjectGraphRenderer implements ProjectGraphSnapshotRendere
     const cancellation = this.cancellation(request); let directory: string | undefined;
     try {
       this.stage(request, "bundling");
-      const serveUrl = await this.serveUrl(), inputProps = { project: structuredClone(request.project), sceneId: request.sceneId };
+      const inputProps = this.inputProps(request), serveUrl = await this.serveUrl();
       this.stage(request, "selecting");
       const composition = await selectComposition({ serveUrl, id: "ProjectGraph", inputProps, ...this.browserOptions });
       directory = await mkdtemp(join(tmpdir(), "sciencemotion-video-")); const output = join(directory, "render.mp4");
