@@ -1,12 +1,15 @@
 import type { ProjectDocument, SceneNode } from "../../contracts/project";
 import { sampleAnimationTrack } from "../../platform/animation";
+import { isChartData, isSafeSvgPathData, isSupportedPaint, type ChartPoint } from "../../platform/graphic-values";
 import { pngArtifactForAsset, projectImagePlacement } from "../../platform/project-assets";
 import { firstSequencePngClips, firstSequenceShots } from "../../platform/project-timeline";
+
+export { isSafeSvgPathData } from "../../platform/graphic-values";
 
 export interface ProjectRenderElement {
   id: string; type: "text" | "shape" | "path" | "chart" | "image"; text?: string; pathData?: string; fillRule?: "nonzero" | "evenodd";
   imageArtifactId?: string;
-  chartType?: "bar" | "line"; chartData?: Array<{ label: string; value: number }>;
+  chartType?: "bar" | "line"; chartData?: ChartPoint[];
   primitive?: "rect" | "circle" | "ellipse" | "line";
   width: number; height: number; fill: string; stroke: string; strokeWidth: number; radius: number;
   color: string; fontSize: number; fontFamily: string; fontWeight: number;
@@ -26,18 +29,7 @@ const multiply = (a: Matrix, b: Matrix): Matrix => [
   a[0]*b[4]+a[2]*b[5]+a[4], a[1]*b[4]+a[3]*b[5]+a[5],
 ];
 const finite = (v: unknown, fallback: number): number => typeof v === "number" && Number.isFinite(v) ? v : fallback;
-const color = (v: unknown, fallback: string): string =>
-  typeof v === "string" && (/^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(v) || /^(transparent|black|white|red|green|blue|orange|yellow|purple|gray|grey|cyan)$/i.test(v))
-    ? v : fallback;
-/** Accept path commands only; raw SVG/XML, CSS, URLs and scripts are never parsed. */
-export function isSafeSvgPathData(value: string): boolean {
-  if (typeof value !== "string" || value.length === 0 || value.length > 20000) return false;
-  if (!/^[MmLlHhVvCcSsQqTtAaZz0-9eE+.,\-\s]+$/.test(value)) return false;
-  const tokens = value.match(/[MmLlHhVvCcSsQqTtAaZz]|[-+]?(?:\d*\.\d+|\d+\.?\d*)(?:[eE][-+]?\d+)?/g);
-  if (!tokens || !tokens.some((token) => /^[MmLlHhVvCcSsQqTtAaZz]$/.test(token))) return false;
-  const stripped = value.replace(/[MmLlHhVvCcSsQqTtAaZz]|[-+]?(?:\d*\.\d+|\d+\.?\d*)(?:[eE][-+]?\d+)?|[\s,]+/g, "");
-  return stripped.length === 0;
-}
+const color = (v: unknown, fallback: string): string => isSupportedPaint(v) ? v : fallback;
 
 const component = (node: SceneNode, kind: string) => node.components.find((item) => item.kind === kind)?.data;
 const safeDimension = (value: unknown, fallback: number): number => Math.max(0, Math.min(10000, finite(value, fallback)));
@@ -116,11 +108,8 @@ export function buildProjectRenderModel(project: ProjectDocument, frame: number,
       const data = component(node, "geometry") ?? {};
       if (data.primitive === "chart") {
         const chartType = data.chartType === "bar" || data.chartType === "line" ? data.chartType : undefined;
-        const chartData = Array.isArray(data.chartData) ? data.chartData : [];
-        const validData = chartData.length >= 2 && chartData.length <= 24 && chartData.every((point) =>
-          point && typeof point.label === "string" && point.label.trim().length > 0 && point.label.length <= 48 &&
-          typeof point.value === "number" && Number.isFinite(point.value));
-        if (!chartType || !validData) {
+        const chartData = data.chartData;
+        if (!chartType || !isChartData(chartData)) {
           diagnostics.push({ level: "error", code: "RENDER_INVALID_CHART_DATA", nodeId: node.id, message: "Chart node " + node.id + " has invalid chart type or data" });
         } else {
           result.elements.push({

@@ -5,7 +5,8 @@ import type { ProjectPatchDocument, TimelinePatchOperation } from "../contracts/
 import { createEmptyProject } from "./empty-project";
 import patchSchema from "../../schemas/project-patch.schema.json";
 import timelinePatchSchema from "../../schemas/project-timeline-patch.schema.json";
-import { isSafeSvgPathData } from "../renderers/remotion/project-render-model";
+import { isChartData, isSafeSvgPathData } from "./graphic-values";
+import { graphicsEditInput, graphicsEditPatches, type GraphicsEdit } from "./graphics-edits";
 import { MAX_INSPECTION_FRAMES } from "./snapshot-inspection";
 import inspectionSchema from "../../schemas/snapshot-inspection.schema.json";
 import layoutInspectionSchema from "../../schemas/snapshot-layout-inspection.schema.json";
@@ -226,7 +227,7 @@ export const workspacePlugin: CreativePluginFactory = {
         async (input) => {
           const a = input as { sceneId: string; nodeId: string; chartType: "bar" | "line"; x: number; y: number; width: number; height: number;
             fill?: string; labelColor?: string; fontSize?: number; data: Array<{ label: string; value: number }> };
-          if (a.data.length < 2 || a.data.length > 24 || a.data.some((point) => !Number.isFinite(point.value) || !point.label.trim() || point.label.length > 48))
+          if (!isChartData(a.data))
             throw new Error("Chart requires 2–24 labelled finite data points");
           const current = await services.project.read(); if (!current) throw new Error("Project not found");
           const result = await services.project.applyPatch({ schemaVersion: "1.3.0", projectId: current.project.id, baseRevisionId: current.revisions.at(-1)!.id,
@@ -237,6 +238,17 @@ export const workspacePlugin: CreativePluginFactory = {
             "Create " + a.chartType + " chart " + a.nodeId);
           return ok({ nodeId: a.nodeId, revisionId: result.revisionId });
         }),
+      tool("graphics.2d.edit", "Edit existing shapes, SVG paths and charts through one revisioned batch. Only the supplied geometry fields are updated.",
+        ["project.read", "project.write"], graphicsEditInput, async (input) => {
+          const { baseRevisionId, edits } = input as { baseRevisionId: string; edits: GraphicsEdit[] };
+          const current = await services.project.read();
+          if (!current) throw new Error("Project not found");
+          if (current.revisions.at(-1)?.id !== baseRevisionId) throw new Error("Revision conflict: project has changed since the graphics edits were created");
+          const result = await services.project.applyPatch({ schemaVersion: "1.3.0", projectId: current.project.id, baseRevisionId,
+            patches: graphicsEditPatches(current.nodes, edits) }, "Edit 2D graphics");
+          return ok({ revisionId: result.revisionId, changedNodeIds: result.changedNodeIds });
+        }, false, object({ revisionId: { type: "string", minLength: 1 },
+          changedNodeIds: { type: "array", minItems: 1, uniqueItems: true, items: { type: "string", minLength: 1 } } })),
       tool("project.node.transform.set", "Set a node's 2D/3D transform through the canonical revisioned editing boundary.", ["project.read", "project.write"],
         object({ ...strings(["nodeId"]), position: { type: "array", minItems: 3, maxItems: 3, items: { type: "number" } },
           rotation: { type: "array", minItems: 3, maxItems: 3, items: { type: "number" } },

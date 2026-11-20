@@ -30,6 +30,7 @@
     "accept:creative-loop": "tsx scripts/creative-loop-acceptance.ts",
     "accept:png-assets": "tsx scripts/render-png-asset-acceptance.ts",
     "accept:timeline": "tsx scripts/render-timeline-acceptance.ts",
+    "accept:graphics-edit": "tsx scripts/render-graphics-edit-acceptance.ts",
     "accept:catalogue-scale": "tsx scripts/catalogue-scale-acceptance.ts",
     "host:stdio": "tsx scripts/creative-host-server.ts",
     "accept:ai-trial": "tsx scripts/ai-trial-acceptance.ts",
