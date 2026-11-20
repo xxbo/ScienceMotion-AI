@@ -1,5 +1,6 @@
 import type { AgentTool, AgentToolManifest, ToolResult } from "../contracts/agent-tool";
 import type { CreativePermission, CreativePluginFactory, CreativeServices } from "../contracts/creative-host";
+import type { ProjectAsset } from "../contracts/project";
 import type { ProjectPatchDocument } from "../contracts/project-patch";
 import { createEmptyProject } from "./empty-project";
 import patchSchema from "../../schemas/project-patch.schema.json";
@@ -8,6 +9,7 @@ import { MAX_INSPECTION_FRAMES } from "./snapshot-inspection";
 import inspectionSchema from "../../schemas/snapshot-inspection.schema.json";
 import layoutInspectionSchema from "../../schemas/snapshot-layout-inspection.schema.json";
 import { MAX_LAYOUT_FRAMES } from "./snapshot-layout-inspection";
+import { pngArtifactForAsset } from "./project-assets";
 
 const strings = (names: string[]) => Object.fromEntries(names.map((name) => [name, { type: "string", minLength: 1 }]));
 const object = (properties: Record<string, unknown>, required = Object.keys(properties)): Record<string, unknown> => ({ type: "object", additionalProperties: false, properties, required });
@@ -89,6 +91,48 @@ export const workspacePlugin: CreativePluginFactory = {
         }, false, { type: "object" }),
       tool("execution.list", "Read persisted execution evidence for the bound project only.", ["execution.read"], object({}), async () => ok(await services.executions.list()), false, { type: "array", items: { type: "object" } }),
 
+      tool("assets.import", "Import a host-approved PNG source into the project. Use replace to update an existing image asset ID.",
+        ["project.read", "project.write", "artifact.write"],
+        object({ sourceId: { type: "string", minLength: 1, maxLength: 256 }, assetId: { type: "string", minLength: 1, maxLength: 256 },
+          replace: { type: "boolean" } }, ["sourceId", "assetId"]),
+        async (input) => {
+          const a = input as { sourceId: string; assetId: string; replace?: boolean };
+          if (!a.assetId.trim() || a.assetId.includes("\0")) throw new Error("A bounded asset ID is required");
+          const current = await services.project.read();
+          if (!current) throw new Error("Create the project before importing assets");
+          const previous = current.assets.find(asset => asset.id === a.assetId);
+          if (a.replace ? previous?.kind !== "image" : previous !== undefined)
+            return { ok: false, diagnostics: [{ level: "error", code: "ASSET_IMPORT_CONFLICT",
+              message: "Import requires an unused asset ID or explicit replacement of an existing image asset" }] };
+          const { record, width, height, license, attribution } = await services.artifacts.importPng(a.sourceId);
+          const asset: ProjectAsset = { id: a.assetId, kind: "image", uri: record.uri, contentHash: record.contentHash,
+            metadata: { sourceId: a.sourceId, mediaType: "image/png", width, height },
+            ...(license === undefined ? {} : { license }), ...(attribution === undefined ? {} : { attribution }) };
+          const applied = await services.project.applyPatch({ schemaVersion: "1.2.0", projectId: current.project.id,
+            baseRevisionId: current.revisions.at(-1)!.id,
+            patches: [a.replace ? { op: "replace-asset", assetId: a.assetId, asset } : { op: "add-asset", asset }] },
+          a.replace ? "Replace imported PNG" : "Import PNG");
+          const ref = { id: record.id, uri: record.uri, mediaType: record.mediaType, contentHash: record.contentHash };
+          return { ok: true, output: { asset, artifactId: record.id, revisionId: applied.revisionId }, artifacts: [ref], diagnostics: [] };
+        }),
+      tool("graphics.2d.image.create", "Place an imported PNG asset in a scene at the specified position and size.", ["project.read", "project.write"],
+        object({ ...strings(["sceneId", "nodeId", "assetId"]), x: { type: "number" }, y: { type: "number" },
+          width: { type: "number", minimum: 1, maximum: 10000 }, height: { type: "number", minimum: 1, maximum: 10000 } }),
+        async (input) => {
+          const a = input as { sceneId: string; nodeId: string; assetId: string; x: number; y: number; width: number; height: number };
+          const current = await services.project.read();
+          if (!current) throw new Error("Project not found");
+          if (!pngArtifactForAsset(current.assets.find(asset => asset.id === a.assetId)))
+            return { ok: false, diagnostics: [{ level: "error", code: "IMAGE_ASSET_UNAVAILABLE",
+              message: "Select an imported PNG asset in this project" }] };
+          const applied = await services.project.applyPatch({ schemaVersion: "1.3.0", projectId: current.project.id,
+            baseRevisionId: current.revisions.at(-1)!.id, patches: [{ op: "add-node", sceneId: a.sceneId,
+              node: { id: a.nodeId, name: a.nodeId, type: "image",
+                transform: { position: [a.x, a.y, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+                components: [{ kind: "image", data: { assetId: a.assetId, width: a.width, height: a.height } }] } }] },
+          "Place PNG image");
+          return ok({ nodeId: a.nodeId, revisionId: applied.revisionId });
+        }),
       tool("project.scene.create", "Create a scene and place it on a sequence through one revisioned Patch.", ["project.read", "project.write"],
         object({ ...strings(["sceneId", "name"]), durationFrames: { type: "integer", minimum: 1 }, sequenceId: { type: "string", minLength: 1 }, startFrame: { type: "integer", minimum: 0 } }, ["sceneId", "name", "durationFrames"]),
         async (input) => {

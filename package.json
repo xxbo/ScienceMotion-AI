@@ -28,6 +28,7 @@
     "render:showcase": "tsx scripts/render-cache-showcase.ts",
     "inspect:layout-smoke": "tsx scripts/inspect-layout-smoke.ts",
     "accept:creative-loop": "tsx scripts/creative-loop-acceptance.ts",
+    "accept:png-assets": "tsx scripts/render-png-asset-acceptance.ts",
     "accept:catalogue-scale": "tsx scripts/catalogue-scale-acceptance.ts",
     "host:stdio": "tsx scripts/creative-host-server.ts",
     "accept:ai-trial": "tsx scripts/ai-trial-acceptance.ts",
@@ -41,6 +42,7 @@
   },
   "dependencies": {
     "@remotion/cli": "^4.0.0",
+    "pngjs": "7.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "remotion": "^4.0.0",
@@ -50,6 +52,7 @@
   "devDependencies": {
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/pngjs": "6.0.5",
     "typescript": "^5.7.0",
     "ajv": "^8.17.1",
     "tsx": "^4.19.2",

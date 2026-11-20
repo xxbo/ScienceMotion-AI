@@ -5,6 +5,7 @@ import { mkdir, mkdtemp, readdir, realpath, rm, statfs, writeFile } from "node:f
 import { tmpdir } from "node:os";
 import { isAbsolute, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
+import { PNG } from "pngjs";
 import type { CreativeHost, CreativeSession } from "../src/contracts/creative-host";
 import type { ProjectDocument } from "../src/contracts/project";
 import type { RenderJobRecord } from "../src/contracts/render-job";
@@ -33,18 +34,23 @@ let sequence = 0, observerFailure: unknown;
 
 const actor = (projectId: string) => host!.createSession({ projectId,
   permissions: ["project.read", "project.write", "snapshot.read", "snapshot.write", "artifact.write"],
-  toolIds: ["project.create", "project.inspect", "project.scene.create", "graphics.2d.shape.create", "project.snapshot.save", "render.preview", "render.video"] });
+  toolIds: ["project.create", "project.inspect", "project.scene.create", "graphics.2d.shape.create", "project.snapshot.save",
+    "render.preview", "render.video", "assets.import", "graphics.2d.image.create"] });
 async function invoke<T>(session: CreativeSession, toolId: string, input: unknown): Promise<T> {
   const result = await session.invoke({ toolId, input, toolVersion: "1.0.0", runId: "temporary-budget", callId: String(++sequence) });
   assert.ok(result.ok, JSON.stringify(result));
   return result.output as T;
 }
-async function render(projectId: string, name: string, video = false) {
+async function render(projectId: string, name: string, video = false, pngSourceId?: string) {
   const s = actor(projectId);
   const durationFrames = video ? 180 : 30;
   await invoke(s, "project.create", { name, episodeId: "temporary-fixture", durationFrames, width: 640, height: 360, fps: 30 });
   await invoke(s, "project.scene.create", { sceneId: "scene", name, durationFrames });
   await invoke(s, "graphics.2d.shape.create", { sceneId: "scene", nodeId: "shape", primitive: "circle", x: 260, y: 120, width: 120, height: 120, fill: "#55d6e8" });
+  if (pngSourceId) {
+    await invoke(s, "assets.import", { sourceId: pngSourceId, assetId: "image" });
+    await invoke(s, "graphics.2d.image.create", { sceneId: "scene", nodeId: "png", assetId: "image", x: 40, y: 20, width: 80, height: 60 });
+  }
   const project = await invoke<ProjectDocument>(s, "project.inspect", {});
   const snapshotId = "snapshot-" + projectId;
   await invoke(s, "project.snapshot.save", { snapshotId, revisionId: project.revisions.at(-1)!.id });
@@ -170,25 +176,41 @@ try {
   await host.close();
 
   const preparedBundle = await prepareRenderBundle(resolve("src/index.ts"), join(root, "prepared-bundle"));
+  const image = new PNG({ width: 4, height: 4 });
+  const rgba = [240, 68, 120, 255];
+  for (let offset = 0; offset < image.data.length; offset += 4) image.data.set(rgba, offset);
+  const source = PNG.sync.write(image), imageHash = createHash("sha256").update(source).digest("hex");
+  const sourcePath = join(root, "approved.png");
+  await writeFile(sourcePath, source);
   let preparedStagingPath: string | undefined;
-  host = await openCreativeHost({ directory, renderWorker: { ...policy, preparedBundle }, onRenderWorkerEvent: event => {
+  host = await openCreativeHost({ directory, assetImports: [{ projectId: "disk-prepared-preview", sourceId: "approved", path: sourcePath }],
+    renderWorker: { ...policy, preparedBundle }, onRenderWorkerEvent: event => {
     if (!event.progress) events.push(event);
     if (event.progress?.phase !== "selecting") return;
     const jobRoot = activeRoot();
     if (!jobRoot) return;
-    const path = join(jobRoot, "work", "sciencemotion-prepared-bundle");
-    if (existsSync(join(path, "index.html"))) preparedStagingPath = path;
+    const work = join(jobRoot, "work"), path = join(work, "sciencemotion-prepared-bundle");
+    if (!existsSync(join(path, "index.html"))) return;
+    try {
+      const request = JSON.parse(readFileSync(join(work, "request.json"), "utf8"));
+      assert.deepEqual(request.request.imageAssets, { [`sha256:${imageHash}`]: source.toString("base64") });
+      preparedStagingPath = path;
+    } catch (error) { observerFailure = error; }
   } });
-  const preview = await render("disk-prepared-preview", "Disk-budgeted prepared preview");
+  const preview = await render("disk-prepared-preview", "Disk-budgeted prepared preview", false, "approved");
   assert.equal(preview.state, "succeeded", JSON.stringify(preview));
   assert.ok(preparedStagingPath, "The verified bundle copy must be on the leased volume");
+  const decoded = PNG.sync.read(Buffer.from((await artifacts.read(preview.result!.artifactId))!));
+  const color = (40 * decoded.width + 70) * 4;
+  assert.deepEqual([...decoded.data.subarray(color, color + 4)], rgba);
   assert.equal(events.at(-1)!.resourceUsage?.temporaryCapacityBytes, String(temporaryBytes));
   const preparedReclaimed = await clean();
   await host.close();
   host = await openCreativeHost({ directory });
   for (const record of records) assert.deepEqual(await actor(record.input.projectId).jobs.get(record.id), record);
   Object.assign(evidence, { status: "passed", kernelErrno: "ENOSPC", bytesWritten: Number(kernelError[1]), reclaimed, mediaPaths, artifact,
-    preparedPreview: { bundleSha256: preparedBundle.sha256, stagingPath: preparedStagingPath, reclaimed: preparedReclaimed }, exactJobsAfterReopen: true });
+    preparedPreview: { bundleSha256: preparedBundle.sha256, stagingPath: preparedStagingPath, imageHash,
+      snapshotPngStagedOnLease: true, reclaimed: preparedReclaimed }, exactJobsAfterReopen: true });
   console.log("PASS: detached writer hit ENOSPC, volume and worker reused, Chromium/FFmpeg rendered on the volume, records survived reopening");
 } catch (error) {
   Object.assign(evidence, { status: "failed", failure: error instanceof Error ? error.stack : String(error) });

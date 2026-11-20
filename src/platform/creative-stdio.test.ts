@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable, Writable } from "node:stream";
 import { spawnSync } from "node:child_process";
+import { PNG } from "pngjs";
 import type { CreativeSession } from "../contracts/creative-host";
 import { runCreativeLocalServer } from "./creative-local-server";
 import { CreativeTransportError, serveCreativeStdio } from "./creative-stdio";
@@ -68,6 +69,34 @@ test("real stdio session creates/replays/snapshots, rejects authority injection 
     const after = second.messages(); assert.equal(after.find(m => m.id === "discover").result.total, 1);
     assert.equal(after.find(m => m.id === "denied").result.ok, false);
     assert.equal(after.find(m => m.id === "inspect").result.output.project.name, "中文初稿");
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test("stdio imports a project-approved PNG from a config-relative path and replays one revision", async () => {
+  const root = await mkdtemp(join(tmpdir(), "science-stdio-png-"));
+  try {
+    const path = join(root, "config.json"), source = "approved.png";
+    const image = new PNG({ width: 2, height: 2 });
+    image.data.fill(255);
+    await writeFile(join(root, source), PNG.sync.write(image));
+    await writeFile(path, JSON.stringify({ schemaVersion: "1.0.0", directory: "workspace", traceFile: "png.jsonl",
+      assetImports: [{ projectId: "p", sourceId: "approved", path: source }],
+      grant: { projectId: "p", permissions: ["project.read", "project.write", "artifact.write"],
+        toolIds: ["project.create", "assets.import", "project.inspect"] } }));
+    const io = output(), params = { sourceId: "approved", assetId: "picture" }, replay = { idempotencyKey: "import-once" };
+    assert.equal(await runCreativeLocalServer(path, { input: Readable.from([wire([
+      invoke("create", "project.create", { name: "Assets", episodeId: "png" }),
+      invoke("import", "assets.import", params, replay), invoke("replay", "assets.import", params, replay),
+      invoke("inspect", "project.inspect"), request("close", "close"),
+    ])]), output: io.stream }), true);
+    const messages = io.messages();
+    const imported = messages.find(m => m.id === "import").result;
+    assert.equal(imported.ok, true, JSON.stringify(imported.diagnostics));
+    assert.deepEqual(messages.find(m => m.id === "replay").result.output, imported.output);
+    const project = messages.find(m => m.id === "inspect").result.output;
+    assert.deepEqual(project.assets, [imported.output.asset]);
+    assert.equal(project.revisions.length, 2);
+    assert.doesNotMatch(await readFile(join(root, "png.jsonl"), "utf8"), /approved\.png/);
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 

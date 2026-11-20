@@ -4,7 +4,7 @@ import type { AgentToolPlugin, PluginOperationResult } from "../contracts/agent-
 import type { AgentToolGateway, AgentToolManifest, AgentToolRegistry, ToolCallContext, ToolExecutionRecord, ToolResult } from "../contracts/agent-tool";
 import type { ArtifactRecord, ArtifactStore } from "../contracts/artifact";
 import type { ArtifactGarbageCollectionOptions, ArtifactReference } from "../contracts/artifact-lifecycle";
-import { CREATIVE_PERMISSIONS, type CreativeHost, type CreativeHostLimits, type CreativeInvocation,
+import { CREATIVE_PERMISSIONS, type ArtifactUpload, type CreativeHost, type CreativeHostLimits, type CreativeInvocation,
   type CreativePermission, type CreativePluginFactory, type CreativeServices, type CreativeSession,
   type CreativeSessionGrant } from "../contracts/creative-host";
 import type { ProjectDocument } from "../contracts/project";
@@ -42,6 +42,7 @@ export interface CreativeHostRuntime {
     collectGarbage(options?: ArtifactGarbageCollectionOptions): ReturnType<CreativeHost["maintenance"]["collectGarbage"]>;
   };
   artifacts: Pick<ArtifactStore, "put" | "get" | "read">;
+  readApprovedPng(projectId: string, sourceId: string): Promise<{ bytes: Uint8Array; width: number; height: number; license?: string; attribution?: string }>;
   renderPreview(request: ProjectGraphRenderRequest & { frame: number }): Promise<ProjectGraphRenderOutput>;
   renderVideo(request: ProjectGraphRenderRequest & { startFrame: number; durationFrames: number }): Promise<ProjectGraphRenderOutput>;
   measureLayout?(request: ProjectGraphLayoutRequest): Promise<LayoutFrameMeasurement[]>;
@@ -196,6 +197,16 @@ export async function assembleCreativeHost(runtime: CreativeHostRuntime, factori
   const retainOutput = async (scope: Scope, id: string, role = "host-output"): Promise<void> => {
     await runtime.retain({ artifactId: id, ownerType: "tool-run", ownerId: JSON.stringify([scope.context.projectId, scope.context.runId, scope.context.callId]), role });
   };
+  const storeArtifact = async (scope: Scope, input: ArtifactUpload): Promise<ArtifactRecord> => {
+    check(scope, ["artifact.write"]);
+    scope.writesStarted = true;
+    const stored = await runtime.artifacts.put({ ...input, provenance: { projectId: scope.context.projectId, runId: scope.context.runId,
+      callId: scope.context.callId, toolId: scope.manifest.id, toolVersion: scope.manifest.version, pluginId: scope.manifest.pluginId } });
+    if (stored.kind !== input.kind || stored.mediaType !== input.mediaType) fail("HOST_ARTIFACT_TYPE_CONFLICT", "Existing content has a different media declaration");
+    scope.produced.add(stored.id);
+    await retainOutput(scope, stored.id);
+    return scopedRecord(scope, stored);
+  };
   const verifyNewAssets = async (scope: Scope, next: ProjectDocument, previous?: ProjectDocument): Promise<void> => {
     const before = new Set(previous ? projectArtifactBindings(previous).map((b) => b.artifactId) : []);
     for (const b of projectArtifactBindings(next)) if (!before.has(b.artifactId)) {
@@ -285,15 +296,15 @@ export async function assembleCreativeHost(runtime: CreativeHostRuntime, factori
           if (!["image", "video", "audio", "model", "texture", "document", "data", "other"].includes(meta.kind) || typeof meta.mediaType !== "string" || !meta.mediaType.trim()) fail("HOST_ARTIFACT_INVALID", "Invalid artifact type");
           copy = { ...structuredClone(meta), bytes: new Uint8Array(bytes) };
         } catch (error) { return task(["artifact.write"], async () => { throw error; }); }
-        return task(["artifact.write"], async (scope) => {
-          scope.writesStarted = true;
-          const stored = await runtime.artifacts.put({ ...copy, provenance: { projectId: scope.context.projectId, runId: scope.context.runId,
-            callId: scope.context.callId, toolId: scope.manifest.id, toolVersion: scope.manifest.version, pluginId: scope.manifest.pluginId } });
-          if (stored.kind !== copy.kind || stored.mediaType !== copy.mediaType) fail("HOST_ARTIFACT_TYPE_CONFLICT", "Existing content has a different media declaration");
-          scope.produced.add(stored.id); await retainOutput(scope, stored.id);
-          return scopedRecord(scope, stored);
-        });
+        return task(["artifact.write"], (scope) => storeArtifact(scope, copy));
       },
+      importPng: (sourceId) => task(["artifact.write"], async (scope) => {
+        identity(sourceId);
+        const { bytes, width, height, license, attribution } = await runtime.readApprovedPng(scope.context.projectId, sourceId);
+        const record = await storeArtifact(scope, { bytes, kind: "image", mediaType: "image/png", extension: "png",
+          metadata: { sourceId, width, height }, ...(license === undefined ? {} : { license }), ...(attribution === undefined ? {} : { attribution }) });
+        return { record, width, height, license, attribution };
+      }),
       read: (id: string, snapshotId?: string) => task(["artifact.read"], async (scope) => {
         if (snapshotId !== undefined) { check(scope, ["snapshot.read"]); const saved = await snapshot(scope, snapshotId);
           projectArtifactBindings(saved.document).forEach((b) => scope.snapshotAssets.add(b.artifactId));

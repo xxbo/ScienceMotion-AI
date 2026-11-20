@@ -205,6 +205,18 @@ jobs:
           path: out/creative-loop/
           if-no-files-found: error
 
+      - name: Verify PNG import and snapshot rendering across host reopen
+        id: png-assets
+        run: npm run accept:png-assets
+
+      - name: Upload PNG asset acceptance evidence
+        if: ${{ !cancelled() && (steps.png-assets.outcome == 'success' || steps.png-assets.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: png-asset-evidence
+          path: out/png-assets/
+          if-no-files-found: error
+
       - name: Verify recorded AI trial and deterministic stdio replay
         # Replay is a regression of the retained interaction, not a new model trial.
         run: npm run accept:ai-trial

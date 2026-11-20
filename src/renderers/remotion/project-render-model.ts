@@ -1,8 +1,10 @@
 import type { ProjectDocument, SceneNode } from "../../contracts/project";
 import { sampleAnimationTrack } from "../../platform/animation";
+import { pngArtifactForAsset, projectImagePlacement } from "../../platform/project-assets";
 
 export interface ProjectRenderElement {
-  id: string; type: "text" | "shape" | "path" | "chart"; text?: string; pathData?: string; fillRule?: "nonzero" | "evenodd";
+  id: string; type: "text" | "shape" | "path" | "chart" | "image"; text?: string; pathData?: string; fillRule?: "nonzero" | "evenodd";
+  imageArtifactId?: string;
   chartType?: "bar" | "line"; chartData?: Array<{ label: string; value: number }>;
   primitive?: "rect" | "circle" | "ellipse" | "line";
   width: number; height: number; fill: string; stroke: string; strokeWidth: number; radius: number;
@@ -82,6 +84,7 @@ export function buildProjectRenderModel(project: ProjectDocument, frame: number,
     return result;
   }
   const nodes = new Map(project.nodes.map((node) => [node.id, node]));
+  const assets = new Map(project.assets.map(asset => [asset.id, asset]));
   const visited = new Set<string>();
   const visit = (id: string, parent: Matrix, parentOpacity: number): void => {
     if (visited.has(id)) { diagnostics.push({ level: "error", code: "RENDER_HIERARCHY_CYCLE", nodeId: id, message: "Repeated node in hierarchy: " + id }); return; }
@@ -91,6 +94,7 @@ export function buildProjectRenderModel(project: ProjectDocument, frame: number,
     const local = localMatrix(node, project, sceneFrame, diagnostics);
     const matrix = multiply(parent, local.matrix);
     const opacity = parentOpacity * local.opacity;
+    const image = projectImagePlacement(node), imageArtifactId = image && pngArtifactForAsset(assets.get(image.assetId));
     if (node.type === "text") {
       const data = component(node, "text") ?? {};
       result.elements.push({
@@ -146,6 +150,13 @@ export function buildProjectRenderModel(project: ProjectDocument, frame: number,
         width: safeDimension(data.width, 1000), height: safeDimension(data.height, 1000),
         fill: color(data.fill, "#55d6e8"), stroke: color(data.stroke, "transparent"),
         strokeWidth: safeDimension(data.strokeWidth, 0), radius: 0, color: "#f4f7fb",
+        fontSize: 0, fontFamily: "sans-serif", fontWeight: 400, textAlign: "left",
+        opacity, transform: "matrix(" + matrix.join(",") + ")",
+      });
+    } else if (image && imageArtifactId) {
+      result.elements.push({
+        id: node.id, type: "image", imageArtifactId, width: image.width, height: image.height,
+        fill: "transparent", stroke: "transparent", strokeWidth: 0, radius: 0, color: "#f4f7fb",
         fontSize: 0, fontFamily: "sans-serif", fontWeight: 400, textAlign: "left",
         opacity, transform: "matrix(" + matrix.join(",") + ")",
       });

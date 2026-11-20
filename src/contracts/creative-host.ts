@@ -17,6 +17,15 @@ export type CreativePermission = typeof CREATIVE_PERMISSIONS[number];
 export type SnapshotReceipt = Omit<ProjectSnapshot, "document">;
 export type ArtifactUpload = Omit<Parameters<ArtifactStore["put"]>[0], "provenance">;
 
+/** A trusted host approval for a local source in one project. */
+export interface CreativeAssetImport {
+  projectId: string;
+  sourceId: string;
+  path: string;
+  license?: string;
+  attribution?: string;
+}
+
 /** Trusted plugin code receives only these invocation-scoped services, never stores or paths. */
 export interface CreativeServices {
   project: {
@@ -31,6 +40,7 @@ export interface CreativeServices {
   };
   artifacts: {
     put(input: ArtifactUpload): Promise<ArtifactRecord>;
+    importPng(sourceId: string): Promise<{ record: ArtifactRecord; width: number; height: number; license?: string; attribution?: string }>;
     read(artifactId: string, snapshotId?: string): Promise<{ record: ArtifactRecord; bytes: Uint8Array }>;
   };
   /** Returns a render receipt: shared blob identity plus this invocation's metadata/provenance.
