@@ -31,7 +31,8 @@ export function firstSequencePngClips(project: ProjectDocument): { clip: Clip; a
 }
 
 export const isTimelineOperation = (operation: ProjectPatchOperation): operation is TimelinePatchOperation =>
-  operation.op === "move-shot" || operation.op === "trim-shot" || operation.op === "reorder-shots" || operation.op === "place-clip";
+  operation.op === "move-shot" || operation.op === "trim-shot" || operation.op === "reorder-shots" ||
+  operation.op === "place-clip" || operation.op === "set-transition";
 
 function placeClip(project: ProjectDocument, sequence: Sequence, edit: Extract<TimelinePatchOperation, { op: "place-clip" }>) {
   const { id, assetId, startFrame, durationFrames } = edit.clip;
@@ -102,6 +103,18 @@ export function applyTimelineOperation(project: ProjectDocument, edit: TimelineP
       placeClip(project, sequence, edit);
       changed.clips.add(edit.clip.id);
       break;
+    case "set-transition": {
+      const { fromShotId, toShotId, transition } = edit;
+      if (fromShotId === toShotId || !sequence.shotIds.includes(fromShotId) || !sequence.shotIds.includes(toShotId))
+        throw new Error("A transition requires two distinct shots in the first sequence");
+      const transitions = (sequence.transitions ?? []).filter(item => item.fromShotId !== fromShotId || item.toShotId !== toShotId);
+      if (transition !== null) transitions.push({ fromShotId, toShotId, type: transition.type, durationFrames: transition.durationFrames });
+      if (transitions.length) sequence.transitions = transitions;
+      else delete sequence.transitions;
+      changed.shots.add(fromShotId);
+      changed.shots.add(toShotId);
+      break;
+    }
   }
 }
 
@@ -120,6 +133,26 @@ function orderedIntervals<T extends FrameInterval>(items: T[], duration: number,
 export function orderEditedShots(project: ProjectDocument) {
   const sequence = project.sequences[0];
   sequence.shotIds = orderedIntervals(firstSequenceShots(project), sequence.durationFrames, "Shot").map(shot => shot.id);
+}
+
+export function assertSequenceTransitions(sequence: Sequence, shots: ReadonlyMap<string, Shot>): void {
+  if (sequence.transitions === undefined) return;
+  if (!Array.isArray(sequence.transitions)) throw new Error("Invalid sequence transitions");
+  if (!sequence.transitions.length) return;
+  const ordered = orderedIntervals(sequence.shotIds.map(id => shots.get(id)!), sequence.durationFrames, "Shot");
+  const positions = new Map(ordered.map((shot, index) => [shot.id, index]));
+  const targets = new Set<string>();
+  for (const transition of sequence.transitions) {
+    if (transition?.type !== "crossfade") throw new Error("Invalid sequence transition type");
+    const { fromShotId, toShotId, durationFrames } = transition;
+    const index = positions.get(toShotId) ?? -1, from = ordered[index - 1], to = ordered[index];
+    if (!from || from.id !== fromShotId || from.startFrame + from.durationFrames !== to.startFrame)
+      throw new Error(`A crossfade requires adjacent shots with a shared cut: ${fromShotId} to ${toShotId}`);
+    if (!Number.isSafeInteger(durationFrames) || durationFrames < 2 || durationFrames > to.durationFrames)
+      throw new Error(`Crossfade duration exceeds the allowed incoming shot range: ${toShotId}`);
+    if (targets.has(toShotId)) throw new Error(`Duplicate crossfade for shot: ${toShotId}`);
+    targets.add(toShotId);
+  }
 }
 
 /** Sequence-owned tracks opt into rendering and its bounded placement rules. */

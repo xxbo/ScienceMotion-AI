@@ -1,4 +1,4 @@
-import type { Clip, ProjectAnimationTrack, ProjectAsset, Scene, SceneNode, Shot } from "./project";
+import type { Clip, ProjectAnimationTrack, ProjectAsset, Scene, SceneNode, Shot, ShotTransition } from "./project";
 
 export interface ProjectPatchDocument {
   /** Patch protocol version, independent of the ProjectDocument format. */
@@ -21,7 +21,8 @@ export type TimelinePatchOperation =
   | { op: "move-shot"; shotId: string; startFrame: number }
   | { op: "trim-shot"; shotId: string; inFrame: number; durationFrames: number }
   | { op: "reorder-shots"; shotIds: string[]; startFrame?: number }
-  | { op: "place-clip"; trackId: string; clip: Pick<Clip, "id" | "assetId" | "startFrame" | "durationFrames"> };
+  | { op: "place-clip"; trackId: string; clip: Pick<Clip, "id" | "assetId" | "startFrame" | "durationFrames"> }
+  | { op: "set-transition"; fromShotId: string; toShotId: string; transition: Pick<ShotTransition, "type" | "durationFrames"> | null };
 
 export type ProjectPatchOperation =
   | { op: "add-node"; sceneId: string; node: SceneNode }

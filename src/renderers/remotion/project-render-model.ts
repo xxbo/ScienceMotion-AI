@@ -18,6 +18,7 @@ export interface ProjectRenderElement {
 export interface ProjectRenderModel {
   projectId: string; sceneId?: string; sceneFrame: number; width: number; height: number; fps: number;
   elements: ProjectRenderElement[];
+  crossfade?: { outgoingElements: ProjectRenderElement[]; incomingOpacity: number };
   videoClips: { clipId: string; artifactId: string }[];
   diagnostics: Array<{ level: "warning" | "error"; code: string; message: string; nodeId?: string; trackId?: string }>;
 }
@@ -63,7 +64,8 @@ function localMatrix(node: SceneNode, project: ProjectDocument, frame: number, d
 export function buildProjectRenderModel(project: ProjectDocument, frame: number, sceneId?: string): ProjectRenderModel {
   const diagnostics: ProjectRenderModel["diagnostics"] = [];
   const sequence = project.sequences[0];
-  const shot = sceneId ? undefined : firstSequenceShots(project).find((item) => item.startFrame <= frame && frame < item.startFrame + item.durationFrames);
+  const shots = sceneId ? [] : firstSequenceShots(project);
+  const shot = shots.find((item) => item.startFrame <= frame && frame < item.startFrame + item.durationFrames);
   const useTimeline = Boolean(project.shots?.length) || sequence?.trackIds !== undefined;
   const selectedSceneId = sceneId ?? (useTimeline ? shot?.sceneId : project.scenes[0]?.id);
   const scene = project.scenes.find((item) => item.id === selectedSceneId);
@@ -160,5 +162,16 @@ export function buildProjectRenderModel(project: ProjectDocument, frame: number,
     for (const childId of node.childIds ?? []) visit(childId, matrix, opacity);
   };
   for (const rootId of scene.rootNodeIds) visit(rootId, identity, 1);
+  if (shot) {
+    const elapsed = frame - shot.startFrame;
+    const transition = sequence?.transitions?.find(item => item.type === "crossfade" && item.toShotId === shot.id && elapsed < item.durationFrames - 1);
+    const outgoing = transition && shots.find(item => item.id === transition.fromShotId);
+    if (transition && outgoing) {
+      const outgoingSceneFrame = (outgoing.inFrame ?? 0) + outgoing.durationFrames - 1;
+      const source = buildProjectRenderModel(project, outgoingSceneFrame, outgoing.sceneId);
+      result.crossfade = { outgoingElements: source.elements,
+        incomingOpacity: elapsed / (transition.durationFrames - 1) };
+    }
+  }
   return result;
 }

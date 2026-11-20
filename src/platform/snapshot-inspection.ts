@@ -47,7 +47,8 @@ export function chooseInspectionFrames(project: ProjectDocument, requested?: rea
     keysByScene.set(scene, keys);
   }
   const shots = firstSequenceShots(project), clips = firstSequencePngClips(project);
-  const candidateWork = shots.reduce((sum, shot) => sum + 4 + (keysByScene.get(shot.sceneId)?.size ?? 0) * 3, clips.length * 4);
+  const transitions = project.sequences[0]?.transitions ?? [];
+  const candidateWork = shots.reduce((sum, shot) => sum + 4 + (keysByScene.get(shot.sceneId)?.size ?? 0) * 3, clips.length * 4 + transitions.length * 5);
   if (candidateWork > MAX_PROJECTION_WORK) reject("INSPECT_WORK_LIMIT", "Automatic frame selection exceeds its budget; request explicit frames");
   const addBoundary = (start: number, length: number) => {
     for (const frame of [start - 1, start, start + length - 1, start + length]) add(frame);
@@ -61,6 +62,15 @@ export function chooseInspectionFrames(project: ProjectDocument, requested?: rea
     }
   }
   for (const { clip } of clips) addBoundary(clip.startFrame, clip.durationFrames);
+  if (transitions.length) {
+    const starts = new Map(shots.map(shot => [shot.id, shot.startFrame]));
+    for (const transition of transitions) {
+      const start = starts.get(transition.toShotId);
+      if (start === undefined) continue;
+      addBoundary(start, transition.durationFrames);
+      add(start + Math.floor((transition.durationFrames - 1) / 2));
+    }
+  }
   if (!project.shots?.length && project.sequences[0]?.trackIds === undefined) for (const key of keysByScene.get(project.scenes[0]?.id) ?? []) {
     for (const offset of [-1, 0, 1]) add(key + offset);
   }

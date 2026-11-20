@@ -7,6 +7,7 @@ import patchSchema from "../../schemas/project-patch.schema.json";
 import timelinePatchSchema from "../../schemas/project-timeline-patch.schema.json";
 import { isChartData, isSafeSvgPathData } from "./graphic-values";
 import { graphicsEditInput, graphicsEditPatches, type GraphicsEdit } from "./graphics-edits";
+import { keyframeEditInput, keyframeEditPatches, type KeyframeEdit } from "./keyframe-edits";
 import { MAX_INSPECTION_FRAMES } from "./snapshot-inspection";
 import inspectionSchema from "../../schemas/snapshot-inspection.schema.json";
 import layoutInspectionSchema from "../../schemas/snapshot-layout-inspection.schema.json";
@@ -47,7 +48,7 @@ export const workspacePlugin: CreativePluginFactory = {
         ["project.read", "project.write", "artifact.read"], patchInput, async (input) => ok(await services.project.applyPatch(input as ProjectPatchDocument, "Agent creative edit"))),
       tool("project.patch.remove", "Explicit destructive edit batch. In-use assets/scenes remain protected; no implicit cascade.",
         ["project.read", "project.write", "project.delete", "artifact.read"], patchInput, async (input) => ok(await services.project.applyPatch(input as ProjectPatchDocument, "Agent approved removal")), true),
-      tool("timeline.edit", "Atomically move, trim or reorder shots and place PNG clips on the first sequence. Times are zero-based frame intervals.",
+      tool("timeline.edit", "Atomically move, trim or reorder shots, set crossfades between adjacent shots, and place PNG clips on the first sequence. Times are zero-based frame intervals.",
         ["project.read", "project.write"],
         { ...object({ baseRevisionId: timelinePatchSchema.properties.baseRevisionId, edits: timelinePatchSchema.properties.patches }),
           definitions: timelinePatchSchema.definitions },
@@ -58,6 +59,7 @@ export const workspacePlugin: CreativePluginFactory = {
           const sequence = result.project.sequences[0];
           return ok({ revisionId: result.revisionId, sequenceId: sequence.id, durationFrames: sequence.durationFrames,
             shotIds: sequence.shotIds, trackIds: sequence.trackIds ?? [],
+            ...(sequence.transitions ? { transitions: sequence.transitions } : {}),
             changedShotIds: result.changedShotIds ?? [], changedClipIds: result.changedClipIds ?? [] });
         }),
       tool("project.snapshot.save", "Retain the exact current revision and its local artifact dependencies.", ["project.read", "snapshot.write"],
@@ -277,6 +279,16 @@ export const workspacePlugin: CreativePluginFactory = {
             patches: [{ op: "put-animation-track", track: { id: a.trackId, targetNodeId: a.targetNodeId, targetProperty: a.targetProperty,
               keyframes: a.keyframes, ...(a.loop !== undefined ? { loop: a.loop } : {}), ...(a.enabled !== undefined ? { enabled: a.enabled } : {}) } }] }, "Set animation " + a.trackId);
           return ok({ trackId: a.trackId, revisionId: result.revisionId });
+        }),
+      tool("animation.keyframes.edit", "Insert, update, retime or remove individual scene-local keyframes on existing animation tracks in one revisioned batch.",
+        ["project.read", "project.write"], keyframeEditInput, async (input) => {
+          const { baseRevisionId, edits } = input as { baseRevisionId: string; edits: KeyframeEdit[] };
+          const current = await services.project.read();
+          if (!current) throw new Error("Project not found");
+          if (current.revisions.at(-1)?.id !== baseRevisionId) throw new Error("Revision conflict: project has changed since the keyframe edits were created");
+          const result = await services.project.applyPatch({ schemaVersion: "1.3.0", projectId: current.project.id, baseRevisionId,
+            patches: keyframeEditPatches(current.animationTracks, edits) }, "Edit animation keyframes");
+          return ok({ revisionId: result.revisionId, changedAnimationTrackIds: result.changedAnimationTrackIds ?? [] });
         }),
     ];
     return { manifest: { id: "builtin.workspace", version: "1.0.0", name: "Local workspace tools",

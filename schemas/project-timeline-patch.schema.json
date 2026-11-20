@@ -64,6 +64,28 @@
                 }
               }
             }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["op", "fromShotId", "toShotId", "transition"],
+            "properties": {
+              "op": { "const": "set-transition" },
+              "fromShotId": { "$ref": "#/definitions/identity" },
+              "toShotId": { "$ref": "#/definitions/identity" },
+              "transition": { "oneOf": [
+                { "type": "null" },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["type", "durationFrames"],
+                  "properties": {
+                    "type": { "const": "crossfade" },
+                    "durationFrames": { "type": "integer", "minimum": 2, "maximum": 9007199254740991 }
+                  }
+                }
+              ] }
+            }
           }
         ]
       }
