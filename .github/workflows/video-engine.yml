@@ -229,6 +229,18 @@ jobs:
           path: out/timeline/
           if-no-files-found: error
 
+      - name: Verify targeted 2D graphics edits, export and snapshot restore
+        id: graphics-edit
+        run: npm run accept:graphics-edit
+
+      - name: Upload graphics edit acceptance evidence
+        if: ${{ !cancelled() && (steps.graphics-edit.outcome == 'success' || steps.graphics-edit.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: graphics-edit-evidence
+          path: out/graphics-edit/
+          if-no-files-found: error
+
       - name: Verify recorded AI trial and deterministic stdio replay
         # Replay is a regression of the retained interaction, not a new model trial.
         run: npm run accept:ai-trial
