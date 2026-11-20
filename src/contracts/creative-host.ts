@@ -1,6 +1,7 @@
 import type { AgentToolPlugin, PluginLockDocument, PluginOperationResult, PluginStatus } from "./agent-plugin";
 import type { AgentToolManifest, ToolExecutionRecord, ToolResult, ToolSearchQuery } from "./agent-tool";
 import type { ArtifactRecord, ArtifactStore } from "./artifact";
+import type { PcmWavInfo } from "./project";
 import type { ProjectDocument } from "./project";
 import type { ProjectPatchDocument, ProjectPatchResult } from "./project-patch";
 import type { ProjectSnapshot } from "../platform/project-snapshots";
@@ -22,6 +23,7 @@ export interface CreativeAssetImport {
   projectId: string;
   sourceId: string;
   path: string;
+  mediaType?: "image/png" | "audio/wav";
   license?: string;
   attribution?: string;
 }
@@ -41,6 +43,7 @@ export interface CreativeServices {
   artifacts: {
     put(input: ArtifactUpload): Promise<ArtifactRecord>;
     importPng(sourceId: string): Promise<{ record: ArtifactRecord; width: number; height: number; license?: string; attribution?: string }>;
+    importWav(sourceId: string): Promise<PcmWavInfo & { record: ArtifactRecord; license?: string; attribution?: string }>;
     read(artifactId: string, snapshotId?: string): Promise<{ record: ArtifactRecord; bytes: Uint8Array }>;
   };
   /** Returns a render receipt: shared blob identity plus this invocation's metadata/provenance.

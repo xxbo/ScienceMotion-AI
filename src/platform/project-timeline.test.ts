@@ -96,3 +96,24 @@ test("adjacent crossfades sample trimmed scene frames and reject moving a config
   assert.equal(cleared.sequences[0].transitions, undefined);
   assert.equal(buildProjectRenderModel(cleared, 165).sceneId, undefined);
 });
+
+test("timed captions replace and clear cues and use half-open global frames", () => {
+  const source = project();
+  const first = edit(source, { op: "set-caption", captionId: "note",
+    caption: { text: "缓存", startFrame: 102, durationFrames: 3 } });
+  assert.equal(buildProjectRenderModel(first, 101).caption, undefined);
+  assert.equal(buildProjectRenderModel(first, 102).caption?.text, "缓存");
+  assert.equal(buildProjectRenderModel(first, 104).caption?.id, "note");
+  assert.equal(buildProjectRenderModel(first, 105).caption, undefined);
+  assert.equal(buildProjectRenderModel(first, 102, "a").caption, undefined);
+  const inspected = chooseInspectionFrames(first).frames;
+  for (const frame of [101, 102, 104, 105]) assert.ok(inspected.includes(frame));
+  const moved = edit(first, { op: "set-caption", captionId: "note",
+    caption: { text: "命中", startFrame: 130, durationFrames: 4 } });
+  assert.equal(moved.sequences[0].captions?.length, 1);
+  assert.equal(buildProjectRenderModel(moved, 102).caption, undefined);
+  assert.equal(buildProjectRenderModel(moved, 130).caption?.text, "命中");
+  const removed = edit(moved, { op: "set-caption", captionId: "note", caption: null });
+  assert.equal(removed.sequences[0].captions, undefined);
+  assert.equal(buildProjectRenderModel(first, 102).caption?.text, "缓存");
+});

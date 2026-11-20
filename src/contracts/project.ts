@@ -31,9 +31,10 @@ export interface ProjectDocument {
 }
 export interface Sequence {
   id: string; name: string; durationFrames: number; fps: number; width: number; height: number;
-  shotIds: string[]; trackIds?: string[]; transitions?: ShotTransition[];
+  shotIds: string[]; trackIds?: string[]; transitions?: ShotTransition[]; captions?: CaptionCue[];
 }
 export interface ShotTransition { fromShotId: string; toShotId: string; type: "crossfade"; durationFrames: number }
+export interface CaptionCue { id: string; text: string; startFrame: number; durationFrames: number }
 export interface Scene { id: string; name: string; durationFrames: number; rootNodeIds: string[]; metadata?: Record<string, unknown> }
 export interface SceneNode {
   id: string; name: string; type: NodeType; parentId?: string; childIds?: string[]; prefabId?: string;
@@ -66,6 +67,7 @@ export interface ProjectDependency {
 export interface Track { id: string; name: string; kind: TrackKind; clipIds: string[] }
 export interface Shot { id: string; name: string; sceneId: string; startFrame: number; durationFrames: number; inFrame?: number; transitionIn?: string; transitionOut?: string }
 export interface Clip { id: string; assetId: string; startFrame: number; durationFrames: number; inFrame?: number; gain?: number }
+export interface PcmWavInfo { sampleRate: number; channels: number; sampleCount: number }
 export interface ProjectAsset {
   id: string; kind: "image" | "video" | "audio" | "font" | "model" | "texture" | "data" | "other";
   uri: string; contentHash?: string; license?: string; attribution?: string; metadata?: Record<string, unknown>;

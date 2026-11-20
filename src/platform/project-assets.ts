@@ -1,4 +1,5 @@
 import type { ProjectAsset, ProjectDocument, SceneNode } from "../contracts/project";
+import { pcmWavInfo } from "./wav-input";
 
 const kinds = new Set(["image", "video", "audio", "font", "model", "texture", "data", "other"]);
 
@@ -27,6 +28,12 @@ export function artifactIdForAsset(asset: Pick<ProjectAsset, "id" | "uri" | "con
 
 export function pngArtifactForAsset(asset: ProjectAsset | undefined): string | undefined {
   if (asset?.kind === "image" && asset.metadata?.mediaType === "image/png") return artifactIdForAsset(asset);
+}
+
+export function narrationAsset(asset: ProjectAsset | undefined) {
+  if (asset?.kind !== "audio" || asset.metadata?.mediaType !== "audio/wav") return;
+  const info = pcmWavInfo(asset.metadata), artifactId = artifactIdForAsset(asset);
+  if (info && artifactId) return { ...info, artifactId };
 }
 
 export function projectImagePlacement(node: SceneNode) {

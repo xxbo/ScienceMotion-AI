@@ -18,9 +18,11 @@ import type { RenderWorkerEvent, RenderWorkerPolicy } from "../contracts/render-
 import type { CreativeJobPolicy } from "../contracts/creative-jobs";
 import { FileSystemRenderJobStore } from "./filesystem-render-job-store";
 import { creativeJobPolicy } from "./creative-job-input";
-import { approvedAssetImports, readApprovedPng } from "./approved-asset-imports";
+import { approvedAssetImports, readApprovedPng, readApprovedWav } from "./approved-asset-imports";
 import { loadRenderPngAssets } from "./png-render-inputs";
 import { PngInputError } from "./png-input";
+import { WavInputError } from "./wav-input";
+import { loadRenderWavAssets } from "./wav-render-inputs";
 import projectSchema from "../../schemas/project.schema.json";
 import patchSchema from "../../schemas/project-patch.schema.json";
 import timelinePatchSchema from "../../schemas/project-timeline-patch.schema.json";
@@ -100,19 +102,26 @@ export async function openCreativeHost(options: OpenCreativeHostOptions): Promis
         const imageAssets = await loadRenderPngAssets(request, artifacts);
         return await work(imageAssets ? { ...request, imageAssets } : request);
       } catch (error) {
-        if (error instanceof RenderWorkerError || error instanceof PngInputError) throw new CreativeHostError(error.code, error.message);
+        if (error instanceof RenderWorkerError || error instanceof PngInputError || error instanceof WavInputError)
+          throw new CreativeHostError(error.code, error.message);
         throw error;
       }
     };
+    const approved = (projectId: string, sourceId: string, mediaType: NonNullable<CreativeAssetImport["mediaType"]>) => {
+      const source = assetImports.find(source => source.projectId === projectId && source.sourceId === sourceId &&
+        (source.mediaType ?? "image/png") === mediaType);
+      if (!source) throw new CreativeHostError("HOST_ASSET_IMPORT_DENIED", "No approved source of this media type with this ID in the project");
+      return source;
+    };
     const runtime: CreativeHostRuntime = {
       projects, artifacts, jobs, rendererIdentity: { id: renderer.id, version: renderer.version },
-      readApprovedPng: (projectId, sourceId) => {
-        const source = assetImports.find(source => source.projectId === projectId && source.sourceId === sourceId);
-        if (!source) throw new CreativeHostError("HOST_ASSET_IMPORT_DENIED", "No approved PNG source with this ID in the project");
-        return readApprovedPng(source, limits.maxArtifactBytes);
-      },
+      readApprovedPng: (projectId, sourceId) => readApprovedPng(approved(projectId, sourceId, "image/png"), limits.maxArtifactBytes),
+      readApprovedWav: (projectId, sourceId) => readApprovedWav(approved(projectId, sourceId, "audio/wav"), limits.maxArtifactBytes),
       renderPreview: (request) => rendering(request, input => renderer.renderPreview(input)),
-      renderVideo: (request) => rendering(request, input => renderer.renderVideo(input)),
+      renderVideo: (request) => rendering(request, async input => {
+        const audioAssets = await loadRenderWavAssets(input, artifacts);
+        return renderer.renderVideo(audioAssets ? { ...input, audioAssets } : input);
+      }),
       ...(renderer.measureLayout ? { measureLayout: (request: Parameters<NonNullable<typeof renderer.measureLayout>>[0]) =>
         rendering(request, input => renderer.measureLayout!(input)) } : {}),
       references: (id) => references.list({ artifactId: id }),

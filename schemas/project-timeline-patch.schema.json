@@ -60,9 +60,33 @@
                   "id": { "$ref": "#/definitions/identity" },
                   "assetId": { "$ref": "#/definitions/identity" },
                   "startFrame": { "$ref": "#/definitions/frame" },
-                  "durationFrames": { "$ref": "#/definitions/duration" }
+                  "durationFrames": { "$ref": "#/definitions/duration" },
+                  "inFrame": { "$ref": "#/definitions/frame" },
+                  "gain": { "type": "number", "minimum": 0, "maximum": 2 }
                 }
               }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["op", "captionId", "caption"],
+            "properties": {
+              "op": { "const": "set-caption" },
+              "captionId": { "$ref": "#/definitions/identity" },
+              "caption": { "oneOf": [
+                { "type": "null" },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["text", "startFrame", "durationFrames"],
+                  "properties": {
+                    "text": { "type": "string", "minLength": 1, "maxLength": 256 },
+                    "startFrame": { "$ref": "#/definitions/frame" },
+                    "durationFrames": { "$ref": "#/definitions/duration" }
+                  }
+                }
+              ] }
             }
           },
           {

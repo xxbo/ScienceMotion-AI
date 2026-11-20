@@ -1,4 +1,4 @@
-import type { ProjectDocument, SceneNode } from "../../contracts/project";
+import type { CaptionCue, ProjectDocument, SceneNode } from "../../contracts/project";
 import { sampleAnimationTrack } from "../../platform/animation";
 import { isChartData, isSafeSvgPathData, isSupportedPaint, type ChartPoint } from "../../platform/graphic-values";
 import { pngArtifactForAsset, projectImagePlacement } from "../../platform/project-assets";
@@ -20,6 +20,7 @@ export interface ProjectRenderModel {
   elements: ProjectRenderElement[];
   crossfade?: { outgoingElements: ProjectRenderElement[]; incomingOpacity: number };
   videoClips: { clipId: string; artifactId: string }[];
+  caption?: CaptionCue;
   diagnostics: Array<{ level: "warning" | "error"; code: string; message: string; nodeId?: string; trackId?: string }>;
 }
 type Matrix = [number, number, number, number, number, number];
@@ -73,13 +74,14 @@ export function buildProjectRenderModel(project: ProjectDocument, frame: number,
   const videoClips = sceneId ? [] : firstSequencePngClips(project)
     .filter(({ clip }) => clip.startFrame <= frame && frame < clip.startFrame + clip.durationFrames)
     .map(({ clip, artifactId }) => ({ clipId: clip.id, artifactId }));
+  const caption = sceneId ? undefined : sequence?.captions?.find(cue => cue.startFrame <= frame && frame < cue.startFrame + cue.durationFrames);
   const result: ProjectRenderModel = {
     projectId: project.project.id, sceneId: scene?.id, sceneFrame,
     width: sequence?.width ?? 1920, height: sequence?.height ?? 1080,
-    fps: sequence?.fps ?? project.project.timebase.fps, elements: [], videoClips, diagnostics,
+    fps: sequence?.fps ?? project.project.timebase.fps, elements: [], videoClips, diagnostics, ...(caption ? { caption } : {}),
   };
   if (!scene) {
-    if (!videoClips.length) diagnostics.push({ level: "warning", code: "RENDER_SCENE_NOT_FOUND", message: "No scene is active at the requested frame" });
+    if (!videoClips.length && !caption) diagnostics.push({ level: "warning", code: "RENDER_SCENE_NOT_FOUND", message: "No scene is active at the requested frame" });
     return result;
   }
   const nodes = new Map(project.nodes.map((node) => [node.id, node]));

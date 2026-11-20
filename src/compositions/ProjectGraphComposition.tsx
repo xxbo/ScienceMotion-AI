@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
-import { AbsoluteFill, Img, useCurrentFrame } from "remotion";
-import type { ProjectDocument } from "../contracts/project";
+import { AbsoluteFill, Html5Audio, Img, Sequence, useCurrentFrame } from "remotion";
+import type { Clip, ProjectDocument } from "../contracts/project";
 import { buildProjectRenderModel, type ProjectRenderModel } from "../renderers/remotion/project-render-model";
 import { ProjectChartSvg } from "./ProjectChartSvg";
 import { ProjectLayoutProbe } from "./ProjectLayoutProbe";
@@ -9,13 +9,21 @@ export interface ProjectGraphProps {
   project: ProjectDocument;
   sceneId?: string;
   imageSources?: Readonly<Record<string, string>>;
+  audioClips?: readonly { clip: Clip; src: string }[];
   layoutInspection?: { token: string };
 }
-export const ProjectGraphComposition: React.FC<ProjectGraphProps> = ({ project, sceneId, imageSources, layoutInspection }) => {
+export const ProjectGraphComposition: React.FC<ProjectGraphProps> = ({ project, sceneId, imageSources, audioClips, layoutInspection }) => {
   const frame = useCurrentFrame();
   const model = useMemo(() => buildProjectRenderModel(project, frame, sceneId), [project, frame, sceneId]);
-  return <><ProjectGraphFrame model={model} imageSources={imageSources} />{layoutInspection &&
-    <ProjectLayoutProbe key={frame} model={model} frame={frame} token={layoutInspection.token} />}</>;
+  return <>
+    <ProjectGraphFrame model={model} imageSources={imageSources} />
+    {!sceneId && audioClips?.map(({ clip, src }) => (
+      <Sequence key={clip.id} layout="none" from={clip.startFrame} durationInFrames={clip.durationFrames}>
+        <Html5Audio src={src} trimBefore={clip.inFrame ?? 0} volume={clip.gain ?? 1} />
+      </Sequence>
+    ))}
+    {layoutInspection && <ProjectLayoutProbe key={frame} model={model} frame={frame} token={layoutInspection.token} />}
+  </>;
 };
 
 /** The same frame surface is used by Remotion and markup regression checks. */
@@ -37,6 +45,16 @@ export const ProjectGraphFrame: React.FC<{ model: ProjectRenderModel; imageSourc
         <Img key={clip.clipId} data-clip-id={clip.clipId} src={imageSources?.[clip.artifactId] ?? ""} alt=""
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "fill" }} />
       ))}
+      {model.caption && (
+        <div style={{ position: "absolute", left: "6%", right: "6%", bottom: "7%", display: "flex", justifyContent: "center" }}>
+          <span data-caption-id={model.caption.id} style={{
+            maxWidth: "100%", boxSizing: "border-box", backgroundColor: "rgba(0,0,0,0.85)", color: "#fff",
+            borderRadius: "0.25em", padding: "0.25em 0.65em", lineHeight: 1.24, fontFamily: "sans-serif", fontWeight: 600,
+            fontSize: Math.max(12, Math.min(56, Math.round(model.height * 0.065))), textAlign: "center",
+            whiteSpace: "pre-wrap", overflowWrap: "anywhere",
+          }}>{model.caption.text}</span>
+        </div>
+      )}
     </AbsoluteFill>
   );
 };

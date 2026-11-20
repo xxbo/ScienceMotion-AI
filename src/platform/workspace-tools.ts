@@ -48,7 +48,7 @@ export const workspacePlugin: CreativePluginFactory = {
         ["project.read", "project.write", "artifact.read"], patchInput, async (input) => ok(await services.project.applyPatch(input as ProjectPatchDocument, "Agent creative edit"))),
       tool("project.patch.remove", "Explicit destructive edit batch. In-use assets/scenes remain protected; no implicit cascade.",
         ["project.read", "project.write", "project.delete", "artifact.read"], patchInput, async (input) => ok(await services.project.applyPatch(input as ProjectPatchDocument, "Agent approved removal")), true),
-      tool("timeline.edit", "Atomically move, trim or reorder shots, set crossfades between adjacent shots, and place PNG clips on the first sequence. Times are zero-based frame intervals.",
+      tool("timeline.edit", "Atomically edit shots, crossfades, PNG clips, PCM WAV narration and timed captions on the first sequence. Times are zero-based frame intervals.",
         ["project.read", "project.write"],
         { ...object({ baseRevisionId: timelinePatchSchema.properties.baseRevisionId, edits: timelinePatchSchema.properties.patches }),
           definitions: timelinePatchSchema.definitions },
@@ -60,6 +60,7 @@ export const workspacePlugin: CreativePluginFactory = {
           return ok({ revisionId: result.revisionId, sequenceId: sequence.id, durationFrames: sequence.durationFrames,
             shotIds: sequence.shotIds, trackIds: sequence.trackIds ?? [],
             ...(sequence.transitions ? { transitions: sequence.transitions } : {}),
+            ...(result.changedCaptionIds ? { changedCaptionIds: result.changedCaptionIds } : {}),
             changedShotIds: result.changedShotIds ?? [], changedClipIds: result.changedClipIds ?? [] });
         }),
       tool("project.snapshot.save", "Retain the exact current revision and its local artifact dependencies.", ["project.read", "snapshot.write"],
@@ -108,27 +109,29 @@ export const workspacePlugin: CreativePluginFactory = {
         }, false, { type: "object" }),
       tool("execution.list", "Read persisted execution evidence for the bound project only.", ["execution.read"], object({}), async () => ok(await services.executions.list()), false, { type: "array", items: { type: "object" } }),
 
-      tool("assets.import", "Import a host-approved PNG source into the project. Use replace to update an existing image asset ID.",
+      tool("assets.import", "Import a host-approved PNG or PCM WAV source. Use replace to update an existing asset of the same kind.",
         ["project.read", "project.write", "artifact.write"],
         object({ sourceId: { type: "string", minLength: 1, maxLength: 256 }, assetId: { type: "string", minLength: 1, maxLength: 256 },
-          replace: { type: "boolean" } }, ["sourceId", "assetId"]),
+          mediaType: { enum: ["image/png", "audio/wav"] }, replace: { type: "boolean" } }, ["sourceId", "assetId"]),
         async (input) => {
-          const a = input as { sourceId: string; assetId: string; replace?: boolean };
+          const a = input as { sourceId: string; assetId: string; mediaType?: "image/png" | "audio/wav"; replace?: boolean };
           if (!a.assetId.trim() || a.assetId.includes("\0")) throw new Error("A bounded asset ID is required");
           const current = await services.project.read();
           if (!current) throw new Error("Create the project before importing assets");
           const previous = current.assets.find(asset => asset.id === a.assetId);
-          if (a.replace ? previous?.kind !== "image" : previous !== undefined)
+          const mediaType = a.mediaType ?? "image/png", kind = mediaType === "audio/wav" ? "audio" : "image";
+          if (a.replace ? previous?.kind !== kind : previous !== undefined)
             return { ok: false, diagnostics: [{ level: "error", code: "ASSET_IMPORT_CONFLICT",
-              message: "Import requires an unused asset ID or explicit replacement of an existing image asset" }] };
-          const { record, width, height, license, attribution } = await services.artifacts.importPng(a.sourceId);
-          const asset: ProjectAsset = { id: a.assetId, kind: "image", uri: record.uri, contentHash: record.contentHash,
-            metadata: { sourceId: a.sourceId, mediaType: "image/png", width, height },
+              message: "Import requires an unused asset ID or explicit replacement of an existing asset of the same kind" }] };
+          const imported = kind === "audio" ? await services.artifacts.importWav(a.sourceId) : await services.artifacts.importPng(a.sourceId);
+          const { record, license, attribution, ...media } = imported;
+          const asset: ProjectAsset = { id: a.assetId, kind, uri: record.uri, contentHash: record.contentHash,
+            metadata: { sourceId: a.sourceId, mediaType, ...media },
             ...(license === undefined ? {} : { license }), ...(attribution === undefined ? {} : { attribution }) };
           const applied = await services.project.applyPatch({ schemaVersion: "1.2.0", projectId: current.project.id,
             baseRevisionId: current.revisions.at(-1)!.id,
             patches: [a.replace ? { op: "replace-asset", assetId: a.assetId, asset } : { op: "add-asset", asset }] },
-          a.replace ? "Replace imported PNG" : "Import PNG");
+          (a.replace ? "Replace imported " : "Import ") + (kind === "audio" ? "WAV" : "PNG"));
           const ref = { id: record.id, uri: record.uri, mediaType: record.mediaType, contentHash: record.contentHash };
           return { ok: true, output: { asset, artifactId: record.id, revisionId: applied.revisionId }, artifacts: [ref], diagnostics: [] };
         }),

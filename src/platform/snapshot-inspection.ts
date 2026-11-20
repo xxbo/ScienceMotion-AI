@@ -3,7 +3,7 @@ import type { SnapshotInspectionIssue, SnapshotInspectionReport } from "../contr
 import { buildProjectRenderModel, type ProjectRenderElement } from "../renderers/remotion/project-render-model";
 import type { ProjectSnapshot } from "./project-snapshots";
 import { hashProject } from "./project-snapshots";
-import { firstSequencePngClips, firstSequenceShots } from "./project-timeline";
+import { firstSequenceAudioClips, firstSequencePngClips, firstSequenceShots } from "./project-timeline";
 
 export const MAX_INSPECTION_FRAMES = 120;
 export const MAX_INSPECTION_ISSUES = 200;
@@ -47,8 +47,9 @@ export function chooseInspectionFrames(project: ProjectDocument, requested?: rea
     keysByScene.set(scene, keys);
   }
   const shots = firstSequenceShots(project), clips = firstSequencePngClips(project);
-  const transitions = project.sequences[0]?.transitions ?? [];
-  const candidateWork = shots.reduce((sum, shot) => sum + 4 + (keysByScene.get(shot.sceneId)?.size ?? 0) * 3, clips.length * 4 + transitions.length * 5);
+  const audio = firstSequenceAudioClips(project), captions = project.sequences[0]?.captions ?? [], transitions = project.sequences[0]?.transitions ?? [];
+  const mediaWork = (clips.length + audio.length + captions.length) * 4 + transitions.length * 5;
+  const candidateWork = shots.reduce((sum, shot) => sum + 4 + (keysByScene.get(shot.sceneId)?.size ?? 0) * 3, mediaWork);
   if (candidateWork > MAX_PROJECTION_WORK) reject("INSPECT_WORK_LIMIT", "Automatic frame selection exceeds its budget; request explicit frames");
   const addBoundary = (start: number, length: number) => {
     for (const frame of [start - 1, start, start + length - 1, start + length]) add(frame);
@@ -62,6 +63,8 @@ export function chooseInspectionFrames(project: ProjectDocument, requested?: rea
     }
   }
   for (const { clip } of clips) addBoundary(clip.startFrame, clip.durationFrames);
+  for (const { clip } of audio) addBoundary(clip.startFrame, clip.durationFrames);
+  for (const cue of captions) addBoundary(cue.startFrame, cue.durationFrames);
   if (transitions.length) {
     const starts = new Map(shots.map(shot => [shot.id, shot.startFrame]));
     for (const transition of transitions) {

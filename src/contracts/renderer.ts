@@ -63,7 +63,11 @@ export interface ProjectGraphRenderRequest {
   profile?: { width: number; height: number; fps?: number }; signal?: AbortSignal; onProgress?: (progress: ProjectGraphRenderProgress) => void;
 }
 export interface ProjectGraphPreviewRequest extends ProjectGraphRenderRequest { frame: number }
-export interface ProjectGraphVideoRequest extends ProjectGraphRenderRequest { startFrame: number; durationFrames: number }
+export interface ProjectGraphVideoRequest extends ProjectGraphRenderRequest {
+  startFrame: number; durationFrames: number;
+  /** Immutable PCM WAV bytes in base64, keyed by the requested range's artifact IDs. */
+  audioAssets?: Readonly<Record<string, string>>;
+}
 /** Final cgroup counters for the enabled resource controls, in decimal to preserve kernel precision. */
 export interface RenderWorkerResourceUsage {
   cpuUsageUsec?: string;
