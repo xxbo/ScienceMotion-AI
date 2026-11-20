@@ -3,9 +3,16 @@ import type { ArtifactStore } from "../contracts/artifact";
 import type { ProjectGraphRenderRequest } from "../contracts/renderer";
 import { projectPngArtifactIds } from "./project-assets";
 import { MAX_PNG_BYTES, MAX_PNG_PIXELS, PngInputError, pngDimensions } from "./png-input";
+import { firstSequencePngClips } from "./project-timeline";
+
+function requestPngArtifactIds(request: ProjectGraphRenderRequest): string[] {
+  const ids = new Set(projectPngArtifactIds(request.project));
+  if (!request.sceneId) for (const { artifactId } of firstSequencePngClips(request.project)) ids.add(artifactId);
+  return [...ids];
+}
 
 export async function loadRenderPngAssets(request: ProjectGraphRenderRequest, artifacts: Pick<ArtifactStore, "get" | "read">) {
-  const ids = projectPngArtifactIds(request.project);
+  const ids = requestPngArtifactIds(request);
   if (ids.length === 0) return undefined;
   let bytesRemaining = MAX_PNG_BYTES, pixelsRemaining = MAX_PNG_PIXELS;
   const imageAssets: Record<string, string> = {};
@@ -30,7 +37,7 @@ export async function loadRenderPngAssets(request: ProjectGraphRenderRequest, ar
 
 /** Called inside the selected renderer, including after a worker receives the job file. */
 export function verifiedPngSources(request: ProjectGraphRenderRequest) {
-  const ids = projectPngArtifactIds(request.project), images = request.imageAssets ?? {};
+  const ids = requestPngArtifactIds(request), images = request.imageAssets ?? {};
   if (Object.keys(images).length !== ids.length)
     throw new PngInputError("HOST_PNG_INVALID", "Render PNG payload does not match the snapshot");
   if (ids.length === 0) return undefined;

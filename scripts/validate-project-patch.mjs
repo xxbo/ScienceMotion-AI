@@ -28,9 +28,9 @@ const creative = [
   { op: "put-animation-track", track: { id: "track-new", targetNodeId: "node-test", targetProperty: "opacity", keyframes: [{ frame: 0, value: 0 }, { frame: 30, value: 1, interpolation: "bezier", easing: "ease-in-out" }] } },
   { op: "remove-animation-track", trackId: "track-new" },
 ];
-const check = (value, expected, label) => {
-  const valid = validate(value);
-  if (valid !== expected) throw new Error(`${label}: ${JSON.stringify(validate.errors)}`);
+const check = (value, expected, label, validator = validate) => {
+  const valid = validator(value);
+  if (valid !== expected) throw new Error(`${label}: ${JSON.stringify(validator.errors)}`);
 };
 for (const operation of [node]) check({ ...base, schemaVersion: "1.1.0", patches: [operation] }, true, "Patch 1.1 node");
 for (const operation of [node, asset]) check({ ...base, schemaVersion: "1.2.0", patches: [operation] }, true, "Patch 1.2 operation");
@@ -45,4 +45,19 @@ for (const invalid of [
   { op: "put-animation-track", track: { id: "t", targetProperty: "opacity", keyframes: [] } },
   { op: "update-shot", shotId: "x", changes: { id: "mutate-identity" } },
 ]) check({ ...base, schemaVersion: "1.3.0", patches: [invalid] }, false, `Invalid Patch 1.3 ${invalid.op}`);
-console.log("Project Patch 1.1.0/1.2.0/1.3.0 compatibility and creative operation schemas passed.");
+const timelineSchema = JSON.parse(await readFile("schemas/project-timeline-patch.schema.json", "utf8"));
+const validateTimeline = ajv.compile(timelineSchema);
+const timeline = [
+  { op: "move-shot", shotId: "shot-new", startFrame: 0 },
+  { op: "trim-shot", shotId: "shot-new", inFrame: 5, durationFrames: 12 },
+  { op: "reorder-shots", shotIds: ["shot-new", "shot-2"] },
+  { op: "place-clip", trackId: "video", clip: { id: "clip", assetId: "asset-test", startFrame: 0, durationFrames: 3 } },
+];
+const batch = { ...base, schemaVersion: "1.4.0", patches: timeline };
+check(batch, true, "Timeline batch", validateTimeline);
+check(batch, false, "Legacy schema must reject Patch 1.4");
+for (const operation of [node, { ...timeline[0], startFrame: -1 }, { ...timeline[1], durationFrames: 0 },
+  { ...timeline[2], shotIds: ["shot-new", "shot-new"] }, { ...timeline[3], path: "extra.png" }]) {
+  check({ ...batch, patches: [operation] }, false, `Invalid Timeline Patch ${operation.op}`, validateTimeline);
+}
+console.log("Legacy Project Patch compatibility and Timeline Patch 1.4.0 validation passed.");

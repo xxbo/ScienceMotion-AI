@@ -23,6 +23,7 @@ import { loadRenderPngAssets } from "./png-render-inputs";
 import { PngInputError } from "./png-input";
 import projectSchema from "../../schemas/project.schema.json";
 import patchSchema from "../../schemas/project-patch.schema.json";
+import timelinePatchSchema from "../../schemas/project-timeline-patch.schema.json";
 import toolSchema from "../../schemas/tool-manifest.schema.json";
 import pluginSchema from "../../schemas/plugin-manifest.schema.json";
 
@@ -58,6 +59,7 @@ export async function openCreativeHost(options: OpenCreativeHostOptions): Promis
   const ajv = new Ajv({ allErrors: true, strict: false });
   const validateProject = ajv.compile(projectSchema);
   const validatePatch = ajv.compile(patchSchema);
+  const validateTimelinePatch = ajv.compile(timelinePatchSchema);
   const validateTool = ajv.compile(toolSchema);
   const validatePlugin = ajv.compile(pluginSchema);
   const ownedRenderer = workerPolicy ? new LocalRenderWorker({ entryPoint: options.renderEntryPoint,
@@ -125,7 +127,7 @@ export async function openCreativeHost(options: OpenCreativeHostOptions): Promis
       },
       listExecutions: (id) => evidence.list(id),
       validateProject: (document) => assertValid(validateProject, document, "Project Schema"),
-      validatePatch: (patch) => assertValid(validatePatch, patch, "Patch Schema"),
+      validatePatch: (patch) => assertValid(patch.schemaVersion === "1.4.0" ? validateTimelinePatch : validatePatch, patch, "Patch Schema"),
       validatePlugin: (plugin) => {
         assertValid(validatePlugin, plugin.manifest, "Plugin Manifest");
         for (const tool of plugin.tools) {

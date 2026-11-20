@@ -217,6 +217,18 @@ jobs:
           path: out/png-assets/
           if-no-files-found: error
 
+      - name: Verify timeline cuts and frame ranges in previews and MP4s
+        id: timeline
+        run: npm run accept:timeline
+
+      - name: Upload timeline acceptance evidence
+        if: ${{ !cancelled() && (steps.timeline.outcome == 'success' || steps.timeline.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: timeline-evidence
+          path: out/timeline/
+          if-no-files-found: error
+
       - name: Verify recorded AI trial and deterministic stdio replay
         # Replay is a regression of the retained interaction, not a new model trial.
         run: npm run accept:ai-trial

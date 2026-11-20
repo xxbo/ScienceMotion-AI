@@ -1,0 +1,77 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://sciencemotion.ai/schemas/project-timeline-patch.schema.json",
+  "title": "Project Timeline Patch",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "projectId", "baseRevisionId", "patches"],
+  "properties": {
+    "schemaVersion": { "const": "1.4.0" },
+    "projectId": { "$ref": "#/definitions/identity" },
+    "baseRevisionId": { "$ref": "#/definitions/identity" },
+    "patches": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["op", "shotId", "startFrame"],
+            "properties": {
+              "op": { "const": "move-shot" },
+              "shotId": { "$ref": "#/definitions/identity" },
+              "startFrame": { "$ref": "#/definitions/frame" }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["op", "shotId", "inFrame", "durationFrames"],
+            "properties": {
+              "op": { "const": "trim-shot" },
+              "shotId": { "$ref": "#/definitions/identity" },
+              "inFrame": { "$ref": "#/definitions/frame" },
+              "durationFrames": { "$ref": "#/definitions/duration" }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["op", "shotIds"],
+            "properties": {
+              "op": { "const": "reorder-shots" },
+              "shotIds": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/definitions/identity" } },
+              "startFrame": { "$ref": "#/definitions/frame" }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["op", "trackId", "clip"],
+            "properties": {
+              "op": { "const": "place-clip" },
+              "trackId": { "$ref": "#/definitions/identity" },
+              "clip": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["id", "assetId", "startFrame", "durationFrames"],
+                "properties": {
+                  "id": { "$ref": "#/definitions/identity" },
+                  "assetId": { "$ref": "#/definitions/identity" },
+                  "startFrame": { "$ref": "#/definitions/frame" },
+                  "durationFrames": { "$ref": "#/definitions/duration" }
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "identity": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "frame": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+    "duration": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 }
+  }
+}

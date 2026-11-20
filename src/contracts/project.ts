@@ -29,7 +29,7 @@ export interface ProjectDocument {
   dependencies: ProjectDependency[];
   revisions: Revision[];
 }
-export interface Sequence { id: string; name: string; durationFrames: number; fps: number; width: number; height: number; shotIds: string[] }
+export interface Sequence { id: string; name: string; durationFrames: number; fps: number; width: number; height: number; shotIds: string[]; trackIds?: string[] }
 export interface Scene { id: string; name: string; durationFrames: number; rootNodeIds: string[]; metadata?: Record<string, unknown> }
 export interface SceneNode {
   id: string; name: string; type: NodeType; parentId?: string; childIds?: string[]; prefabId?: string;
@@ -60,7 +60,7 @@ export interface ProjectDependency {
   relation: "uses" | "instances" | "references" | "parent-of" | "derived-from";
 }
 export interface Track { id: string; name: string; kind: TrackKind; clipIds: string[] }
-export interface Shot { id: string; name: string; sceneId: string; startFrame: number; durationFrames: number; transitionIn?: string; transitionOut?: string }
+export interface Shot { id: string; name: string; sceneId: string; startFrame: number; durationFrames: number; inFrame?: number; transitionIn?: string; transitionOut?: string }
 export interface Clip { id: string; assetId: string; startFrame: number; durationFrames: number; inFrame?: number; gain?: number }
 export interface ProjectAsset {
   id: string; kind: "image" | "video" | "audio" | "font" | "model" | "texture" | "data" | "other";

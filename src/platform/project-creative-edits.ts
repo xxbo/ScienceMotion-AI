@@ -2,12 +2,13 @@ import type { CreativePatchOperation, ProjectPatchOperation } from "../contracts
 import type { ProjectDocument } from "../contracts/project";
 import { validateAnimationTrack } from "./animation";
 import { assertAssetReferences, assertProjectAsset } from "./project-assets";
+import { assertTimelineTracks } from "./project-timeline";
 
 export const creativeOperations = new Set([
   "add-scene", "update-scene", "remove-scene", "add-shot", "update-shot", "remove-shot", "put-animation-track", "remove-animation-track",
 ]);
 export const isCreativeOperation = (op: ProjectPatchOperation): op is CreativePatchOperation => creativeOperations.has(op.op);
-export interface CreativeChanges { scenes: Set<string>; shots: Set<string>; animations: Set<string> }
+export interface CreativeChanges { scenes: Set<string>; shots: Set<string>; animations: Set<string>; clips: Set<string> }
 const nonempty = (value: unknown, label: string): void => { if (typeof value !== "string" || !value.trim() || value.includes("\0")) throw new Error(`Invalid ${label}`); };
 const integer = (value: number, label: string, min = 1): void => { if (!Number.isSafeInteger(value) || value < min) throw new Error(`Invalid ${label}`); };
 function onlyKeys(value: object, allowed: string[]): void {
@@ -83,7 +84,7 @@ export function applyCreativeOperation(project: ProjectDocument, op: CreativePat
     }
   }
 }
-/** Semantic gate for the 1.3 editing path. Renderer-specific component support remains adapter-owned. */
+/** Semantic gate for creative documents. Renderer-specific component support remains adapter-owned. */
 export function assertCreativeDocument(project: ProjectDocument): void {
   if (project.schemaVersion !== "1.1.0") throw new Error("Unsupported creative project format");
   nonempty(project.project.id, "project ID"); integer(project.project.timebase.fps, "project FPS");
@@ -134,13 +135,16 @@ export function assertCreativeDocument(project: ProjectDocument): void {
     if (seq.fps !== project.project.timebase.fps) throw new Error("Creative editing requires a common project/sequence FPS");
     for (const id of seq.shotIds) {
       const shot = shots.get(id); if (!shot || memberships.has(id)) throw new Error(`Invalid shot membership: ${id}`);
-      memberships.add(id); onlyKeys(shot, ["id", "name", "sceneId", "startFrame", "durationFrames", "transitionIn", "transitionOut"]); nonempty(shot.name, "shot name"); integer(shot.startFrame, "shot start", 0); integer(shot.durationFrames, "shot duration");
+      memberships.add(id); onlyKeys(shot, ["id", "name", "sceneId", "startFrame", "durationFrames", "inFrame", "transitionIn", "transitionOut"]); nonempty(shot.name, "shot name"); integer(shot.startFrame, "shot start", 0); integer(shot.durationFrames, "shot duration");
+      if (shot.inFrame !== undefined) integer(shot.inFrame, "shot source frame", 0);
       for (const value of [shot.transitionIn, shot.transitionOut]) if (value !== undefined && typeof value !== "string") throw new Error("Invalid shot transition");
       const scene = scenes.get(shot.sceneId);
-      if (!scene || shot.durationFrames > scene.durationFrames || shot.startFrame + shot.durationFrames > seq.durationFrames) throw new Error(`Shot exceeds scene/sequence bounds: ${id}`);
+      if (!scene || shot.durationFrames > scene.durationFrames - (shot.inFrame ?? 0) ||
+          shot.durationFrames > seq.durationFrames - shot.startFrame) throw new Error(`Shot exceeds scene/sequence bounds: ${id}`);
     }
   }
   if (memberships.size !== shots.size) throw new Error("Every shot must belong to exactly one sequence");
+  assertTimelineTracks(project);
   const targets = new Set<string>();
   for (const track of tracks.values()) {
     onlyKeys(track, ["id", "targetNodeId", "targetProperty", "keyframes", "loop", "enabled"]);

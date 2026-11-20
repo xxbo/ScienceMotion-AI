@@ -52,6 +52,10 @@ export const ProjectGraphFrame: React.FC<{ model: ProjectRenderModel; imageSourc
           borderRadius: element.primitive === "circle" || element.primitive === "ellipse" ? "50%" : element.radius,
         }} />
       ))}
+      {model.videoClips.map(clip => (
+        <Img key={clip.clipId} data-clip-id={clip.clipId} src={imageSources?.[clip.artifactId] ?? ""} alt=""
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "fill" }} />
+      ))}
     </AbsoluteFill>
   );
 };
