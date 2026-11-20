@@ -199,7 +199,14 @@ try {
   assert.equal(child.status, 0, child.stderr || child.error?.message); assert.equal(child.stderr, "");
   const replay = transcript(await readFile(tracePath, "utf8")), replayProjects = checkProjectsAndReports(replay);
   assert.equal(replay.records[0].data.renderExecution.mode, processWorker ? "local-process" : "in-process");
-  assert.deepEqual(replay.requests, original.requests); assert.deepEqual(replay.catalogue, original.catalogue);
+  assert.deepEqual(replay.requests, original.requests);
+  // Compare the historical catalogue with the additive P1.3-A image layout case.
+  const expectedCatalogue = structuredClone(original.catalogue);
+  const layoutTool = expectedCatalogue.tools.find((tool: { id: string }) => tool.id === "inspect.layout");
+  const nodeTypes = layoutTool.outputSchema.properties.frames.items.properties.nodes.items.properties.type.enum;
+  assert.deepEqual(nodeTypes, ["text", "shape", "path", "chart"]);
+  nodeTypes.push("image");
+  assert.deepEqual(replay.catalogue, expectedCatalogue);
   assert.deepEqual(child.stdout.trim().split("\n").map(line => JSON.parse(line)), replay.records.filter(r => r.kind === "response").map(r => r.data));
   for (const stage of ["before", "after"] as const) {
     assert.deepEqual(normalizedAudit(replayProjects[stage].document), normalizedAudit(originalProjects[stage].document));
@@ -226,6 +233,7 @@ try {
     sourceCommit: spawnSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).stdout.trim(), node: process.version,
     sourceWorktreeDirty: Boolean(spawnSync("git", ["status", "--porcelain"], { encoding: "utf8" }).stdout.trim()),
     auditNormalization: ["project.createdAt", "project.updatedAt", "revisions[*].createdAt"],
+    catalogueEvolution: { tool: "inspect.layout", addedNodeType: "image" },
     original: { media: originalMedia, layoutBefore: original.value("layout-before"), layoutFinal: original.value("layout-final") },
     replay: { media: validateMedia(output), receipts: mediaReceipts, layoutBefore: replay.value("layout-before"), layoutFinal: replay.value("layout-final") },
     humanVisualReview: "Historical AI sample accepted by the user on 2026-11-17; this run is automated. Full two-topic human review remains separately pending.", companionRegression: "accept:creative-loop runs separately in the same CI job" };
