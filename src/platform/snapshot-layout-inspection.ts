@@ -16,8 +16,9 @@ export function prepareLayoutInspection(saved: ProjectSnapshot, requested?: read
   if (work > 1_000_000 || sequence.width > 4096 || sequence.height > 4096)
     reject("LAYOUT_WORK_LIMIT", "Browser layout exceeds its viewport/model budget; request fewer frames or a smaller project");
   const models = selection.frames.map((frame) => buildProjectRenderModel(p, frame));
-  if (models.some((m) => m.elements.length > 200 || m.elements.reduce((sum, e) => sum + (e.text?.length ?? 0), 0) > 20000) ||
-    models.reduce((sum, m) => sum + m.elements.length, 0) > 1200)
+  const drawn = models.map(model => model.crossfade ? [...model.elements, ...model.crossfade.outgoingElements] : model.elements);
+  if (drawn.some(elements => elements.length > 200 || elements.reduce((sum, element) => sum + (element.text?.length ?? 0), 0) > 20000) ||
+    drawn.reduce((sum, elements) => sum + elements.length, 0) > 1200)
     reject("LAYOUT_WORK_LIMIT", "Browser layout is limited to 200 nodes and 20,000 text characters per frame, and 1,200 node-frames");
   return { ...selection, models, explicit: requested !== undefined };
 }

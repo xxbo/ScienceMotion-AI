@@ -2,7 +2,7 @@ import type { CreativePatchOperation, ProjectPatchOperation } from "../contracts
 import type { ProjectDocument } from "../contracts/project";
 import { validateAnimationTrack } from "./animation";
 import { assertAssetReferences, assertProjectAsset } from "./project-assets";
-import { assertTimelineTracks } from "./project-timeline";
+import { assertSequenceTransitions, assertTimelineTracks } from "./project-timeline";
 
 export const creativeOperations = new Set([
   "add-scene", "update-scene", "remove-scene", "add-shot", "update-shot", "remove-shot", "put-animation-track", "remove-animation-track",
@@ -142,6 +142,7 @@ export function assertCreativeDocument(project: ProjectDocument): void {
       if (!scene || shot.durationFrames > scene.durationFrames - (shot.inFrame ?? 0) ||
           shot.durationFrames > seq.durationFrames - shot.startFrame) throw new Error(`Shot exceeds scene/sequence bounds: ${id}`);
     }
+    assertSequenceTransitions(seq, shots);
   }
   if (memberships.size !== shots.size) throw new Error("Every shot must belong to exactly one sequence");
   assertTimelineTracks(project);

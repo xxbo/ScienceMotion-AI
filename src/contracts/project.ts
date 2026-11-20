@@ -29,7 +29,11 @@ export interface ProjectDocument {
   dependencies: ProjectDependency[];
   revisions: Revision[];
 }
-export interface Sequence { id: string; name: string; durationFrames: number; fps: number; width: number; height: number; shotIds: string[]; trackIds?: string[] }
+export interface Sequence {
+  id: string; name: string; durationFrames: number; fps: number; width: number; height: number;
+  shotIds: string[]; trackIds?: string[]; transitions?: ShotTransition[];
+}
+export interface ShotTransition { fromShotId: string; toShotId: string; type: "crossfade"; durationFrames: number }
 export interface Scene { id: string; name: string; durationFrames: number; rootNodeIds: string[]; metadata?: Record<string, unknown> }
 export interface SceneNode {
   id: string; name: string; type: NodeType; parentId?: string; childIds?: string[]; prefabId?: string;

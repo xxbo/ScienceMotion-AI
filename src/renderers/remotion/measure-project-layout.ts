@@ -10,6 +10,7 @@ export function measureProjectLayout(model: ProjectRenderModel, frame: number): 
   const rect = (r: DOMRect): LayoutRect => ({ x: round(r.x - viewport.x), y: round(r.y - viewport.y),
     width: round(r.width), height: round(r.height) });
   const elements = new Map(Array.from(root.querySelectorAll<HTMLElement | SVGElement>("[data-node-id]"))
+    .filter(element => !element.closest("[data-project-transition-outgoing]"))
     .map((element) => [element.getAttribute("data-node-id")!, element]));
   if (elements.size !== model.elements.length) throw new Error("Production DOM and render model have different node counts");
   const canvas = document.createElement("canvas"), context = canvas.getContext("2d");

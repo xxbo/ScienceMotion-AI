@@ -10,7 +10,7 @@ Prioritize a small demonstrated creation-and-repair workflow on Remotion. Progra
 
 [Platform Vision](PLATFORM_VISION.md) owns durable principles, [Architecture](ARCHITECTURE.md) implementation boundaries, and [P1.1 Acceptance](P1.1-ACCEPTANCE.md) measurable exit gates. Test counts and catalogue size are not product-completion percentages.
 
-P1.2 delivers isolated local jobs with resource limits and measured bundle reuse. P1.3-A–C deliver PNG import, timeline editing and edits to existing 2D graphics with rendered evidence. P1.3-D covers keyframe editing and an initial transition. Human effect review is assigned to the final acceptance workstream. [P1.2 plan](P1.2-PLAN.md) · [P1.3 plan](P1.3-PLAN.md).
+P1.2 delivers isolated local jobs with resource limits and measured bundle reuse. P1.3-A–D deliver PNG import, timeline editing, edits to existing 2D graphics, and keyframe editing with an adjacent-shot crossfade. P1.3-E covers narration and captions. Human effect review is assigned to the final acceptance workstream. [P1.2 plan](P1.2-PLAN.md) · [P1.3 plan](P1.3-PLAN.md).
 
 ## Main is the delivery baseline
 
@@ -42,7 +42,7 @@ Recorded baselines are historical evidence, not aliases for main HEAD. [PR #1](h
 | P1.2-C2 | Trusted retention inspection, durable reconciliation, job-specific output ownership, release and pruning | D aggregate quotas |
 | P1.2-C3 | Real-worker concurrent edit, project isolation, scoped GC, plugin and shutdown behavior with a full queue, and durable restart records | D aggregate quotas |
 
-The built-in workspace catalogue has 23 executable tools including inspection and workspace operations. The two-topic scenario adds one executable test extension using public services. The catalogue also has one JSON catalogue-only manifest and 300 synthetic scale entries (100 IDs × 3 versions). Plugin administration is available through the trusted application API. [PNG import](P1.3-PLAN.md#a--approved-png-imports) · [Timeline editing](P1.3-PLAN.md#b--timeline-editing) · [2D graphics editing](P1.3-PLAN.md#c--edit-existing-2d-graphics).
+The built-in workspace catalogue has 24 executable tools including inspection and workspace operations. The two-topic scenario adds one executable test extension using public services. The catalogue also has one JSON catalogue-only manifest and 300 synthetic scale entries (100 IDs × 3 versions). Plugin administration is available through the trusted application API. [PNG import](P1.3-PLAN.md#a--approved-png-imports) · [Timeline editing](P1.3-PLAN.md#b--timeline-editing) · [2D graphics editing](P1.3-PLAN.md#c--edit-existing-2d-graphics) · [Keyframes and crossfades](P1.3-PLAN.md#d--keyframes-and-crossfades).
 
 ## Next delivery sequence
 
@@ -73,7 +73,8 @@ P1.1's engineering gates have evidence; full visual closure is deferred to the f
 | 11a — implemented | P1.3-A approved PNG assets | Public import and placement, independent preview/video outputs, old and new snapshot recovery, and disk-budgeted worker evidence |
 | 11b — implemented | P1.3-B timeline editing | Shot move, reorder and trim, PNG clips on video tracks, and decoded MP4 cut and duration checks |
 | 11c — implemented | P1.3-C geometry, SVG and chart editing | Revisioned edits to existing nodes, localized pixel differences, verified export and identical restored preview |
-| 11d — next implementation | P1.3-D keyframes and an initial transition | Targeted keyframe edits, easing and rendered boundary checks |
+| 11d — implemented | P1.3-D keyframes and a crossfade | Revisioned keyframe edits, preserved easing rules and verified transition frames in previews and MP4 |
+| 11e — next implementation | P1.3-E narration and timed captions | Place audio and captions and verify sound and caption boundaries in the MP4 |
 | Final acceptance workstream — deferred | Consolidated human effect review | Review both P1.1 fixtures and representative later outputs, record defects/fixes and final reviewed main evidence |
 
 Land each verified increment independently. I2 is a bounded measurement feature, not a new Studio UI or a general autonomous video critic. Additional infrastructure needs an acceptance case that depends on it.
@@ -146,7 +147,7 @@ Project/plugin operation remains trusted and single-writer. The [P1.2 first slic
 | Stage | Responsibility |
 | --- | --- |
 | P1.2 | A–E implemented. [P1.2 plan](P1.2-PLAN.md) |
-| P1.3 | A–C implement PNG assets, timeline editing and edits to existing geometry, SVG paths and charts. D covers animation, followed by audio/captions and inspection. [P1.3 plan](P1.3-PLAN.md) |
+| P1.3 | A–D implement PNG assets, timeline editing, edits to existing 2D graphics, individual keyframes and a crossfade. E covers narration and captions, followed by integrated inspection. [P1.3 plan](P1.3-PLAN.md) |
 | P1.4 | Provider-independent planning and autonomous inspection/repair |
 | P1.5 | Multi-tool composition, performance evidence and new engines without orchestration rewrites |
 | P2 | Advanced motion design, Three.js/Blender, Manim, simulation, cinematography and audio |

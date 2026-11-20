@@ -181,6 +181,20 @@
               "type": "string",
               "minLength": 1
             }
+          },
+          "transitions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["fromShotId", "toShotId", "type", "durationFrames"],
+              "properties": {
+                "fromShotId": { "type": "string", "minLength": 1 },
+                "toShotId": { "type": "string", "minLength": 1 },
+                "type": { "const": "crossfade" },
+                "durationFrames": { "type": "integer", "minimum": 2, "maximum": 9007199254740991 }
+              }
+            }
           }
         }
       }

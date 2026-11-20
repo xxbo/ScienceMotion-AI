@@ -69,3 +69,30 @@ test("automatic inspection samples trimmed keyframes and clip boundaries", () =>
   for (const frame of [240, 241, 256, 257, 258, 290, 291, 408, 409, 410, 411]) assert.ok(frames.includes(frame), String(frame));
   assert.ok(!frames.includes(297));
 });
+
+test("adjacent crossfades sample trimmed scene frames and reject moving a configured boundary apart", () => {
+  const source = project();
+  source.shots = [
+    { id: "outgoing", name: "Out", sceneId: "a", inFrame: 7, startFrame: 145, durationFrames: 20, transitionOut: "cut" },
+    { id: "incoming", name: "In", sceneId: "b", inFrame: 5, startFrame: 165, durationFrames: 30 },
+  ];
+  source.sequences[0].shotIds = ["outgoing", "incoming"];
+  const transition = { op: "set-transition", fromShotId: "outgoing", toShotId: "incoming",
+    transition: { type: "crossfade", durationFrames: 5 } } as const;
+  const timeline = edit(source, transition);
+  assert.equal(source.sequences[0].transitions, undefined);
+  assert.equal(timeline.shots?.[0].transitionOut, "cut");
+  assert.equal(buildProjectRenderModel(timeline, 164).sceneFrame, 26);
+  const start = buildProjectRenderModel(timeline, 165);
+  assert.equal(start.sceneFrame, 5);
+  assert.deepEqual(start.crossfade, { outgoingElements: [], incomingOpacity: 0 });
+  assert.equal(buildProjectRenderModel(timeline, 167).crossfade?.incomingOpacity, 0.5);
+  assert.equal(buildProjectRenderModel(timeline, 169).crossfade, undefined);
+  assert.equal(buildProjectRenderModel(timeline, 165, "b").crossfade, undefined);
+  const { frames } = chooseInspectionFrames(timeline);
+  for (const f of [164, 165, 167, 169, 170]) assert.ok(frames.includes(f));
+  assert.throws(() => edit(timeline, { op: "move-shot", shotId: "incoming", startFrame: 166 }), /requires adjacent shots/);
+  const cleared = edit(timeline, { op: "move-shot", shotId: "incoming", startFrame: 166 }, { ...transition, transition: null });
+  assert.equal(cleared.sequences[0].transitions, undefined);
+  assert.equal(buildProjectRenderModel(cleared, 165).sceneId, undefined);
+});

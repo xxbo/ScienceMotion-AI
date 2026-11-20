@@ -241,6 +241,18 @@ jobs:
           path: out/graphics-edit/
           if-no-files-found: error
 
+      - name: Verify keyframe edits, crossfade boundaries and snapshot export
+        id: animation
+        run: npm run accept:animation
+
+      - name: Upload animation acceptance evidence
+        if: ${{ !cancelled() && (steps.animation.outcome == 'success' || steps.animation.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: animation-evidence
+          path: out/animation/
+          if-no-files-found: error
+
       - name: Verify recorded AI trial and deterministic stdio replay
         # Replay is a regression of the retained interaction, not a new model trial.
         run: npm run accept:ai-trial
