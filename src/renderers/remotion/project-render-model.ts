@@ -1,6 +1,7 @@
 import type { ProjectDocument, SceneNode } from "../../contracts/project";
 import { sampleAnimationTrack } from "../../platform/animation";
 import { pngArtifactForAsset, projectImagePlacement } from "../../platform/project-assets";
+import { firstSequencePngClips, firstSequenceShots } from "../../platform/project-timeline";
 
 export interface ProjectRenderElement {
   id: string; type: "text" | "shape" | "path" | "chart" | "image"; text?: string; pathData?: string; fillRule?: "nonzero" | "evenodd";
@@ -14,6 +15,7 @@ export interface ProjectRenderElement {
 export interface ProjectRenderModel {
   projectId: string; sceneId?: string; sceneFrame: number; width: number; height: number; fps: number;
   elements: ProjectRenderElement[];
+  videoClips: { clipId: string; artifactId: string }[];
   diagnostics: Array<{ level: "warning" | "error"; code: string; message: string; nodeId?: string; trackId?: string }>;
 }
 type Matrix = [number, number, number, number, number, number];
@@ -69,18 +71,21 @@ function localMatrix(node: SceneNode, project: ProjectDocument, frame: number, d
 export function buildProjectRenderModel(project: ProjectDocument, frame: number, sceneId?: string): ProjectRenderModel {
   const diagnostics: ProjectRenderModel["diagnostics"] = [];
   const sequence = project.sequences[0];
-  const shots = project.shots ?? [];
-  const shot = sceneId ? undefined : shots.find((item) => item.startFrame <= frame && frame < item.startFrame + item.durationFrames);
-  const selectedSceneId = sceneId ?? (shots.length ? shot?.sceneId : project.scenes[0]?.id);
+  const shot = sceneId ? undefined : firstSequenceShots(project).find((item) => item.startFrame <= frame && frame < item.startFrame + item.durationFrames);
+  const useTimeline = Boolean(project.shots?.length) || sequence?.trackIds !== undefined;
+  const selectedSceneId = sceneId ?? (useTimeline ? shot?.sceneId : project.scenes[0]?.id);
   const scene = project.scenes.find((item) => item.id === selectedSceneId);
-  const sceneFrame = shot && !sceneId ? frame - shot.startFrame : frame;
+  const sceneFrame = shot ? frame - shot.startFrame + (shot.inFrame ?? 0) : frame;
+  const videoClips = sceneId ? [] : firstSequencePngClips(project)
+    .filter(({ clip }) => clip.startFrame <= frame && frame < clip.startFrame + clip.durationFrames)
+    .map(({ clip, artifactId }) => ({ clipId: clip.id, artifactId }));
   const result: ProjectRenderModel = {
     projectId: project.project.id, sceneId: scene?.id, sceneFrame,
     width: sequence?.width ?? 1920, height: sequence?.height ?? 1080,
-    fps: sequence?.fps ?? project.project.timebase.fps, elements: [], diagnostics,
+    fps: sequence?.fps ?? project.project.timebase.fps, elements: [], videoClips, diagnostics,
   };
   if (!scene) {
-    diagnostics.push({ level: "warning", code: "RENDER_SCENE_NOT_FOUND", message: "No scene is active at the requested frame" });
+    if (!videoClips.length) diagnostics.push({ level: "warning", code: "RENDER_SCENE_NOT_FOUND", message: "No scene is active at the requested frame" });
     return result;
   }
   const nodes = new Map(project.nodes.map((node) => [node.id, node]));

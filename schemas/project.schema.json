@@ -173,6 +173,14 @@
             "items": {
               "type": "string"
             }
+          },
+          "trackIds": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
           }
         }
       }
@@ -395,6 +403,10 @@
           "durationFrames": {
             "type": "integer",
             "minimum": 1
+          },
+          "inFrame": {
+            "type": "integer",
+            "minimum": 0
           },
           "transitionIn": {
             "type": "string"

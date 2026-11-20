@@ -3,6 +3,7 @@ import type { SnapshotInspectionIssue, SnapshotInspectionReport } from "../contr
 import { buildProjectRenderModel, type ProjectRenderElement } from "../renderers/remotion/project-render-model";
 import type { ProjectSnapshot } from "./project-snapshots";
 import { hashProject } from "./project-snapshots";
+import { firstSequencePngClips, firstSequenceShots } from "./project-timeline";
 
 export const MAX_INSPECTION_FRAMES = 120;
 export const MAX_INSPECTION_ISSUES = 200;
@@ -45,15 +46,22 @@ export function chooseInspectionFrames(project: ProjectDocument, requested?: rea
     for (const key of track.keyframes) keys.add(key.frame);
     keysByScene.set(scene, keys);
   }
-  const candidateWork = (project.shots ?? []).reduce((sum, shot) => sum + 4 + (keysByScene.get(shot.sceneId)?.size ?? 0) * 3, 0);
+  const shots = firstSequenceShots(project), clips = firstSequencePngClips(project);
+  const candidateWork = shots.reduce((sum, shot) => sum + 4 + (keysByScene.get(shot.sceneId)?.size ?? 0) * 3, clips.length * 4);
   if (candidateWork > MAX_PROJECTION_WORK) reject("INSPECT_WORK_LIMIT", "Automatic frame selection exceeds its budget; request explicit frames");
-  for (const shot of project.shots ?? []) {
-    for (const frame of [shot.startFrame - 1, shot.startFrame, shot.startFrame + shot.durationFrames - 1, shot.startFrame + shot.durationFrames]) add(frame);
-    for (const key of keysByScene.get(shot.sceneId) ?? []) if (key < shot.durationFrames) {
-      for (const offset of [-1, 0, 1]) if (key + offset >= 0 && key + offset < shot.durationFrames) add(shot.startFrame + key + offset);
+  const addBoundary = (start: number, length: number) => {
+    for (const frame of [start - 1, start, start + length - 1, start + length]) add(frame);
+  };
+  for (const shot of shots) {
+    addBoundary(shot.startFrame, shot.durationFrames);
+    for (const key of keysByScene.get(shot.sceneId) ?? []) {
+      const relative = key - (shot.inFrame ?? 0);
+      if (relative < 0 || relative >= shot.durationFrames) continue;
+      for (const offset of [-1, 0, 1]) if (relative + offset >= 0 && relative + offset < shot.durationFrames) add(shot.startFrame + relative + offset);
     }
   }
-  if (!(project.shots?.length)) for (const key of keysByScene.get(project.scenes[0]?.id) ?? []) {
+  for (const { clip } of clips) addBoundary(clip.startFrame, clip.durationFrames);
+  if (!project.shots?.length && project.sequences[0]?.trackIds === undefined) for (const key of keysByScene.get(project.scenes[0]?.id) ?? []) {
     for (const offset of [-1, 0, 1]) add(key + offset);
   }
   const sorted = [...candidates].sort((a, b) => a - b);

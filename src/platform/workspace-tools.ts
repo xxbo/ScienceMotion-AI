@@ -1,9 +1,10 @@
 import type { AgentTool, AgentToolManifest, ToolResult } from "../contracts/agent-tool";
 import type { CreativePermission, CreativePluginFactory, CreativeServices } from "../contracts/creative-host";
 import type { ProjectAsset } from "../contracts/project";
-import type { ProjectPatchDocument } from "../contracts/project-patch";
+import type { ProjectPatchDocument, TimelinePatchOperation } from "../contracts/project-patch";
 import { createEmptyProject } from "./empty-project";
 import patchSchema from "../../schemas/project-patch.schema.json";
+import timelinePatchSchema from "../../schemas/project-timeline-patch.schema.json";
 import { isSafeSvgPathData } from "../renderers/remotion/project-render-model";
 import { MAX_INSPECTION_FRAMES } from "./snapshot-inspection";
 import inspectionSchema from "../../schemas/snapshot-inspection.schema.json";
@@ -45,6 +46,19 @@ export const workspacePlugin: CreativePluginFactory = {
         ["project.read", "project.write", "artifact.read"], patchInput, async (input) => ok(await services.project.applyPatch(input as ProjectPatchDocument, "Agent creative edit"))),
       tool("project.patch.remove", "Explicit destructive edit batch. In-use assets/scenes remain protected; no implicit cascade.",
         ["project.read", "project.write", "project.delete", "artifact.read"], patchInput, async (input) => ok(await services.project.applyPatch(input as ProjectPatchDocument, "Agent approved removal")), true),
+      tool("timeline.edit", "Atomically move, trim or reorder shots and place PNG clips on the first sequence. Times are zero-based frame intervals.",
+        ["project.read", "project.write"],
+        { ...object({ baseRevisionId: timelinePatchSchema.properties.baseRevisionId, edits: timelinePatchSchema.properties.patches }),
+          definitions: timelinePatchSchema.definitions },
+        async (input, context) => {
+          const args = input as { baseRevisionId: string; edits: TimelinePatchOperation[] };
+          const result = await services.project.applyPatch({ schemaVersion: "1.4.0", projectId: context.projectId,
+            baseRevisionId: args.baseRevisionId, patches: args.edits }, "Edit first sequence timeline");
+          const sequence = result.project.sequences[0];
+          return ok({ revisionId: result.revisionId, sequenceId: sequence.id, durationFrames: sequence.durationFrames,
+            shotIds: sequence.shotIds, trackIds: sequence.trackIds ?? [],
+            changedShotIds: result.changedShotIds ?? [], changedClipIds: result.changedClipIds ?? [] });
+        }),
       tool("project.snapshot.save", "Retain the exact current revision and its local artifact dependencies.", ["project.read", "snapshot.write"],
         object(strings(["revisionId", "snapshotId"])), async (input) => { const args = input as { revisionId: string; snapshotId: string }; return ok(await services.snapshots.save(args.revisionId, args.snapshotId)); }),
       tool("project.snapshot.inspect", "Read a retained snapshot from this project; dependencies are pinned for the tool run.", ["snapshot.read"],

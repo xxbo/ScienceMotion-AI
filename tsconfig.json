@@ -23,6 +23,7 @@
     "episodes/**/*.json",
     "scripts/creative-loop-acceptance.ts",
     "scripts/render-png-asset-acceptance.ts",
+    "scripts/render-timeline-acceptance.ts",
     "scripts/catalogue-scale-acceptance.ts",
     "scripts/creative-host-server.ts",
     "scripts/ai-trial-acceptance.ts",
