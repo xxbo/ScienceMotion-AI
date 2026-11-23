@@ -151,7 +151,7 @@ try {
   assert.ok(host.plugins.install(createApprovedBriefPlugin("3.0.0",false)).ok);
   const catalogueOnly=(await readdir("tools/manifests")).filter(p=>p.endsWith(".json")).length;
   const inventory={builtInExecutableTools:host.status().tools-1,acceptanceExtensionTools:1,catalogueOnlyManifests:catalogueOnly,syntheticScaleEntries:0};
-  assert.equal(inventory.builtInExecutableTools,24);
+  assert.equal(inventory.builtInExecutableTools,25);
   for(const topic of creativeLoopTopics){
     const s=session(topic.id);
     if(host.plugins.exportLock().plugins["acceptance.brief"]!=="1.0.0")await activate(s,"1.0.0",`${topic.id}-baseline-selection`);

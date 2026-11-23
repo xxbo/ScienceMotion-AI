@@ -1,6 +1,6 @@
 # Development Plan
 
-Last updated 2026-11-20
+Last updated 2026-11-23
 
 ## Goal and current priority
 
@@ -10,7 +10,7 @@ Prioritize a small demonstrated creation-and-repair workflow on Remotion. Progra
 
 [Platform Vision](PLATFORM_VISION.md) owns durable principles, [Architecture](ARCHITECTURE.md) implementation boundaries, and [P1.1 Acceptance](P1.1-ACCEPTANCE.md) measurable exit gates. Test counts and catalogue size are not product-completion percentages.
 
-P1.2 delivers isolated local jobs with resource limits and measured bundle reuse. P1.3-A–E deliver PNG import, timeline editing, edits to existing 2D graphics, keyframe editing and crossfades, and WAV narration with timed captions. P1.3-F covers integrated inspection and repair. Human effect review is assigned to the final acceptance workstream. [P1.2 plan](P1.2-PLAN.md) · [P1.3 plan](P1.3-PLAN.md).
+P1.2 delivers isolated local jobs with resource limits and measured bundle reuse. P1.3 delivers editable media, timelines, 2D graphics, keyframes, crossfades, WAV narration and timed captions. The integrated short exercises inspection, targeted repairs, export and recovery. P1.4 is next, with provider-independent planning and an inspection and repair loop. Human effect review is assigned to the final acceptance workstream. [P1.2 plan](P1.2-PLAN.md) · [P1.3 plan](P1.3-PLAN.md).
 
 ## Main is the delivery baseline
 
@@ -42,7 +42,7 @@ Recorded baselines are historical evidence, not aliases for main HEAD. [PR #1](h
 | P1.2-C2 | Trusted retention inspection, durable reconciliation, job-specific output ownership, release and pruning | D aggregate quotas |
 | P1.2-C3 | Real-worker concurrent edit, project isolation, scoped GC, plugin and shutdown behavior with a full queue, and durable restart records | D aggregate quotas |
 
-The built-in workspace catalogue has 24 executable tools including inspection and workspace operations. The two-topic scenario adds one executable test extension using public services. The catalogue also has one JSON catalogue-only manifest and 300 synthetic scale entries (100 IDs × 3 versions). Plugin administration is available through the trusted application API. [PNG import](P1.3-PLAN.md#a--approved-png-imports) · [Timeline editing](P1.3-PLAN.md#b--timeline-editing) · [2D graphics editing](P1.3-PLAN.md#c--edit-existing-2d-graphics) · [Keyframes and crossfades](P1.3-PLAN.md#d--keyframes-and-crossfades).
+The built-in workspace catalogue has 25 executable tools including inspection and workspace operations. The two-topic scenario adds one executable test extension using public services. The catalogue also has one JSON catalogue-only manifest and 300 synthetic scale entries (100 IDs × 3 versions). Plugin administration is available through the trusted application API. [PNG import](P1.3-PLAN.md#a--approved-png-imports) · [Timeline editing](P1.3-PLAN.md#b--timeline-editing) · [2D graphics editing](P1.3-PLAN.md#c--edit-existing-2d-graphics) · [Keyframes and crossfades](P1.3-PLAN.md#d--keyframes-and-crossfades) · [Integrated inspection](P1.3-PLAN.md#f--integrated-inspection-and-repair).
 
 ## Next delivery sequence
 
@@ -75,7 +75,7 @@ P1.1's engineering gates have evidence; full visual closure is deferred to the f
 | 11c — implemented | P1.3-C geometry, SVG and chart editing | Revisioned edits to existing nodes, localized pixel differences, verified export and identical restored preview |
 | 11d — implemented | P1.3-D keyframes and a crossfade | Revisioned keyframe edits, preserved easing rules and verified transition frames in previews and MP4 |
 | 11e — implemented | P1.3-E narration and timed captions | Approved WAV import, revisioned narration and caption placement, and decoded MP4 audio and caption timing |
-| 11f — next implementation | P1.3-F integrated inspection and repair | Create, diagnose, repair, export and recover a short using the public tools |
+| 11f — implemented | P1.3-F integrated inspection and repair | Exact timeline report, three diagnoses and targeted repairs, and matching decoded media after recovery of an eight-second narrated short |
 | Final acceptance workstream — deferred | Consolidated human effect review | Review both P1.1 fixtures and representative later outputs, record defects/fixes and final reviewed main evidence |
 
 Land each verified increment independently. I2 is a bounded measurement feature, not a new Studio UI or a general autonomous video critic. Additional infrastructure needs an acceptance case that depends on it.
@@ -148,8 +148,8 @@ Project/plugin operation remains trusted and single-writer. The [P1.2 first slic
 | Stage | Responsibility |
 | --- | --- |
 | P1.2 | A–E implemented. [P1.2 plan](P1.2-PLAN.md) |
-| P1.3 | A–E implement PNG assets, timeline editing, edits to existing 2D graphics, individual keyframes, a crossfade, and narration with timed captions. F covers integrated inspection and repair. [P1.3 plan](P1.3-PLAN.md) |
-| P1.4 | Provider-independent planning and autonomous inspection/repair |
+| P1.3 | A–F implemented, including an integrated short with inspection, targeted repair, export and recovery. [P1.3 plan](P1.3-PLAN.md) |
+| P1.4 | Next implementation. Provider-independent planning and autonomous inspection and repair |
 | P1.5 | Multi-tool composition, performance evidence and new engines without orchestration rewrites |
 | P2 | Advanced motion design, Three.js/Blender, Manim, simulation, cinematography and audio |
 | P3 | Research/LLM/TTS/media providers, claims/sources, asset provenance and licensing |

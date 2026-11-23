@@ -16,6 +16,8 @@ import { projectArtifactBindings } from "./project-assets";
 import { hashProject } from "./project-snapshots";
 import type { ProjectGraphRenderOutput, ProjectGraphRenderRequest } from "../contracts/renderer";
 import { inspectProjectSnapshot, SnapshotInspectionError } from "./snapshot-inspection";
+import { inspectProjectTimeline } from "./snapshot-timeline-inspection";
+import type { TimelineInspectionOptions } from "../contracts/inspection";
 import { finishLayoutInspection, prepareLayoutInspection } from "./snapshot-layout-inspection";
 import type { ProjectGraphLayoutRequest } from "../contracts/renderer";
 import type { LayoutFrameMeasurement } from "../contracts/layout-inspection";
@@ -356,6 +358,17 @@ export async function assembleCreativeHost(runtime: CreativeHostRuntime, factori
       }),
     },
     inspect: {
+      timeline: (snapshotId: string, options?: TimelineInspectionOptions) => {
+        const selected = options === undefined ? undefined : structuredClone(options);
+        return task(["snapshot.read"], async (scope) => {
+          const saved = await snapshot(scope, snapshotId);
+          try { return jsonCopy(inspectProjectTimeline(saved, selected), limits.maxProjectBytes); }
+          catch (error) {
+            if (error instanceof SnapshotInspectionError) fail(error.code, error.message);
+            throw error;
+          }
+        });
+      },
       layout: (snapshotId: string, frames?: readonly number[]) => {
         const selected = frames === undefined ? undefined : structuredClone(frames);
         return task(["snapshot.read"], async (scope) => {

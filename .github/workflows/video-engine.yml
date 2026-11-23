@@ -265,6 +265,18 @@ jobs:
           path: out/narration/
           if-no-files-found: error
 
+      - name: Verify integrated short creation, inspection, repair and recovery
+        id: integrated-creative
+        run: npm run accept:p1-3
+
+      - name: Upload integrated creative acceptance evidence
+        if: ${{ !cancelled() && (steps.integrated-creative.outcome == 'success' || steps.integrated-creative.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: integrated-creative-evidence
+          path: out/integrated-creative/
+          if-no-files-found: error
+
       - name: Verify recorded AI trial and deterministic stdio replay
         # Replay is a regression of the retained interaction, not a new model trial.
         run: npm run accept:ai-trial
