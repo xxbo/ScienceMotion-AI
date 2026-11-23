@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Creative planner decision 1.0.0",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "toolId", "toolVersion", "input"],
+      "properties": {
+        "kind": { "const": "invoke" },
+        "toolId": { "type": "string", "pattern": "^[a-z][a-z0-9._-]+$", "maxLength": 256 },
+        "toolVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$", "maxLength": 256 },
+        "input": {}
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "summary"],
+      "properties": { "kind": { "const": "finish" }, "summary": { "$ref": "#/definitions/text" } }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "question"],
+      "properties": { "kind": { "const": "needs-input" }, "question": { "$ref": "#/definitions/text" } }
+    }
+  ],
+  "definitions": {
+    "text": { "type": "string", "maxLength": 2048, "pattern": "\\S" }
+  }
+}

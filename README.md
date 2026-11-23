@@ -56,7 +56,7 @@ The host has 25 executable built-ins. The P1.1 two-topic scenario adds one execu
 
 P1.1 has evidence for 23 of 25 acceptance items, and the two human-review items are assigned to final acceptance. The recorded AI trial created a 12-second video through discovered tools and repaired it using a layout report. [P1.1 acceptance](docs/P1.1-ACCEPTANCE.md) · [Sample review](docs/P1.1-REVIEW.md) · [Recorded AI trial](docs/P1.1-AI-TRIAL.md) · [Revised video](docs/ai-trials/cache-hit-2026-11-17/video-final.mp4).
 
-P1.2 and P1.3 are implemented. P1.4 is next, with provider-independent planning and autonomous inspection and repair. [Roadmap](docs/PLAN.md#later-roadmap).
+P1.2 and P1.3 are implemented. P1.4-A validates provider-independent planning proposals against the scoped Creative Host catalogue. P1.4-B will execute proposals within a bounded run. [P1.4 plan](docs/P1.4-PLAN.md).
 
 ## Development checks
 

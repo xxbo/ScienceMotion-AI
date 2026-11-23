@@ -10,7 +10,7 @@ Prioritize a small demonstrated creation-and-repair workflow on Remotion. Progra
 
 [Platform Vision](PLATFORM_VISION.md) owns durable principles, [Architecture](ARCHITECTURE.md) implementation boundaries, and [P1.1 Acceptance](P1.1-ACCEPTANCE.md) measurable exit gates. Test counts and catalogue size are not product-completion percentages.
 
-P1.2 delivers isolated local jobs with resource limits and measured bundle reuse. P1.3 delivers editable media, timelines, 2D graphics, keyframes, crossfades, WAV narration and timed captions. The integrated short exercises inspection, targeted repairs, export and recovery. P1.4 is next, with provider-independent planning and an inspection and repair loop. Human effect review is assigned to the final acceptance workstream. [P1.2 plan](P1.2-PLAN.md) · [P1.3 plan](P1.3-PLAN.md).
+P1.2 delivers isolated local jobs with resource limits and measured bundle reuse. P1.3 delivers editable media, timelines, 2D graphics, keyframes, crossfades, WAV narration and timed captions. The integrated short exercises inspection, targeted repairs, export and recovery. P1.4 starts with a provider-independent planning interface and scoped proposal preflight. Bounded execution is next. Human effect review is assigned to the final acceptance workstream. [P1.2 plan](P1.2-PLAN.md) · [P1.3 plan](P1.3-PLAN.md) · [P1.4 plan](P1.4-PLAN.md).
 
 ## Main is the delivery baseline
 
@@ -76,6 +76,8 @@ P1.1's engineering gates have evidence; full visual closure is deferred to the f
 | 11d — implemented | P1.3-D keyframes and a crossfade | Revisioned keyframe edits, preserved easing rules and verified transition frames in previews and MP4 |
 | 11e — implemented | P1.3-E narration and timed captions | Approved WAV import, revisioned narration and caption placement, and decoded MP4 audio and caption timing |
 | 11f — implemented | P1.3-F integrated inspection and repair | Exact timeline report, three diagnoses and targeted repairs, and matching decoded media after recovery of an eight-second narrated short |
+| 12a — implemented | P1.4-A planning interface | One provider-independent proposal preflight using the live scoped catalogue, exact versions and input schemas |
+| 12b — next implementation | P1.4-B bounded execution | A result-aware run from an approved brief to a saved draft with a recorded stop reason |
 | Final acceptance workstream — deferred | Consolidated human effect review | Review both P1.1 fixtures and representative later outputs, record defects/fixes and final reviewed main evidence |
 
 Land each verified increment independently. I2 is a bounded measurement feature, not a new Studio UI or a general autonomous video critic. Additional infrastructure needs an acceptance case that depends on it.
@@ -149,7 +151,7 @@ Project/plugin operation remains trusted and single-writer. The [P1.2 first slic
 | --- | --- |
 | P1.2 | A–E implemented. [P1.2 plan](P1.2-PLAN.md) |
 | P1.3 | A–F implemented, including an integrated short with inspection, targeted repair, export and recovery. [P1.3 plan](P1.3-PLAN.md) |
-| P1.4 | Next implementation. Provider-independent planning and autonomous inspection and repair |
+| P1.4 | A delivers proposal preflight. B–E cover bounded execution, inspection and repair, delivery checks, and end-to-end acceptance. [P1.4 plan](P1.4-PLAN.md) |
 | P1.5 | Multi-tool composition, performance evidence and new engines without orchestration rewrites |
 | P2 | Advanced motion design, Three.js/Blender, Manim, simulation, cinematography and audio |
 | P3 | Research/LLM/TTS/media providers, claims/sources, asset provenance and licensing |

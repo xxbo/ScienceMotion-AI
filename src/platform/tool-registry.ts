@@ -1,7 +1,8 @@
-import Ajv, { type ValidateFunction } from "ajv";
+import type { ValidateFunction } from "ajv";
 import type { ArtifactStore } from "../contracts/artifact";
 import type { ArtifactLifecycleManager } from "../contracts/artifact-lifecycle";
 import { LocalToolExecutor, toolFailure, type ToolExecutorOptions } from "./tool-execution";
+import { createToolSchemaValidator, formatToolSchemaErrors } from "./tool-schema-validation";
 export type { ToolExecutionEvent } from "./tool-execution";
 import type {
   AgentTool,
@@ -140,7 +141,7 @@ export class InMemoryAgentToolRegistry implements AgentToolRegistry {
 
 /** Validation/policy adapter; admission and execution evidence live in LocalToolExecutor. */
 export class LocalAgentToolGateway implements AgentToolGateway {
-  private readonly ajv = new Ajv({ allErrors: true, strict: false });
+  private readonly ajv = createToolSchemaValidator();
   private readonly executor: LocalToolExecutor;
   private readonly permissions: Set<string>;
   private readonly options: ToolGatewayOptions;
@@ -169,10 +170,10 @@ export class LocalAgentToolGateway implements AgentToolGateway {
       validateOutput = this.ajv.compile(manifest.outputSchema);
     } catch (error) { return toolFailure("TOOL_SCHEMA_INVALID", error instanceof Error ? error.message : String(error)); }
     try {
-      if (!validateInput(input)) return toolFailure("TOOL_INPUT_INVALID", this.formatErrors(validateInput));
+      if (!validateInput(input)) return toolFailure("TOOL_INPUT_INVALID", formatToolSchemaErrors(validateInput));
     } catch (error) { return toolFailure("TOOL_INPUT_INVALID", error instanceof Error ? error.message : String(error)); }
     const result = await this.executor.invoke(tool, input, context, async (result, signal) => {
-      if (result.ok && !validateOutput(result.output)) throw new Error(`Tool output does not match its declared schema: ${this.formatErrors(validateOutput)}`);
+      if (result.ok && !validateOutput(result.output)) throw new Error(`Tool output does not match its declared schema: ${formatToolSchemaErrors(validateOutput)}`);
       if (result.ok && result.artifacts?.length && this.options.artifactStore) {
         for (const artifact of result.artifacts) {
           signal.throwIfAborted();
@@ -195,8 +196,4 @@ export class LocalAgentToolGateway implements AgentToolGateway {
   }
 
   async shutdown(): Promise<void> { await this.executor.shutdown(); }
-
-  private formatErrors(validate: ValidateFunction): string {
-    return (validate.errors ?? []).map((error) => `${error.instancePath || "/"} ${error.message ?? "is invalid"}`).join("; ");
-  }
 }
