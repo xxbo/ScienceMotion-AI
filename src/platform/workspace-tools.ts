@@ -1,5 +1,6 @@
 import type { AgentTool, AgentToolManifest, ToolResult } from "../contracts/agent-tool";
 import type { CreativePermission, CreativePluginFactory, CreativeServices } from "../contracts/creative-host";
+import type { TimelineInspectionOptions } from "../contracts/inspection";
 import type { ProjectAsset } from "../contracts/project";
 import type { ProjectPatchDocument, TimelinePatchOperation } from "../contracts/project-patch";
 import { createEmptyProject } from "./empty-project";
@@ -11,6 +12,7 @@ import { keyframeEditInput, keyframeEditPatches, type KeyframeEdit } from "./key
 import { MAX_INSPECTION_FRAMES } from "./snapshot-inspection";
 import inspectionSchema from "../../schemas/snapshot-inspection.schema.json";
 import layoutInspectionSchema from "../../schemas/snapshot-layout-inspection.schema.json";
+import timelineInspectionSchema from "../../schemas/timeline-inspection.schema.json";
 import { MAX_LAYOUT_FRAMES } from "./snapshot-layout-inspection";
 import { pngArtifactForAsset } from "./project-assets";
 
@@ -90,6 +92,17 @@ export const workspacePlugin: CreativePluginFactory = {
             message: issue.message, details: { frame: issue.frame, ...(issue.nodeId ? { nodeId: issue.nodeId } : {}),
               ...(issue.sceneId ? { sceneId: issue.sceneId } : {}) } })) };
         }, false, layoutInspectionSchema),
+      tool("inspect.timeline", "Inspect exact first-sequence shot, crossfade, PNG, narration and caption intervals. Optionally report caption spans outside declared positive-gain narration.", ["snapshot.read"],
+        object({ snapshotId: { type: "string", minLength: 1, maxLength: 256 },
+          range: object({ startFrame: { type: "integer", minimum: 0, maximum: Number.MAX_SAFE_INTEGER },
+            durationFrames: { type: "integer", minimum: 1, maximum: Number.MAX_SAFE_INTEGER } }),
+          requireNarrationForCaptions: { type: "boolean" } }, ["snapshotId"]),
+        async (input) => {
+          const { snapshotId, ...options } = input as TimelineInspectionOptions & { snapshotId: string };
+          const report = await services.inspect.timeline(snapshotId, options);
+          return { ok: true, output: report, diagnostics: report.issues.map(issue => ({ level: issue.level, code: issue.code,
+            message: issue.message, details: { captionId: issue.captionId, uncovered: issue.uncovered } })) };
+        }, false, timelineInspectionSchema),
       tool("render.preview", "Render one frame from a project-owned immutable snapshot and return a retained PNG Artifact.", ["snapshot.read", "artifact.write"],
         object({ snapshotId: { type: "string", minLength: 1 }, frame: { type: "integer", minimum: 0 }, sceneId: { type: "string", minLength: 1 } }, ["snapshotId", "frame"]),
         async (input) => {

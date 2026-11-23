@@ -37,7 +37,7 @@ Main is the delivery baseline. P1.2-A's render-worker lifecycle was delivered on
 | P1.3-C | Edit existing shapes, SVG paths and charts, with pixel checks and exact snapshot recovery. [Graphics editing](docs/P1.3-PLAN.md#c--edit-existing-2d-graphics) |
 | P1.3-D | Individual keyframe edits, scene-local easing and a frame-verified shot crossfade. [Keyframes and crossfades](docs/P1.3-PLAN.md#d--keyframes-and-crossfades) |
 | P1.3-E | WAV narration, timed captions and verified AAC and caption boundaries in MP4 exports. [Narration and captions](docs/P1.3-PLAN.md#e--narration-and-timed-captions) |
-| P1.3-F | Integrated inspection, targeted repair, export and recovery. [Roadmap](docs/PLAN.md#later-roadmap) |
+| P1.3-F | Read-only timeline inspection, targeted repairs and verified recovery of an eight-second narrated short. [Integrated inspection and repair](docs/P1.3-PLAN.md#f--integrated-inspection-and-repair) |
 
 The built-in workspace plugin now includes initial scene, text, shape, transform and keyframe tools. The generic Project Graph composition is a first 2D slice; the CPU-cache Episode renderer remains separate. The [two-topic acceptance scenario](docs/P1.1-CREATIVE-LOOP.md) creates 12-second cache and water-cycle fixtures through public tools, detects/repairs seeded defects, edits text/motion and verifies export/restart/restore including original data dependencies. CI preserves six baseline/edited/restored MP4s, 18 previews, manifests and invocation evidence. These technical fixtures are silent and scripted.
 
@@ -52,9 +52,11 @@ Approved content -> AI tool calls -> Project Graph -> immutable snapshot
   -> structured inspection -> targeted edit -> representative preview -> video export / restore
 ```
 
-The current host has 19 executable built-ins; acceptance adds one executable test extension and grants 17 tools to the fixture workflow. One catalogue-only manifest and 300 synthetic scale entries (100 IDs × 3 versions) are counted separately. The scale entries are not implemented creative tools. Reuse Remotion and the existing contracts; marketplace/distributed infrastructure remains deferred.
+The host has 25 executable built-ins. The P1.1 two-topic scenario adds one executable test extension. The catalogue also includes one catalogue-only manifest and 300 synthetic scale entries (100 IDs × 3 versions).
 
-P1.1 has evidence for 23/25 acceptance items, not an effort-completion percentage. [Host plugin switching and the 300-manifest scenario](docs/P1.1-PLUGIN-SWITCH-SCALE.md), plus the [local interface and recorded AI trial](docs/P1.1-AI-TRIAL.md), are implemented. Watch the trial's [12-second revised video](docs/ai-trials/cache-hit-2026-11-17/video-final.mp4): it was created through discovered tools and repaired from a layout report. The user gave [positive sample feedback and deferred human review to final acceptance](docs/P1.1-REVIEW.md). [P1.2-A](docs/P1.2-WORKERS.md), [B1's ledger](docs/P1.2-B1-JOB-LEDGER.md) and [B2 host/client jobs](docs/P1.2-B2-HOST-JOBS.md) are implemented; [B3 completes the actual worker/CLI lifecycle](docs/P1.2-B3-CLI-LIFECYCLE.md). P1.2-D follows the C1–C3 delivery. [C1 scheduling](docs/P1.2-C1-SCHEDULING.md) · [C2 retention administration](docs/P1.2-C2-RETENTION.md) · [C3 acceptance](docs/P1.2-C3-CONCURRENT-MAINTENANCE.md). CI replay makes no new model calls. See [Development Plan](docs/PLAN.md) and [P1.1 Acceptance](docs/P1.1-ACCEPTANCE.md).
+P1.1 has evidence for 23 of 25 acceptance items, and the two human-review items are assigned to final acceptance. The recorded AI trial created a 12-second video through discovered tools and repaired it using a layout report. [P1.1 acceptance](docs/P1.1-ACCEPTANCE.md) · [Sample review](docs/P1.1-REVIEW.md) · [Recorded AI trial](docs/P1.1-AI-TRIAL.md) · [Revised video](docs/ai-trials/cache-hit-2026-11-17/video-final.mp4).
+
+P1.2 and P1.3 are implemented. P1.4 is next, with provider-independent planning and autonomous inspection and repair. [Roadmap](docs/PLAN.md#later-roadmap).
 
 ## Development checks
 
@@ -79,6 +81,7 @@ npm run accept:render-worker
 npm run accept:render-jobs
 npm run accept:render-scheduler
 npm run accept:render-maintenance
+npm run accept:p1-3
 npm run --silent probe:render-resources
 ```
 
@@ -111,6 +114,8 @@ The combined acceptance enables all resource budgets in the same host, verifies 
 `npm run bench:render` compares isolated in-process and worker runs over the same snapshot. It writes raw timings and a summary under `out/render-performance/`. [E1 reproduction and metrics](docs/P1.2-E1-PERFORMANCE-BASELINE.md).
 
 `npm run bench:render -- --compare bundle` compares worker requests with and without a prepared bundle and includes build time in the sample totals. [E2 preparation and metrics](docs/P1.2-E2-BUNDLE-REUSE.md).
+
+`npm run accept:p1-3` creates, inspects, repairs, exports and recovers a short through the public tools. CI publishes the videos, previews, inspection reports and execution trace as `integrated-creative-evidence`. [P1.3-F verification](docs/P1.3-PLAN.md#f--integrated-inspection-and-repair).
 
 ## Design and documentation
 

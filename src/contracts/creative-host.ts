@@ -6,7 +6,7 @@ import type { ProjectDocument } from "./project";
 import type { ProjectPatchDocument, ProjectPatchResult } from "./project-patch";
 import type { ProjectSnapshot } from "../platform/project-snapshots";
 import type { ProjectGraphRenderOutput, ProjectGraphRenderRequest } from "./renderer";
-import type { SnapshotInspectionReport } from "./inspection";
+import type { SnapshotInspectionReport, TimelineInspectionOptions, TimelineInspectionReport } from "./inspection";
 import type { SnapshotLayoutInspectionReport } from "./layout-inspection";
 import type { CreativeRenderJobMaintenance, CreativeRenderJobs } from "./creative-jobs";
 
@@ -50,7 +50,8 @@ export interface CreativeServices {
    * The content-addressed store retains its immutable first-writer record. */
   render: { preview(snapshotId: string, frame: number, sceneId?: string): Promise<ArtifactRecord>; video(snapshotId: string, startFrame: number, durationFrames: number, sceneId?: string): Promise<ArtifactRecord> };
   inspect: { snapshot(snapshotId: string, frames?: readonly number[]): Promise<SnapshotInspectionReport>;
-    layout(snapshotId: string, frames?: readonly number[]): Promise<SnapshotLayoutInspectionReport> };
+    layout(snapshotId: string, frames?: readonly number[]): Promise<SnapshotLayoutInspectionReport>;
+    timeline(snapshotId: string, options?: TimelineInspectionOptions): Promise<TimelineInspectionReport> };
   executions: { list(): Promise<ToolExecutionRecord[]> };
 }
 export interface CreativePluginFactory {

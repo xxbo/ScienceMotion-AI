@@ -33,6 +33,7 @@
     "accept:graphics-edit": "tsx scripts/render-graphics-edit-acceptance.ts",
     "accept:animation": "tsx scripts/render-animation-acceptance.ts",
     "accept:narration": "tsx scripts/render-narration-acceptance.ts",
+    "accept:p1-3": "tsx scripts/integrated-creative-acceptance.ts",
     "accept:catalogue-scale": "tsx scripts/catalogue-scale-acceptance.ts",
     "host:stdio": "tsx scripts/creative-host-server.ts",
     "accept:ai-trial": "tsx scripts/ai-trial-acceptance.ts",

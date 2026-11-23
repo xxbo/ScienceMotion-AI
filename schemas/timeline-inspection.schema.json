@@ -1,0 +1,82 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Snapshot timeline inspection",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "inspector", "snapshotId", "snapshotHash", "projectId", "revisionId", "sequenceId", "fps", "sequenceFrames", "range", "coverage", "outcome", "intervals", "issues"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "inspector": {
+      "type": "object", "additionalProperties": false, "required": ["id", "version"],
+      "properties": { "id": { "const": "project-graph.timeline" }, "version": { "const": "1.0.0" } }
+    },
+    "snapshotId": { "$ref": "#/definitions/id" },
+    "snapshotHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "projectId": { "$ref": "#/definitions/id" },
+    "revisionId": { "$ref": "#/definitions/id" },
+    "sequenceId": { "$ref": "#/definitions/id" },
+    "fps": { "type": "integer", "minimum": 1, "maximum": 240 },
+    "sequenceFrames": { "type": "integer", "minimum": 1 },
+    "range": { "$ref": "#/definitions/range" },
+    "coverage": {
+      "type": "object", "additionalProperties": false,
+      "required": ["mode", "requireNarrationForCaptions", "checks", "notChecked"],
+      "properties": {
+        "mode": { "const": "exact-intervals" },
+        "requireNarrationForCaptions": { "type": "boolean" },
+        "checks": { "type": "array", "items": { "type": "string" } },
+        "notChecked": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "outcome": { "enum": ["issues-found", "no-issues-detected"] },
+    "intervals": {
+      "type": "array", "maxItems": 2000,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["kind", "startFrame", "endFrame"],
+        "properties": {
+          "kind": { "enum": ["shot", "png", "narration", "caption", "crossfade"] },
+          "startFrame": { "$ref": "#/definitions/frame" },
+          "endFrame": { "$ref": "#/definitions/frame" },
+          "sourceStartFrame": { "$ref": "#/definitions/frame" },
+          "shotId": { "$ref": "#/definitions/id" },
+          "sceneId": { "$ref": "#/definitions/id" },
+          "captionId": { "$ref": "#/definitions/id" },
+          "clipId": { "$ref": "#/definitions/id" },
+          "assetId": { "$ref": "#/definitions/id" },
+          "artifactId": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+          "gain": { "type": "number", "minimum": 0, "maximum": 2 },
+          "fromShotId": { "$ref": "#/definitions/id" },
+          "toShotId": { "$ref": "#/definitions/id" }
+        },
+        "oneOf": [
+          { "properties": { "kind": { "const": "shot" } }, "required": ["shotId", "sceneId", "sourceStartFrame"] },
+          { "properties": { "kind": { "const": "png" } }, "required": ["clipId", "assetId", "artifactId"] },
+          { "properties": { "kind": { "const": "narration" } }, "required": ["clipId", "assetId", "artifactId", "sourceStartFrame", "gain"] },
+          { "properties": { "kind": { "const": "caption" } }, "required": ["captionId"] },
+          { "properties": { "kind": { "const": "crossfade" } }, "required": ["fromShotId", "toShotId"] }
+        ]
+      }
+    },
+    "issues": {
+      "type": "array", "maxItems": 2000,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["level", "code", "message", "captionId", "uncovered"],
+        "properties": {
+          "level": { "const": "warning" },
+          "code": { "const": "TIMELINE_CAPTION_NARRATION_GAP" },
+          "message": { "type": "string" },
+          "captionId": { "$ref": "#/definitions/id" },
+          "uncovered": { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/range" } }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "id": { "type": "string", "minLength": 1 },
+    "frame": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+    "range": {
+      "type": "object", "additionalProperties": false, "required": ["startFrame", "endFrame"],
+      "properties": { "startFrame": { "$ref": "#/definitions/frame" }, "endFrame": { "$ref": "#/definitions/frame" } }
+    }
+  }
+}
