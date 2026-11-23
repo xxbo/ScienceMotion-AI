@@ -28,6 +28,7 @@
     "scripts/render-animation-acceptance.ts",
     "scripts/render-narration-acceptance.ts",
     "scripts/integrated-creative-acceptance.ts",
+    "scripts/creative-run-acceptance.ts",
     "scripts/catalogue-scale-acceptance.ts",
     "scripts/creative-host-server.ts",
     "scripts/ai-trial-acceptance.ts",

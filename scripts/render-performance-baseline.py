@@ -32,10 +32,15 @@ def installed_environment():
     packages = ("remotion", "@remotion/bundler", "@remotion/renderer", "tsx")
     installed = {name: json.loads((ROOT / "node_modules" / name / "package.json").read_text())["version"]
                  for name in packages}
-    browser = ROOT / "node_modules/.remotion/chrome-headless-shell"
-    version = browser / "VERSION"
-    if not version.is_file() or not any(path.is_file() and os.access(path, os.X_OK) for path in browser.rglob("chrome-headless-shell")):
-        raise RuntimeError("Prepare the browser with npx remotion browser ensure")
+    # Resolve the executable through Remotion because its browser cache layout can change.
+    browser = Path(command("node", "--input-type=module", "-e", """
+        import { ensureBrowser } from "@remotion/renderer";
+        const status = await ensureBrowser({ logLevel: "silent" });
+        if (!status.path) throw new Error("Remotion did not select a browser");
+        process.stdout.write(status.path);
+    """))
+    if not browser.is_file() or not os.access(browser, os.X_OK):
+        raise RuntimeError("Remotion did not select an executable browser")
     cgroup = next((line[3:] for line in Path("/proc/self/cgroup").read_text().splitlines() if line.startswith("0::")), "/")
     cgroup_path = Path("/sys/fs/cgroup") / cgroup.lstrip("/")
     controls = {name: (cgroup_path / name).read_text().strip() for name in ("cpu.max", "memory.max")
@@ -46,7 +51,7 @@ def installed_environment():
             "os": platform.freedesktop_os_release()["PRETTY_NAME"], "kernel": platform.release(), "arch": platform.machine(),
             "cpuModel": model, "affinityCpuCount": len(os.sched_getaffinity(0)), "accountingCgroupControls": controls,
             "node": command("node", "--version"), "python": platform.python_version(), "packages": installed,
-            "browser": version.read_text().strip(),
+            "browser": command(str(browser), "--version"),
             "chineseFont": command("fc-match", "-f", "%{family}", "sans-serif:lang=zh") if shutil.which("fc-match") else None,
             "ciRun": os.environ.get("GITHUB_RUN_ID"), "ciAttempt": os.environ.get("GITHUB_RUN_ATTEMPT")}
 
