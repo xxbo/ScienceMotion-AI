@@ -2,7 +2,7 @@ import type { ValidateFunction } from "ajv";
 import decisionSchema from "../../schemas/creative-planner-decision.schema.json";
 import type { ToolSearchQuery } from "../contracts/agent-tool";
 import type { CreativeSession } from "../contracts/creative-host";
-import { CREATIVE_PLANNER_PROTOCOL, type CreativePlanner, type CreativePlannerDecision } from "../contracts/creative-planner";
+import { CREATIVE_PLANNER_PROTOCOL, type CreativePlanner, type CreativePlannerDecision, type CreativePlannerObservation } from "../contracts/creative-planner";
 import { assertFiniteJson } from "./project-creative-edits";
 import { createToolSchemaValidator, formatToolSchemaErrors } from "./tool-schema-validation";
 
@@ -36,7 +36,7 @@ function parseDecision(text: string): CreativePlannerDecision {
 export async function planCreativeStep(
   session: Pick<CreativeSession, "projectId" | "discover" | "manifest">,
   planner: CreativePlanner,
-  { brief, query, signal }: { brief: string; query?: ToolSearchQuery; signal?: AbortSignal },
+  { brief, query, signal, observation }: { brief: string; query?: ToolSearchQuery; signal?: AbortSignal; observation?: CreativePlannerObservation },
 ): Promise<CreativePlannerDecision> {
   signal?.throwIfAborted();
   if (typeof brief !== "string" || !brief.trim())
@@ -44,7 +44,7 @@ export async function planCreativeStep(
   const catalogue = await session.discover(query);
   signal?.throwIfAborted();
   const raw = await planner.propose({ protocolVersion: CREATIVE_PLANNER_PROTOCOL, projectId: session.projectId,
-    brief, catalogue: structuredClone(catalogue) }, signal);
+    brief, catalogue: structuredClone(catalogue), ...(observation ? { observation: structuredClone(observation) } : {}) }, signal);
   signal?.throwIfAborted();
   const decision = parseDecision(raw);
   if (decision.kind !== "invoke") return decision;

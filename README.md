@@ -56,7 +56,7 @@ The host has 25 executable built-ins. The P1.1 two-topic scenario adds one execu
 
 P1.1 has evidence for 23 of 25 acceptance items, and the two human-review items are assigned to final acceptance. The recorded AI trial created a 12-second video through discovered tools and repaired it using a layout report. [P1.1 acceptance](docs/P1.1-ACCEPTANCE.md) · [Sample review](docs/P1.1-REVIEW.md) · [Recorded AI trial](docs/P1.1-AI-TRIAL.md) · [Revised video](docs/ai-trials/cache-hit-2026-11-17/video-final.mp4).
 
-P1.2 and P1.3 are implemented. P1.4-A validates provider-independent planning proposals against the scoped Creative Host catalogue. P1.4-B will execute proposals within a bounded run. [P1.4 plan](docs/P1.4-PLAN.md).
+P1.2 and P1.3 are implemented. P1.4-A and B validate provider-independent proposals and feed tool results back into a bounded run. The acceptance scenario saves and reopens a two-shot draft. P1.4-C will use inspection findings to drive repairs. [P1.4 plan](docs/P1.4-PLAN.md).
 
 ## Development checks
 
@@ -82,6 +82,7 @@ npm run accept:render-jobs
 npm run accept:render-scheduler
 npm run accept:render-maintenance
 npm run accept:p1-3
+npm run accept:p1-4-b
 npm run --silent probe:render-resources
 ```
 
@@ -116,6 +117,8 @@ The combined acceptance enables all resource budgets in the same host, verifies 
 `npm run bench:render -- --compare bundle` compares worker requests with and without a prepared bundle and includes build time in the sample totals. [E2 preparation and metrics](docs/P1.2-E2-BUNDLE-REUSE.md).
 
 `npm run accept:p1-3` creates, inspects, repairs, exports and recovers a short through the public tools. CI publishes the videos, previews, inspection reports and execution trace as `integrated-creative-evidence`. [P1.3-F verification](docs/P1.3-PLAN.md#f--integrated-inspection-and-repair).
+
+`npm run accept:p1-4-b` runs local planning against the Creative Host, saves and reopens a draft and reconciles a deliberately lost response against the execution ledger. CI publishes the run traces, draft and ledger entries as `creative-run-evidence`. [P1.4-B verification](docs/P1.4-PLAN.md#b--bounded-execution).
 
 ## Design and documentation
 
