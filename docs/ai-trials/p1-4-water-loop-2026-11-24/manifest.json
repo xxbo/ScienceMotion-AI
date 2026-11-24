@@ -1,0 +1,182 @@
+{
+  "schemaVersion": "1.0.0",
+  "trialId": "p1-4-water-loop-2026-11-24",
+  "sourceCommit": "b93d20051f6f4e9533af0c343945e48e0ee8c6c8",
+  "provenance": {
+    "mode": "live-interactive-model-trial",
+    "provider": "OpenAI",
+    "client": "Current Codex session",
+    "modelFamily": "GPT-6 (session instruction)",
+    "servedModelId": null,
+    "tokenUsage": null,
+    "samplingParameters": null,
+    "providerReceipt": null,
+    "record": "Operator-recorded exchange with the active Codex session",
+    "transport": "Local CreativePlanner and CreativeRepairPlanner JSON Lines exchange"
+  },
+  "brief": {
+    "id": "water-loop",
+    "name": "蒸发与降水",
+    "brief": "用两个镜头说明：水受热可以蒸发成水蒸气；水蒸气冷却凝结，云中的水滴或冰晶增长后可能形成降水。粒子和路径只是示意。",
+    "narrated": false
+  },
+  "controlledChallenge": {
+    "nodeId": "marker",
+    "trackId": "marker-motion",
+    "frame": 40,
+    "seededPosition": [
+      720,
+      184,
+      0
+    ],
+    "verifiedPosition": [
+      329,
+      184,
+      0
+    ],
+    "appliedBy": "Trusted acceptance fixture after the draft was saved"
+  },
+  "modelProposals": {
+    "planning": 21,
+    "repair": 1
+  },
+  "approved": {
+    "id": "repair-03a5e25c-21b6-4000-ba63-3bdea831cffe",
+    "revisionId": "revision-host-261bb9a81be95ef3e9788a6eafe3a6421feccba6732ee0fd5113a1b0225cdca5",
+    "contentHash": "b5afd0f4e059d105e72dafe5f7e70c4aac1e32ea3661dcd056358eaebbe54029"
+  },
+  "restored": {
+    "id": "restored-delivery",
+    "revisionId": "revision-host-c85703c10955fc516099a964aeb79dc0ba8dba39fb33e1a13251b933dd223c9b",
+    "contentHash": "be9397e8d970c7b4dc4cd3eb1b5802f5d67f5301b349cc294b547add27233bc2"
+  },
+  "comparison": {
+    "previewFrames": [
+      0,
+      40,
+      79,
+      80,
+      82,
+      159
+    ],
+    "rgbHash": "5301847b8a44f3ffa608e93f45381237d74e60eb29c5e7cd5485838e5dc79788"
+  },
+  "metrics": {
+    "planning": {
+      "runId": "4789ecb1-9cd2-4a45-88d0-47a67f0d3102",
+      "turns": 21,
+      "toolCalls": 20,
+      "elapsedMs": 176593
+    },
+    "inspectionAndRepair": {
+      "runId": "2e58b3cd-242b-4094-bc38-9660d01605f6",
+      "turns": 11,
+      "toolCalls": 10,
+      "elapsedMs": 19141
+    },
+    "trustedToolCalls": 7,
+    "deliveryMs": 10236,
+    "recoveryMs": 31440,
+    "exportJobs": 14,
+    "encodedVideoFrames": 320,
+    "encodedPreviewFrames": 12
+  },
+  "files": {
+    "evidence.json": {
+      "sha256": "815aa4a36c55e12f99174626eea7ed24591b6829deb801041bca2b7cac6c2f6f",
+      "bytes": 3682
+    },
+    "transcript.jsonl": {
+      "sha256": "23b79ab02b98ca4ed7c6846ed0c2226e02c1ccfa10ffa77f340f5c91380fb719",
+      "bytes": 290826
+    },
+    "water-loop/approved/delivery.mp4": {
+      "sha256": "10265c8ee00b3731b70f7d3d44662b64ba953278279a3d7875b48c43084e1b49",
+      "bytes": 55908
+    },
+    "water-loop/approved/preview-0.png": {
+      "sha256": "d25c63ce792376a342002a10f9be25383f552d1b04d809965bdf269f06f81dc8",
+      "bytes": 28229
+    },
+    "water-loop/approved/preview-159.png": {
+      "sha256": "cb1c54902f8aad93b08725b63527dd006d1391fa21d73dbcae223c16d1186538",
+      "bytes": 30383
+    },
+    "water-loop/approved/preview-40.png": {
+      "sha256": "9307cdc97201d5fd5430418c79ec6700b262b6b04d6d1f85e838fb88cfa5bc54",
+      "bytes": 28303
+    },
+    "water-loop/approved/preview-79.png": {
+      "sha256": "290c29feea31de20dab9ca3ca0a33547e1fd0ee41efa77a4db1529aa93948a73",
+      "bytes": 28318
+    },
+    "water-loop/approved/preview-80.png": {
+      "sha256": "290c29feea31de20dab9ca3ca0a33547e1fd0ee41efa77a4db1529aa93948a73",
+      "bytes": 28318
+    },
+    "water-loop/approved/preview-82.png": {
+      "sha256": "60beb7486c5e3a0ac2859eb1bf5a461895a4a406371fd993ee359d8f58a08038",
+      "bytes": 46800
+    },
+    "water-loop/approved.json": {
+      "sha256": "8edba81ddaa8e40113754eccdbf88d9a702a8247951eed69ebd8f708e7dbd832",
+      "bytes": 16879
+    },
+    "water-loop/comparison.json": {
+      "sha256": "796d29209bac6b542710c63ea1e76e89d2c3a8f4cd4b183f23fd7d36865db39d",
+      "bytes": 157
+    },
+    "water-loop/draft.json": {
+      "sha256": "109e7af980957dda6ab30caa110f906ba3ccc91f4f6767af434019e92df10d77",
+      "bytes": 17964
+    },
+    "water-loop/evidence.json": {
+      "sha256": "8555cc9847a5ef5ca2c0a817afc466c8532f1cd1b62ea33344f411093350e312",
+      "bytes": 2952
+    },
+    "water-loop/executions.json": {
+      "sha256": "9ad6d36c39893bf6f5bf9c7743b9adbd0744927d698cd0a167b251cf609d723b",
+      "bytes": 306593
+    },
+    "water-loop/planning.json": {
+      "sha256": "bb6e8ae99e8f32ae6c8065a1e8a5f508630cb1c3bc1402bface7c9b02fab0d1c",
+      "bytes": 42888
+    },
+    "water-loop/repair.json": {
+      "sha256": "f989a39b699d92d70d59d7e84a897716dcf0d08aabe321b4c16fa0c592cac880",
+      "bytes": 236787
+    },
+    "water-loop/restored/delivery.mp4": {
+      "sha256": "10265c8ee00b3731b70f7d3d44662b64ba953278279a3d7875b48c43084e1b49",
+      "bytes": 55908
+    },
+    "water-loop/restored/preview-0.png": {
+      "sha256": "d25c63ce792376a342002a10f9be25383f552d1b04d809965bdf269f06f81dc8",
+      "bytes": 28229
+    },
+    "water-loop/restored/preview-159.png": {
+      "sha256": "cb1c54902f8aad93b08725b63527dd006d1391fa21d73dbcae223c16d1186538",
+      "bytes": 30383
+    },
+    "water-loop/restored/preview-40.png": {
+      "sha256": "9307cdc97201d5fd5430418c79ec6700b262b6b04d6d1f85e838fb88cfa5bc54",
+      "bytes": 28303
+    },
+    "water-loop/restored/preview-79.png": {
+      "sha256": "290c29feea31de20dab9ca3ca0a33547e1fd0ee41efa77a4db1529aa93948a73",
+      "bytes": 28318
+    },
+    "water-loop/restored/preview-80.png": {
+      "sha256": "290c29feea31de20dab9ca3ca0a33547e1fd0ee41efa77a4db1529aa93948a73",
+      "bytes": 28318
+    },
+    "water-loop/restored/preview-82.png": {
+      "sha256": "60beb7486c5e3a0ac2859eb1bf5a461895a4a406371fd993ee359d8f58a08038",
+      "bytes": 46800
+    },
+    "water-loop/restored.json": {
+      "sha256": "fcbd28083412e72f79dace33d902a9f63c4bc239a520bdab489406c80af63973",
+      "bytes": 16671
+    }
+  }
+}

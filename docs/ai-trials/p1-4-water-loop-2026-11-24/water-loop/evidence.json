@@ -1,0 +1,112 @@
+{
+  "schemaVersion": "1.0.0",
+  "topic": {
+    "id": "water-loop",
+    "name": "蒸发与降水",
+    "brief": "用两个镜头说明：水受热可以蒸发成水蒸气；水蒸气冷却凝结，云中的水滴或冰晶增长后可能形成降水。粒子和路径只是示意。",
+    "narrated": false
+  },
+  "provenance": {
+    "mode": "interactive-planner",
+    "sourceCommit": "b93d20051f6f4e9533af0c343945e48e0ee8c6c8",
+    "reportedModelUsage": null,
+    "newModelCalls": null
+  },
+  "profile": {
+    "width": 640,
+    "height": 360,
+    "fps": 10
+  },
+  "durationFrames": 160,
+  "comparisonFrames": [
+    0,
+    16,
+    28,
+    40,
+    52,
+    64,
+    79,
+    82,
+    100,
+    159
+  ],
+  "status": "passed",
+  "planned": {
+    "id": "draft",
+    "contentHash": "7d6cb937493de21cec2502a4741f3c83525d367929e38c7b04ba1214a8c68f61",
+    "revisionId": "revision-host-c121380d9fe69ec11a5e4f7f392914b5dbeaac2cde11b612def112ff37c5e2e7"
+  },
+  "approval": {
+    "id": "repair-03a5e25c-21b6-4000-ba63-3bdea831cffe",
+    "revisionId": "revision-host-261bb9a81be95ef3e9788a6eafe3a6421feccba6732ee0fd5113a1b0225cdca5",
+    "contentHash": "b5afd0f4e059d105e72dafe5f7e70c4aac1e32ea3661dcd056358eaebbe54029"
+  },
+  "restored": {
+    "id": "restored-delivery",
+    "revisionId": "revision-host-c85703c10955fc516099a964aeb79dc0ba8dba39fb33e1a13251b933dd223c9b",
+    "contentHash": "be9397e8d970c7b4dc4cd3eb1b5802f5d67f5301b349cc294b547add27233bc2"
+  },
+  "findings": [
+    {
+      "check": "model",
+      "nodeId": "marker",
+      "sceneId": "evaporate",
+      "source": "declared-geometry",
+      "level": "warning",
+      "code": "INSPECT_NODE_OUTSIDE_FRAME",
+      "message": "Declared shape/chart bounds are outside the frame; check whether this is intentional",
+      "ranges": [
+        {
+          "startFrame": 40,
+          "endFrame": 41
+        }
+      ]
+    },
+    {
+      "check": "layout",
+      "sceneId": "evaporate",
+      "nodeId": "marker",
+      "level": "warning",
+      "code": "LAYOUT_VIEWPORT_OVERFLOW",
+      "message": "Measured content boxes cross the viewport edge; check whether the exit or bleed is intentional",
+      "ranges": [
+        {
+          "startFrame": 40,
+          "endFrame": 41
+        }
+      ]
+    }
+  ],
+  "restoredMedia": {
+    "previewFrames": [
+      0,
+      40,
+      79,
+      80,
+      82,
+      159
+    ],
+    "rgbHash": "5301847b8a44f3ffa608e93f45381237d74e60eb29c5e7cd5485838e5dc79788"
+  },
+  "metrics": {
+    "planning": {
+      "runId": "4789ecb1-9cd2-4a45-88d0-47a67f0d3102",
+      "turns": 21,
+      "toolCalls": 20,
+      "elapsedMs": 176593
+    },
+    "inspectionAndRepair": {
+      "runId": "2e58b3cd-242b-4094-bc38-9660d01605f6",
+      "turns": 11,
+      "toolCalls": 10,
+      "elapsedMs": 19141
+    },
+    "trustedToolCalls": 7,
+    "deliveryMs": 10236,
+    "recoveryMs": 31440,
+    "exportJobs": 14,
+    "encodedVideoFrames": 320,
+    "encodedPreviewFrames": 12
+  },
+  "elapsedMs": 238458
+}

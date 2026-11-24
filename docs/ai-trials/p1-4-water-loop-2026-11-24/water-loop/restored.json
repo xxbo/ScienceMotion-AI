@@ -1,0 +1,470 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "p14e-water-loop",
+  "snapshot": {
+    "id": "restored-delivery",
+    "revisionId": "revision-host-c85703c10955fc516099a964aeb79dc0ba8dba39fb33e1a13251b933dd223c9b",
+    "contentHash": "be9397e8d970c7b4dc4cd3eb1b5802f5d67f5301b349cc294b547add27233bc2"
+  },
+  "renderContentHash": "012b153c958f40e7199d9bd430b95eaff3b06eddbf23dbc66fbc3e1d076f9536",
+  "range": {
+    "startFrame": 0,
+    "durationFrames": 160
+  },
+  "profile": {
+    "width": 640,
+    "height": 360,
+    "fps": 10
+  },
+  "selection": {
+    "frames": [
+      {
+        "frame": 0,
+        "reasons": [
+          "export-range"
+        ]
+      },
+      {
+        "frame": 40,
+        "reasons": [
+          "repair-finding"
+        ]
+      },
+      {
+        "frame": 79,
+        "reasons": [
+          "shot-boundary",
+          "crossfade",
+          "export-range"
+        ]
+      },
+      {
+        "frame": 80,
+        "reasons": [
+          "shot-boundary",
+          "crossfade"
+        ]
+      },
+      {
+        "frame": 82,
+        "reasons": [
+          "crossfade"
+        ]
+      },
+      {
+        "frame": 159,
+        "reasons": [
+          "export-range"
+        ]
+      }
+    ],
+    "candidateCount": 8,
+    "omittedCount": 2
+  },
+  "previews": [
+    {
+      "frame": 0,
+      "job": {
+        "schemaVersion": "1.0.0",
+        "id": "089f8453-3a5e-4bfc-8c71-678596dfdd91",
+        "input": {
+          "projectId": "p14e-water-loop",
+          "submissionId": "37864341-f071-4d5f-b247-153557409a04-preview-0",
+          "runId": "37864341-f071-4d5f-b247-153557409a04",
+          "callId": "preview-0",
+          "toolVersion": "1.0.0",
+          "snapshot": {
+            "id": "restored-delivery",
+            "revisionId": "revision-host-c85703c10955fc516099a964aeb79dc0ba8dba39fb33e1a13251b933dd223c9b",
+            "contentHash": "be9397e8d970c7b4dc4cd3eb1b5802f5d67f5301b349cc294b547add27233bc2"
+          },
+          "render": {
+            "operation": "preview",
+            "frame": 0
+          },
+          "profile": {
+            "width": 640,
+            "height": 360,
+            "fps": 10
+          },
+          "renderer": {
+            "id": "remotion.project-graph",
+            "version": "1.0.0"
+          }
+        },
+        "inputHash": "1d9b55b4a95565a4eae397119aff4c9b7111d9303335f7843600b2b8ac7a00a2",
+        "state": "succeeded",
+        "revision": 7,
+        "createdAt": "2026-11-24T04:27:27.169Z",
+        "updatedAt": "2026-11-24T04:27:29.454Z",
+        "outcomeUnknown": false,
+        "startedAt": "2026-11-24T04:27:27.172Z",
+        "progress": {
+          "phase": "rendering",
+          "fraction": 1,
+          "observedAt": "2026-11-24T04:27:29.381Z"
+        },
+        "publicationStartedAt": "2026-11-24T04:27:29.438Z",
+        "completedAt": "2026-11-24T04:27:29.454Z",
+        "result": {
+          "jobId": "089f8453-3a5e-4bfc-8c71-678596dfdd91",
+          "inputHash": "1d9b55b4a95565a4eae397119aff4c9b7111d9303335f7843600b2b8ac7a00a2",
+          "artifactId": "sha256:d25c63ce792376a342002a10f9be25383f552d1b04d809965bdf269f06f81dc8",
+          "contentHash": "d25c63ce792376a342002a10f9be25383f552d1b04d809965bdf269f06f81dc8",
+          "sizeBytes": 28229,
+          "mediaType": "image/png",
+          "rendererId": "remotion.project-graph",
+          "rendererVersion": "1.0.0"
+        }
+      },
+      "rgbaHash": "66e8945169cb4e681a6a55592efb731090ee81018d342c80fe4d509b9cdc451c"
+    },
+    {
+      "frame": 40,
+      "job": {
+        "schemaVersion": "1.0.0",
+        "id": "9160a33b-eae1-4c4a-9dd1-b9eeeabc24b7",
+        "input": {
+          "projectId": "p14e-water-loop",
+          "submissionId": "37864341-f071-4d5f-b247-153557409a04-preview-40",
+          "runId": "37864341-f071-4d5f-b247-153557409a04",
+          "callId": "preview-40",
+          "toolVersion": "1.0.0",
+          "snapshot": {
+            "id": "restored-delivery",
+            "revisionId": "revision-host-c85703c10955fc516099a964aeb79dc0ba8dba39fb33e1a13251b933dd223c9b",
+            "contentHash": "be9397e8d970c7b4dc4cd3eb1b5802f5d67f5301b349cc294b547add27233bc2"
+          },
+          "render": {
+            "operation": "preview",
+            "frame": 40
+          },
+          "profile": {
+            "width": 640,
+            "height": 360,
+            "fps": 10
+          },
+          "renderer": {
+            "id": "remotion.project-graph",
+            "version": "1.0.0"
+          }
+        },
+        "inputHash": "a5c740856067d332a03bf36c923c97681e289dcdb6e68e556e01594847358656",
+        "state": "succeeded",
+        "revision": 7,
+        "createdAt": "2026-11-24T04:27:29.645Z",
+        "updatedAt": "2026-11-24T04:27:31.414Z",
+        "outcomeUnknown": false,
+        "startedAt": "2026-11-24T04:27:29.648Z",
+        "progress": {
+          "phase": "rendering",
+          "fraction": 1,
+          "observedAt": "2026-11-24T04:27:31.305Z"
+        },
+        "publicationStartedAt": "2026-11-24T04:27:31.401Z",
+        "completedAt": "2026-11-24T04:27:31.414Z",
+        "result": {
+          "jobId": "9160a33b-eae1-4c4a-9dd1-b9eeeabc24b7",
+          "inputHash": "a5c740856067d332a03bf36c923c97681e289dcdb6e68e556e01594847358656",
+          "artifactId": "sha256:9307cdc97201d5fd5430418c79ec6700b262b6b04d6d1f85e838fb88cfa5bc54",
+          "contentHash": "9307cdc97201d5fd5430418c79ec6700b262b6b04d6d1f85e838fb88cfa5bc54",
+          "sizeBytes": 28303,
+          "mediaType": "image/png",
+          "rendererId": "remotion.project-graph",
+          "rendererVersion": "1.0.0"
+        }
+      },
+      "rgbaHash": "22a471468de5ea7e70732d597a9feb77945bc1ba0215303ca7d61594c1a87144"
+    },
+    {
+      "frame": 79,
+      "job": {
+        "schemaVersion": "1.0.0",
+        "id": "ed257806-568e-4ed9-8f66-39b176d220a1",
+        "input": {
+          "projectId": "p14e-water-loop",
+          "submissionId": "37864341-f071-4d5f-b247-153557409a04-preview-79",
+          "runId": "37864341-f071-4d5f-b247-153557409a04",
+          "callId": "preview-79",
+          "toolVersion": "1.0.0",
+          "snapshot": {
+            "id": "restored-delivery",
+            "revisionId": "revision-host-c85703c10955fc516099a964aeb79dc0ba8dba39fb33e1a13251b933dd223c9b",
+            "contentHash": "be9397e8d970c7b4dc4cd3eb1b5802f5d67f5301b349cc294b547add27233bc2"
+          },
+          "render": {
+            "operation": "preview",
+            "frame": 79
+          },
+          "profile": {
+            "width": 640,
+            "height": 360,
+            "fps": 10
+          },
+          "renderer": {
+            "id": "remotion.project-graph",
+            "version": "1.0.0"
+          }
+        },
+        "inputHash": "dcdd8f44879b42a4facc9c2217dd80ed53d211dbedd2ac4ec592ae361b83eb36",
+        "state": "succeeded",
+        "revision": 7,
+        "createdAt": "2026-11-24T04:27:31.608Z",
+        "updatedAt": "2026-11-24T04:27:33.679Z",
+        "outcomeUnknown": false,
+        "startedAt": "2026-11-24T04:27:31.611Z",
+        "progress": {
+          "phase": "rendering",
+          "fraction": 1,
+          "observedAt": "2026-11-24T04:27:33.439Z"
+        },
+        "publicationStartedAt": "2026-11-24T04:27:33.667Z",
+        "completedAt": "2026-11-24T04:27:33.679Z",
+        "result": {
+          "jobId": "ed257806-568e-4ed9-8f66-39b176d220a1",
+          "inputHash": "dcdd8f44879b42a4facc9c2217dd80ed53d211dbedd2ac4ec592ae361b83eb36",
+          "artifactId": "sha256:290c29feea31de20dab9ca3ca0a33547e1fd0ee41efa77a4db1529aa93948a73",
+          "contentHash": "290c29feea31de20dab9ca3ca0a33547e1fd0ee41efa77a4db1529aa93948a73",
+          "sizeBytes": 28318,
+          "mediaType": "image/png",
+          "rendererId": "remotion.project-graph",
+          "rendererVersion": "1.0.0"
+        }
+      },
+      "rgbaHash": "33862d076f98fd11a959e5288abb2cadbbe554d8510d5f39e988cabd19fd6033"
+    },
+    {
+      "frame": 80,
+      "job": {
+        "schemaVersion": "1.0.0",
+        "id": "9b957add-2187-456c-bb72-6e29ee3d4a0b",
+        "input": {
+          "projectId": "p14e-water-loop",
+          "submissionId": "37864341-f071-4d5f-b247-153557409a04-preview-80",
+          "runId": "37864341-f071-4d5f-b247-153557409a04",
+          "callId": "preview-80",
+          "toolVersion": "1.0.0",
+          "snapshot": {
+            "id": "restored-delivery",
+            "revisionId": "revision-host-c85703c10955fc516099a964aeb79dc0ba8dba39fb33e1a13251b933dd223c9b",
+            "contentHash": "be9397e8d970c7b4dc4cd3eb1b5802f5d67f5301b349cc294b547add27233bc2"
+          },
+          "render": {
+            "operation": "preview",
+            "frame": 80
+          },
+          "profile": {
+            "width": 640,
+            "height": 360,
+            "fps": 10
+          },
+          "renderer": {
+            "id": "remotion.project-graph",
+            "version": "1.0.0"
+          }
+        },
+        "inputHash": "eb04853577d420e9c1d64eecb99755048da87ab643ebebe5c17a0bcd05d59a07",
+        "state": "succeeded",
+        "revision": 7,
+        "createdAt": "2026-11-24T04:27:33.880Z",
+        "updatedAt": "2026-11-24T04:27:35.593Z",
+        "outcomeUnknown": false,
+        "startedAt": "2026-11-24T04:27:33.889Z",
+        "progress": {
+          "phase": "rendering",
+          "fraction": 1,
+          "observedAt": "2026-11-24T04:27:35.522Z"
+        },
+        "publicationStartedAt": "2026-11-24T04:27:35.579Z",
+        "completedAt": "2026-11-24T04:27:35.593Z",
+        "result": {
+          "jobId": "9b957add-2187-456c-bb72-6e29ee3d4a0b",
+          "inputHash": "eb04853577d420e9c1d64eecb99755048da87ab643ebebe5c17a0bcd05d59a07",
+          "artifactId": "sha256:290c29feea31de20dab9ca3ca0a33547e1fd0ee41efa77a4db1529aa93948a73",
+          "contentHash": "290c29feea31de20dab9ca3ca0a33547e1fd0ee41efa77a4db1529aa93948a73",
+          "sizeBytes": 28318,
+          "mediaType": "image/png",
+          "rendererId": "remotion.project-graph",
+          "rendererVersion": "1.0.0"
+        }
+      },
+      "rgbaHash": "33862d076f98fd11a959e5288abb2cadbbe554d8510d5f39e988cabd19fd6033"
+    },
+    {
+      "frame": 82,
+      "job": {
+        "schemaVersion": "1.0.0",
+        "id": "19cb1fac-b87f-4438-818c-93fde0bc07a1",
+        "input": {
+          "projectId": "p14e-water-loop",
+          "submissionId": "37864341-f071-4d5f-b247-153557409a04-preview-82",
+          "runId": "37864341-f071-4d5f-b247-153557409a04",
+          "callId": "preview-82",
+          "toolVersion": "1.0.0",
+          "snapshot": {
+            "id": "restored-delivery",
+            "revisionId": "revision-host-c85703c10955fc516099a964aeb79dc0ba8dba39fb33e1a13251b933dd223c9b",
+            "contentHash": "be9397e8d970c7b4dc4cd3eb1b5802f5d67f5301b349cc294b547add27233bc2"
+          },
+          "render": {
+            "operation": "preview",
+            "frame": 82
+          },
+          "profile": {
+            "width": 640,
+            "height": 360,
+            "fps": 10
+          },
+          "renderer": {
+            "id": "remotion.project-graph",
+            "version": "1.0.0"
+          }
+        },
+        "inputHash": "68613cabfc224c76deb6f9b8fb5682e58c95c9a7b531e5e505efec22df6c8a6e",
+        "state": "succeeded",
+        "revision": 7,
+        "createdAt": "2026-11-24T04:27:35.878Z",
+        "updatedAt": "2026-11-24T04:27:37.721Z",
+        "outcomeUnknown": false,
+        "startedAt": "2026-11-24T04:27:35.883Z",
+        "progress": {
+          "phase": "rendering",
+          "fraction": 1,
+          "observedAt": "2026-11-24T04:27:37.641Z"
+        },
+        "publicationStartedAt": "2026-11-24T04:27:37.712Z",
+        "completedAt": "2026-11-24T04:27:37.721Z",
+        "result": {
+          "jobId": "19cb1fac-b87f-4438-818c-93fde0bc07a1",
+          "inputHash": "68613cabfc224c76deb6f9b8fb5682e58c95c9a7b531e5e505efec22df6c8a6e",
+          "artifactId": "sha256:60beb7486c5e3a0ac2859eb1bf5a461895a4a406371fd993ee359d8f58a08038",
+          "contentHash": "60beb7486c5e3a0ac2859eb1bf5a461895a4a406371fd993ee359d8f58a08038",
+          "sizeBytes": 46800,
+          "mediaType": "image/png",
+          "rendererId": "remotion.project-graph",
+          "rendererVersion": "1.0.0"
+        }
+      },
+      "rgbaHash": "caba1ec32cc9b7244fec7324a758880a4e37899e4d380319f725b7939bddcd67"
+    },
+    {
+      "frame": 159,
+      "job": {
+        "schemaVersion": "1.0.0",
+        "id": "de573e1f-2a0c-49db-b962-67e3f68f236e",
+        "input": {
+          "projectId": "p14e-water-loop",
+          "submissionId": "37864341-f071-4d5f-b247-153557409a04-preview-159",
+          "runId": "37864341-f071-4d5f-b247-153557409a04",
+          "callId": "preview-159",
+          "toolVersion": "1.0.0",
+          "snapshot": {
+            "id": "restored-delivery",
+            "revisionId": "revision-host-c85703c10955fc516099a964aeb79dc0ba8dba39fb33e1a13251b933dd223c9b",
+            "contentHash": "be9397e8d970c7b4dc4cd3eb1b5802f5d67f5301b349cc294b547add27233bc2"
+          },
+          "render": {
+            "operation": "preview",
+            "frame": 159
+          },
+          "profile": {
+            "width": 640,
+            "height": 360,
+            "fps": 10
+          },
+          "renderer": {
+            "id": "remotion.project-graph",
+            "version": "1.0.0"
+          }
+        },
+        "inputHash": "a9edca88724112a2e65d97b69f3bd5d6746afc575e18fa322cc3e500b0de6971",
+        "state": "succeeded",
+        "revision": 7,
+        "createdAt": "2026-11-24T04:27:38.016Z",
+        "updatedAt": "2026-11-24T04:27:39.785Z",
+        "outcomeUnknown": false,
+        "startedAt": "2026-11-24T04:27:38.019Z",
+        "progress": {
+          "phase": "rendering",
+          "fraction": 1,
+          "observedAt": "2026-11-24T04:27:39.709Z"
+        },
+        "publicationStartedAt": "2026-11-24T04:27:39.773Z",
+        "completedAt": "2026-11-24T04:27:39.785Z",
+        "result": {
+          "jobId": "de573e1f-2a0c-49db-b962-67e3f68f236e",
+          "inputHash": "a9edca88724112a2e65d97b69f3bd5d6746afc575e18fa322cc3e500b0de6971",
+          "artifactId": "sha256:cb1c54902f8aad93b08725b63527dd006d1391fa21d73dbcae223c16d1186538",
+          "contentHash": "cb1c54902f8aad93b08725b63527dd006d1391fa21d73dbcae223c16d1186538",
+          "sizeBytes": 30383,
+          "mediaType": "image/png",
+          "rendererId": "remotion.project-graph",
+          "rendererVersion": "1.0.0"
+        }
+      },
+      "rgbaHash": "98e452fa589fa0622352e832cde0b365aa52014e1e129674bd48366c13b10338"
+    }
+  ],
+  "video": {
+    "job": {
+      "schemaVersion": "1.0.0",
+      "id": "11729bf1-2f0b-40fe-9c04-5dbc0512a42e",
+      "input": {
+        "projectId": "p14e-water-loop",
+        "submissionId": "37864341-f071-4d5f-b247-153557409a04-video",
+        "runId": "37864341-f071-4d5f-b247-153557409a04",
+        "callId": "video",
+        "toolVersion": "1.0.0",
+        "snapshot": {
+          "id": "restored-delivery",
+          "revisionId": "revision-host-c85703c10955fc516099a964aeb79dc0ba8dba39fb33e1a13251b933dd223c9b",
+          "contentHash": "be9397e8d970c7b4dc4cd3eb1b5802f5d67f5301b349cc294b547add27233bc2"
+        },
+        "render": {
+          "operation": "video",
+          "startFrame": 0,
+          "durationFrames": 160
+        },
+        "profile": {
+          "width": 640,
+          "height": 360,
+          "fps": 10
+        },
+        "renderer": {
+          "id": "remotion.project-graph",
+          "version": "1.0.0"
+        }
+      },
+      "inputHash": "ce2d8bcfc43234d637aa274e6dc39ef3ec3ea98d94e6d5cd8ef555de69ae0180",
+      "state": "succeeded",
+      "revision": 19,
+      "createdAt": "2026-11-24T04:27:40.077Z",
+      "updatedAt": "2026-11-24T04:27:46.088Z",
+      "outcomeUnknown": false,
+      "startedAt": "2026-11-24T04:27:40.082Z",
+      "progress": {
+        "phase": "encoding",
+        "fraction": 1,
+        "observedAt": "2026-11-24T04:27:45.913Z"
+      },
+      "publicationStartedAt": "2026-11-24T04:27:46.078Z",
+      "completedAt": "2026-11-24T04:27:46.088Z",
+      "result": {
+        "jobId": "11729bf1-2f0b-40fe-9c04-5dbc0512a42e",
+        "inputHash": "ce2d8bcfc43234d637aa274e6dc39ef3ec3ea98d94e6d5cd8ef555de69ae0180",
+        "artifactId": "sha256:10265c8ee00b3731b70f7d3d44662b64ba953278279a3d7875b48c43084e1b49",
+        "contentHash": "10265c8ee00b3731b70f7d3d44662b64ba953278279a3d7875b48c43084e1b49",
+        "sizeBytes": 55908,
+        "mediaType": "video/mp4",
+        "rendererId": "remotion.project-graph",
+        "rendererVersion": "1.0.0"
+      }
+    },
+    "decoded": {
+      "codec": "h264",
+      "frames": 160,
+      "durationSeconds": 16,
+      "rgbHash": "5301847b8a44f3ffa608e93f45381237d74e60eb29c5e7cd5485838e5dc79788"
+    }
+  }
+}
