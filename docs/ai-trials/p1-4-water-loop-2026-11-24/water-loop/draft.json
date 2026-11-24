@@ -1,0 +1,689 @@
+{
+  "id": "draft",
+  "createdAt": "2026-11-24T04:26:38.779Z",
+  "projectId": "p14e-water-loop",
+  "schemaVersion": "1.1.0",
+  "contentHash": "7d6cb937493de21cec2502a4741f3c83525d367929e38c7b04ba1214a8c68f61",
+  "document": {
+    "schemaVersion": "1.1.0",
+    "project": {
+      "id": "p14e-water-loop",
+      "name": "水从地面到云，再回到地面",
+      "createdAt": "2026-11-24T04:24:10.162Z",
+      "updatedAt": "2026-11-24T04:26:32.021Z",
+      "units": "unitless",
+      "coordinateSystem": "screen-y-down",
+      "timebase": {
+        "fps": 10,
+        "ticksPerFrame": 1
+      },
+      "colorSpace": "srgb"
+    },
+    "editorial": {
+      "episodeId": "water-loop"
+    },
+    "sequences": [
+      {
+        "id": "sequence-main",
+        "name": "Main Sequence",
+        "fps": 10,
+        "durationFrames": 160,
+        "width": 640,
+        "height": 360,
+        "shotIds": [
+          "shot-evaporate",
+          "shot-rain"
+        ],
+        "transitions": [
+          {
+            "fromShotId": "shot-evaporate",
+            "toShotId": "shot-rain",
+            "type": "crossfade",
+            "durationFrames": 6
+          }
+        ]
+      }
+    ],
+    "scenes": [
+      {
+        "id": "evaporate",
+        "name": "水受热后更容易蒸发",
+        "durationFrames": 80,
+        "rootNodeIds": [
+          "evaporation-background",
+          "evaporation-title",
+          "water-surface",
+          "marker",
+          "evaporation-note"
+        ]
+      },
+      {
+        "id": "rain",
+        "name": "凝结与降水",
+        "durationFrames": 80,
+        "rootNodeIds": [
+          "rain-background",
+          "condensation-title",
+          "cloud-bed",
+          "cloud-top",
+          "rain-drop",
+          "rain-note"
+        ]
+      }
+    ],
+    "nodes": [
+      {
+        "id": "evaporation-background",
+        "name": "evaporation-background",
+        "type": "shape",
+        "transform": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "components": [
+          {
+            "kind": "geometry",
+            "data": {
+              "primitive": "rect",
+              "width": 640,
+              "height": 360,
+              "fill": "#102740",
+              "stroke": "transparent",
+              "strokeWidth": 0,
+              "radius": 0
+            }
+          }
+        ]
+      },
+      {
+        "id": "rain-background",
+        "name": "rain-background",
+        "type": "shape",
+        "transform": {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "components": [
+          {
+            "kind": "geometry",
+            "data": {
+              "primitive": "rect",
+              "width": 640,
+              "height": 360,
+              "fill": "#162d3b",
+              "stroke": "transparent",
+              "strokeWidth": 0,
+              "radius": 0
+            }
+          }
+        ]
+      },
+      {
+        "id": "evaporation-title",
+        "name": "evaporation-title",
+        "type": "text",
+        "transform": {
+          "position": [
+            48,
+            40,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "components": [
+          {
+            "kind": "text",
+            "data": {
+              "text": "蒸发：液态水变成水蒸气",
+              "fontSize": 34,
+              "fontWeight": 700,
+              "color": "#eef8ff",
+              "fontFamily": "sans-serif",
+              "width": 544,
+              "height": 58,
+              "textAlign": "left"
+            }
+          }
+        ]
+      },
+      {
+        "id": "condensation-title",
+        "name": "condensation-title",
+        "type": "text",
+        "transform": {
+          "position": [
+            48,
+            40,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "components": [
+          {
+            "kind": "text",
+            "data": {
+              "text": "冷却凝结，云中形成小水滴",
+              "fontSize": 32,
+              "fontWeight": 700,
+              "color": "#eef8ff",
+              "fontFamily": "sans-serif",
+              "width": 544,
+              "height": 58,
+              "textAlign": "left"
+            }
+          }
+        ]
+      },
+      {
+        "id": "water-surface",
+        "name": "water-surface",
+        "type": "shape",
+        "transform": {
+          "position": [
+            96,
+            261,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "components": [
+          {
+            "kind": "geometry",
+            "data": {
+              "primitive": "ellipse",
+              "width": 448,
+              "height": 51,
+              "fill": "#28668b",
+              "stroke": "transparent",
+              "strokeWidth": 0,
+              "radius": 0
+            }
+          }
+        ]
+      },
+      {
+        "id": "marker",
+        "name": "marker",
+        "type": "shape",
+        "transform": {
+          "position": [
+            305,
+            242,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "components": [
+          {
+            "kind": "geometry",
+            "data": {
+              "primitive": "circle",
+              "width": 24,
+              "height": 24,
+              "fill": "#82e2fb",
+              "stroke": "transparent",
+              "strokeWidth": 0,
+              "radius": 0
+            }
+          }
+        ]
+      },
+      {
+        "id": "evaporation-note",
+        "name": "evaporation-note",
+        "type": "text",
+        "transform": {
+          "position": [
+            48,
+            320,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "components": [
+          {
+            "kind": "text",
+            "data": {
+              "text": "水蒸气进入空气，蓝点为示意",
+              "fontSize": 20,
+              "fontWeight": 600,
+              "color": "#b8d8e9",
+              "fontFamily": "sans-serif",
+              "width": 544,
+              "height": 29,
+              "textAlign": "center"
+            }
+          }
+        ]
+      },
+      {
+        "id": "cloud-bed",
+        "name": "cloud-bed",
+        "type": "shape",
+        "transform": {
+          "position": [
+            194,
+            139,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "components": [
+          {
+            "kind": "geometry",
+            "data": {
+              "primitive": "ellipse",
+              "width": 252,
+              "height": 58,
+              "fill": "#99b5c9",
+              "stroke": "transparent",
+              "strokeWidth": 0,
+              "radius": 0
+            }
+          }
+        ]
+      },
+      {
+        "id": "cloud-top",
+        "name": "cloud-top",
+        "type": "shape",
+        "transform": {
+          "position": [
+            244,
+            104,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "components": [
+          {
+            "kind": "geometry",
+            "data": {
+              "primitive": "ellipse",
+              "width": 143,
+              "height": 81,
+              "fill": "#99b5c9",
+              "stroke": "transparent",
+              "strokeWidth": 0,
+              "radius": 0
+            }
+          }
+        ]
+      },
+      {
+        "id": "rain-drop",
+        "name": "rain-drop",
+        "type": "shape",
+        "transform": {
+          "position": [
+            313,
+            194,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "components": [
+          {
+            "kind": "geometry",
+            "data": {
+              "primitive": "ellipse",
+              "width": 14,
+              "height": 23,
+              "fill": "#67cdeb",
+              "stroke": "transparent",
+              "strokeWidth": 0,
+              "radius": 0
+            }
+          }
+        ]
+      },
+      {
+        "id": "rain-note",
+        "name": "rain-note",
+        "type": "text",
+        "transform": {
+          "position": [
+            48,
+            317,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "components": [
+          {
+            "kind": "text",
+            "data": {
+              "text": "云滴或冰晶增长后，可能形成降水",
+              "fontSize": 21,
+              "fontWeight": 600,
+              "color": "#cee5ef",
+              "fontFamily": "sans-serif",
+              "width": 544,
+              "height": 32,
+              "textAlign": "center"
+            }
+          }
+        ]
+      }
+    ],
+    "animationTracks": [
+      {
+        "id": "marker-motion",
+        "targetNodeId": "marker",
+        "targetProperty": "transform.position",
+        "keyframes": [
+          {
+            "frame": 0,
+            "value": [
+              305,
+              242,
+              0
+            ],
+            "interpolation": "linear"
+          },
+          {
+            "frame": 40,
+            "value": [
+              329,
+              184,
+              0
+            ],
+            "interpolation": "linear"
+          },
+          {
+            "frame": 79,
+            "value": [
+              351,
+              113,
+              0
+            ],
+            "interpolation": "linear"
+          }
+        ]
+      },
+      {
+        "id": "rain-motion",
+        "targetNodeId": "rain-drop",
+        "targetProperty": "transform.position",
+        "keyframes": [
+          {
+            "frame": 0,
+            "value": [
+              313,
+              194,
+              0
+            ],
+            "interpolation": "linear"
+          },
+          {
+            "frame": 36,
+            "value": [
+              307,
+              225,
+              0
+            ],
+            "interpolation": "linear"
+          },
+          {
+            "frame": 79,
+            "value": [
+              292,
+              286,
+              0
+            ],
+            "interpolation": "linear"
+          }
+        ]
+      }
+    ],
+    "shots": [
+      {
+        "id": "shot-evaporate",
+        "name": "水受热后更容易蒸发",
+        "sceneId": "evaporate",
+        "startFrame": 0,
+        "durationFrames": 80
+      },
+      {
+        "id": "shot-rain",
+        "name": "凝结与降水",
+        "sceneId": "rain",
+        "startFrame": 80,
+        "durationFrames": 80
+      }
+    ],
+    "clips": [],
+    "tracks": [],
+    "assets": [],
+    "prefabs": [],
+    "constraints": [],
+    "dependencies": [],
+    "revisions": [
+      {
+        "id": "revision-initial",
+        "createdAt": "2026-11-24T04:24:10.162Z",
+        "message": "Created empty project",
+        "author": "ScienceMotion"
+      },
+      {
+        "id": "revision-host-207c6cfaa8d184230be0800280c37ef099bb012b8094449bd88781c5cea3e632",
+        "parentRevisionId": "revision-initial",
+        "createdAt": "2026-11-24T04:24:16.495Z",
+        "message": "Create scene 水受热后更容易蒸发",
+        "author": "ScienceMotion Agent"
+      },
+      {
+        "id": "revision-host-1cd3496d01c587764ca30ada2f4b9e2b2fef5a905ed5c2afbbcc5f2ed7d349c0",
+        "parentRevisionId": "revision-host-207c6cfaa8d184230be0800280c37ef099bb012b8094449bd88781c5cea3e632",
+        "createdAt": "2026-11-24T04:24:22.848Z",
+        "message": "Create scene 凝结与降水",
+        "author": "ScienceMotion Agent"
+      },
+      {
+        "id": "revision-host-e250ca93b76aa68fe79a9f56ef7a11abc58c019b0fed6040b25771a83ec96da8",
+        "parentRevisionId": "revision-host-1cd3496d01c587764ca30ada2f4b9e2b2fef5a905ed5c2afbbcc5f2ed7d349c0",
+        "createdAt": "2026-11-24T04:24:30.742Z",
+        "message": "Create shape evaporation-background",
+        "author": "ScienceMotion Agent"
+      },
+      {
+        "id": "revision-host-9acd4ee6245e19b3e642323623e41e8f58e4c845a16ed59dfe2ee6b0dc192f39",
+        "parentRevisionId": "revision-host-e250ca93b76aa68fe79a9f56ef7a11abc58c019b0fed6040b25771a83ec96da8",
+        "createdAt": "2026-11-24T04:24:37.364Z",
+        "message": "Create shape rain-background",
+        "author": "ScienceMotion Agent"
+      },
+      {
+        "id": "revision-host-d94ca4f6d46c6758f3ecbf1e707753939add1b26d7733a3c5a12d5026547e6c4",
+        "parentRevisionId": "revision-host-9acd4ee6245e19b3e642323623e41e8f58e4c845a16ed59dfe2ee6b0dc192f39",
+        "createdAt": "2026-11-24T04:24:46.997Z",
+        "message": "Create text evaporation-title",
+        "author": "ScienceMotion Agent"
+      },
+      {
+        "id": "revision-host-77f5a0425e476f67449a470cc841d0193efe335c1f465f1f460f57f454deb8db",
+        "parentRevisionId": "revision-host-d94ca4f6d46c6758f3ecbf1e707753939add1b26d7733a3c5a12d5026547e6c4",
+        "createdAt": "2026-11-24T04:24:54.255Z",
+        "message": "Create text condensation-title",
+        "author": "ScienceMotion Agent"
+      },
+      {
+        "id": "revision-host-d541c70d49f63364f76e3a04f4ab299d594fddd634782382291144c436a53c5b",
+        "parentRevisionId": "revision-host-77f5a0425e476f67449a470cc841d0193efe335c1f465f1f460f57f454deb8db",
+        "createdAt": "2026-11-24T04:25:04.334Z",
+        "message": "Create shape water-surface",
+        "author": "ScienceMotion Agent"
+      },
+      {
+        "id": "revision-host-aba3cf1c201234969fd08d88b5c7010bd15e01fe94dc81d1696ca9f4bfdb59ca",
+        "parentRevisionId": "revision-host-d541c70d49f63364f76e3a04f4ab299d594fddd634782382291144c436a53c5b",
+        "createdAt": "2026-11-24T04:25:10.475Z",
+        "message": "Create shape marker",
+        "author": "ScienceMotion Agent"
+      },
+      {
+        "id": "revision-host-43b6dead255156dd3995cbcf740f431296274ca86af4171a1c98ca7dcc7b5c4b",
+        "parentRevisionId": "revision-host-aba3cf1c201234969fd08d88b5c7010bd15e01fe94dc81d1696ca9f4bfdb59ca",
+        "createdAt": "2026-11-24T04:25:20.106Z",
+        "message": "Set animation marker-motion",
+        "author": "ScienceMotion Agent"
+      },
+      {
+        "id": "revision-host-49bb5b15a9c2250fbe2a23a8b2e757f7caeca0fac53bb58f65cf3eaa62f548f8",
+        "parentRevisionId": "revision-host-43b6dead255156dd3995cbcf740f431296274ca86af4171a1c98ca7dcc7b5c4b",
+        "createdAt": "2026-11-24T04:25:28.864Z",
+        "message": "Create text evaporation-note",
+        "author": "ScienceMotion Agent"
+      },
+      {
+        "id": "revision-host-c09070ada7581802555646f5269f41919330c9942901cc912c691954963aadcb",
+        "parentRevisionId": "revision-host-49bb5b15a9c2250fbe2a23a8b2e757f7caeca0fac53bb58f65cf3eaa62f548f8",
+        "createdAt": "2026-11-24T04:25:36.872Z",
+        "message": "Create shape cloud-bed",
+        "author": "ScienceMotion Agent"
+      },
+      {
+        "id": "revision-host-eb18a22288faa0b061c1c953d915074bb7a3c079bc6cc853744eac853924b7a0",
+        "parentRevisionId": "revision-host-c09070ada7581802555646f5269f41919330c9942901cc912c691954963aadcb",
+        "createdAt": "2026-11-24T04:25:43.355Z",
+        "message": "Create shape cloud-top",
+        "author": "ScienceMotion Agent"
+      },
+      {
+        "id": "revision-host-e4969ef59fb7adbc155bac81e89ae0b204ccbc9ea835b2df65a3d6688fcabdb2",
+        "parentRevisionId": "revision-host-eb18a22288faa0b061c1c953d915074bb7a3c079bc6cc853744eac853924b7a0",
+        "createdAt": "2026-11-24T04:25:51.150Z",
+        "message": "Create shape rain-drop",
+        "author": "ScienceMotion Agent"
+      },
+      {
+        "id": "revision-host-21460001ff1f893c725bb43036ac40cd41324df8ffb093ef52b7d95319f49b53",
+        "parentRevisionId": "revision-host-e4969ef59fb7adbc155bac81e89ae0b204ccbc9ea835b2df65a3d6688fcabdb2",
+        "createdAt": "2026-11-24T04:25:59.517Z",
+        "message": "Create text rain-note",
+        "author": "ScienceMotion Agent"
+      },
+      {
+        "id": "revision-host-412f539907fb16ae00e08043fb282b5323783ac51e507f6e288ab35d85970924",
+        "parentRevisionId": "revision-host-21460001ff1f893c725bb43036ac40cd41324df8ffb093ef52b7d95319f49b53",
+        "createdAt": "2026-11-24T04:26:10.333Z",
+        "message": "Set animation rain-motion",
+        "author": "ScienceMotion Agent"
+      },
+      {
+        "id": "revision-host-c121380d9fe69ec11a5e4f7f392914b5dbeaac2cde11b612def112ff37c5e2e7",
+        "parentRevisionId": "revision-host-412f539907fb16ae00e08043fb282b5323783ac51e507f6e288ab35d85970924",
+        "createdAt": "2026-11-24T04:26:32.021Z",
+        "message": "Edit first sequence timeline",
+        "author": "ScienceMotion Agent"
+      }
+    ]
+  }
+}

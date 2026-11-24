@@ -313,6 +313,18 @@ jobs:
           path: out/creative-delivery/
           if-no-files-found: error
 
+      - name: Verify two-topic planning, repair, delivery and recovery
+        id: creative-acceptance
+        run: npm run accept:p1-4-e
+
+      - name: Upload end-to-end creative acceptance evidence
+        if: ${{ !cancelled() && (steps.creative-acceptance.outcome == 'success' || steps.creative-acceptance.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: creative-acceptance-evidence
+          path: out/p1-4-e/
+          if-no-files-found: error
+
       - name: Verify recorded AI trial and deterministic stdio replay
         # Replay is a regression of the retained interaction, not a new model trial.
         run: npm run accept:ai-trial

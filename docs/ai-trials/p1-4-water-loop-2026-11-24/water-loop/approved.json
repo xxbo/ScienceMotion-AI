@@ -1,0 +1,470 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "p14e-water-loop",
+  "snapshot": {
+    "id": "repair-03a5e25c-21b6-4000-ba63-3bdea831cffe",
+    "revisionId": "revision-host-261bb9a81be95ef3e9788a6eafe3a6421feccba6732ee0fd5113a1b0225cdca5",
+    "contentHash": "b5afd0f4e059d105e72dafe5f7e70c4aac1e32ea3661dcd056358eaebbe54029"
+  },
+  "renderContentHash": "012b153c958f40e7199d9bd430b95eaff3b06eddbf23dbc66fbc3e1d076f9536",
+  "range": {
+    "startFrame": 0,
+    "durationFrames": 160
+  },
+  "profile": {
+    "width": 640,
+    "height": 360,
+    "fps": 10
+  },
+  "selection": {
+    "frames": [
+      {
+        "frame": 0,
+        "reasons": [
+          "export-range"
+        ]
+      },
+      {
+        "frame": 40,
+        "reasons": [
+          "repair-finding"
+        ]
+      },
+      {
+        "frame": 79,
+        "reasons": [
+          "shot-boundary",
+          "crossfade",
+          "export-range"
+        ]
+      },
+      {
+        "frame": 80,
+        "reasons": [
+          "shot-boundary",
+          "crossfade"
+        ]
+      },
+      {
+        "frame": 82,
+        "reasons": [
+          "crossfade"
+        ]
+      },
+      {
+        "frame": 159,
+        "reasons": [
+          "export-range"
+        ]
+      }
+    ],
+    "candidateCount": 8,
+    "omittedCount": 2
+  },
+  "previews": [
+    {
+      "frame": 0,
+      "job": {
+        "schemaVersion": "1.0.0",
+        "id": "9d2975ca-2b68-47a9-a9a3-28f725c8ff55",
+        "input": {
+          "projectId": "p14e-water-loop",
+          "submissionId": "9f1116e1-0046-41f8-bec8-adaa4ec004aa-preview-0",
+          "runId": "9f1116e1-0046-41f8-bec8-adaa4ec004aa",
+          "callId": "preview-0",
+          "toolVersion": "1.0.0",
+          "snapshot": {
+            "id": "repair-03a5e25c-21b6-4000-ba63-3bdea831cffe",
+            "revisionId": "revision-host-261bb9a81be95ef3e9788a6eafe3a6421feccba6732ee0fd5113a1b0225cdca5",
+            "contentHash": "b5afd0f4e059d105e72dafe5f7e70c4aac1e32ea3661dcd056358eaebbe54029"
+          },
+          "render": {
+            "operation": "preview",
+            "frame": 0
+          },
+          "profile": {
+            "width": 640,
+            "height": 360,
+            "fps": 10
+          },
+          "renderer": {
+            "id": "remotion.project-graph",
+            "version": "1.0.0"
+          }
+        },
+        "inputHash": "c059388b2bb81f9c71058d03be080641419ef24e55ffbdc6e00e3d8bece76a48",
+        "state": "succeeded",
+        "revision": 7,
+        "createdAt": "2026-11-24T04:27:05.000Z",
+        "updatedAt": "2026-11-24T04:27:05.583Z",
+        "outcomeUnknown": false,
+        "startedAt": "2026-11-24T04:27:05.003Z",
+        "progress": {
+          "phase": "rendering",
+          "fraction": 1,
+          "observedAt": "2026-11-24T04:27:05.558Z"
+        },
+        "publicationStartedAt": "2026-11-24T04:27:05.564Z",
+        "completedAt": "2026-11-24T04:27:05.583Z",
+        "result": {
+          "jobId": "9d2975ca-2b68-47a9-a9a3-28f725c8ff55",
+          "inputHash": "c059388b2bb81f9c71058d03be080641419ef24e55ffbdc6e00e3d8bece76a48",
+          "artifactId": "sha256:d25c63ce792376a342002a10f9be25383f552d1b04d809965bdf269f06f81dc8",
+          "contentHash": "d25c63ce792376a342002a10f9be25383f552d1b04d809965bdf269f06f81dc8",
+          "sizeBytes": 28229,
+          "mediaType": "image/png",
+          "rendererId": "remotion.project-graph",
+          "rendererVersion": "1.0.0"
+        }
+      },
+      "rgbaHash": "66e8945169cb4e681a6a55592efb731090ee81018d342c80fe4d509b9cdc451c"
+    },
+    {
+      "frame": 40,
+      "job": {
+        "schemaVersion": "1.0.0",
+        "id": "e89ab20a-600d-4df4-9de9-d86f1328822b",
+        "input": {
+          "projectId": "p14e-water-loop",
+          "submissionId": "9f1116e1-0046-41f8-bec8-adaa4ec004aa-preview-40",
+          "runId": "9f1116e1-0046-41f8-bec8-adaa4ec004aa",
+          "callId": "preview-40",
+          "toolVersion": "1.0.0",
+          "snapshot": {
+            "id": "repair-03a5e25c-21b6-4000-ba63-3bdea831cffe",
+            "revisionId": "revision-host-261bb9a81be95ef3e9788a6eafe3a6421feccba6732ee0fd5113a1b0225cdca5",
+            "contentHash": "b5afd0f4e059d105e72dafe5f7e70c4aac1e32ea3661dcd056358eaebbe54029"
+          },
+          "render": {
+            "operation": "preview",
+            "frame": 40
+          },
+          "profile": {
+            "width": 640,
+            "height": 360,
+            "fps": 10
+          },
+          "renderer": {
+            "id": "remotion.project-graph",
+            "version": "1.0.0"
+          }
+        },
+        "inputHash": "0aaef1f42ba834b6eea4127b05e3e9e2c798b2dab4a0f54c7c7563cd09b34898",
+        "state": "succeeded",
+        "revision": 7,
+        "createdAt": "2026-11-24T04:27:05.749Z",
+        "updatedAt": "2026-11-24T04:27:06.417Z",
+        "outcomeUnknown": false,
+        "startedAt": "2026-11-24T04:27:05.753Z",
+        "progress": {
+          "phase": "rendering",
+          "fraction": 1,
+          "observedAt": "2026-11-24T04:27:06.390Z"
+        },
+        "publicationStartedAt": "2026-11-24T04:27:06.400Z",
+        "completedAt": "2026-11-24T04:27:06.417Z",
+        "result": {
+          "jobId": "e89ab20a-600d-4df4-9de9-d86f1328822b",
+          "inputHash": "0aaef1f42ba834b6eea4127b05e3e9e2c798b2dab4a0f54c7c7563cd09b34898",
+          "artifactId": "sha256:9307cdc97201d5fd5430418c79ec6700b262b6b04d6d1f85e838fb88cfa5bc54",
+          "contentHash": "9307cdc97201d5fd5430418c79ec6700b262b6b04d6d1f85e838fb88cfa5bc54",
+          "sizeBytes": 28303,
+          "mediaType": "image/png",
+          "rendererId": "remotion.project-graph",
+          "rendererVersion": "1.0.0"
+        }
+      },
+      "rgbaHash": "22a471468de5ea7e70732d597a9feb77945bc1ba0215303ca7d61594c1a87144"
+    },
+    {
+      "frame": 79,
+      "job": {
+        "schemaVersion": "1.0.0",
+        "id": "d39ad04f-6134-4cfe-890c-1753d66edb19",
+        "input": {
+          "projectId": "p14e-water-loop",
+          "submissionId": "9f1116e1-0046-41f8-bec8-adaa4ec004aa-preview-79",
+          "runId": "9f1116e1-0046-41f8-bec8-adaa4ec004aa",
+          "callId": "preview-79",
+          "toolVersion": "1.0.0",
+          "snapshot": {
+            "id": "repair-03a5e25c-21b6-4000-ba63-3bdea831cffe",
+            "revisionId": "revision-host-261bb9a81be95ef3e9788a6eafe3a6421feccba6732ee0fd5113a1b0225cdca5",
+            "contentHash": "b5afd0f4e059d105e72dafe5f7e70c4aac1e32ea3661dcd056358eaebbe54029"
+          },
+          "render": {
+            "operation": "preview",
+            "frame": 79
+          },
+          "profile": {
+            "width": 640,
+            "height": 360,
+            "fps": 10
+          },
+          "renderer": {
+            "id": "remotion.project-graph",
+            "version": "1.0.0"
+          }
+        },
+        "inputHash": "69a69126868135bccac653875680bfc9adf43c96dceaa08c1946a7e4334c5ed1",
+        "state": "succeeded",
+        "revision": 7,
+        "createdAt": "2026-11-24T04:27:06.597Z",
+        "updatedAt": "2026-11-24T04:27:07.333Z",
+        "outcomeUnknown": false,
+        "startedAt": "2026-11-24T04:27:06.602Z",
+        "progress": {
+          "phase": "rendering",
+          "fraction": 1,
+          "observedAt": "2026-11-24T04:27:07.307Z"
+        },
+        "publicationStartedAt": "2026-11-24T04:27:07.317Z",
+        "completedAt": "2026-11-24T04:27:07.333Z",
+        "result": {
+          "jobId": "d39ad04f-6134-4cfe-890c-1753d66edb19",
+          "inputHash": "69a69126868135bccac653875680bfc9adf43c96dceaa08c1946a7e4334c5ed1",
+          "artifactId": "sha256:290c29feea31de20dab9ca3ca0a33547e1fd0ee41efa77a4db1529aa93948a73",
+          "contentHash": "290c29feea31de20dab9ca3ca0a33547e1fd0ee41efa77a4db1529aa93948a73",
+          "sizeBytes": 28318,
+          "mediaType": "image/png",
+          "rendererId": "remotion.project-graph",
+          "rendererVersion": "1.0.0"
+        }
+      },
+      "rgbaHash": "33862d076f98fd11a959e5288abb2cadbbe554d8510d5f39e988cabd19fd6033"
+    },
+    {
+      "frame": 80,
+      "job": {
+        "schemaVersion": "1.0.0",
+        "id": "e4951af4-be01-40bf-9fb8-096aece681df",
+        "input": {
+          "projectId": "p14e-water-loop",
+          "submissionId": "9f1116e1-0046-41f8-bec8-adaa4ec004aa-preview-80",
+          "runId": "9f1116e1-0046-41f8-bec8-adaa4ec004aa",
+          "callId": "preview-80",
+          "toolVersion": "1.0.0",
+          "snapshot": {
+            "id": "repair-03a5e25c-21b6-4000-ba63-3bdea831cffe",
+            "revisionId": "revision-host-261bb9a81be95ef3e9788a6eafe3a6421feccba6732ee0fd5113a1b0225cdca5",
+            "contentHash": "b5afd0f4e059d105e72dafe5f7e70c4aac1e32ea3661dcd056358eaebbe54029"
+          },
+          "render": {
+            "operation": "preview",
+            "frame": 80
+          },
+          "profile": {
+            "width": 640,
+            "height": 360,
+            "fps": 10
+          },
+          "renderer": {
+            "id": "remotion.project-graph",
+            "version": "1.0.0"
+          }
+        },
+        "inputHash": "08280b9ba9faf3c1ed0e54cc86985ce4ecf7a40c027f6ac64606c0ceb37812d6",
+        "state": "succeeded",
+        "revision": 7,
+        "createdAt": "2026-11-24T04:27:07.519Z",
+        "updatedAt": "2026-11-24T04:27:08.194Z",
+        "outcomeUnknown": false,
+        "startedAt": "2026-11-24T04:27:07.523Z",
+        "progress": {
+          "phase": "rendering",
+          "fraction": 1,
+          "observedAt": "2026-11-24T04:27:08.169Z"
+        },
+        "publicationStartedAt": "2026-11-24T04:27:08.177Z",
+        "completedAt": "2026-11-24T04:27:08.194Z",
+        "result": {
+          "jobId": "e4951af4-be01-40bf-9fb8-096aece681df",
+          "inputHash": "08280b9ba9faf3c1ed0e54cc86985ce4ecf7a40c027f6ac64606c0ceb37812d6",
+          "artifactId": "sha256:290c29feea31de20dab9ca3ca0a33547e1fd0ee41efa77a4db1529aa93948a73",
+          "contentHash": "290c29feea31de20dab9ca3ca0a33547e1fd0ee41efa77a4db1529aa93948a73",
+          "sizeBytes": 28318,
+          "mediaType": "image/png",
+          "rendererId": "remotion.project-graph",
+          "rendererVersion": "1.0.0"
+        }
+      },
+      "rgbaHash": "33862d076f98fd11a959e5288abb2cadbbe554d8510d5f39e988cabd19fd6033"
+    },
+    {
+      "frame": 82,
+      "job": {
+        "schemaVersion": "1.0.0",
+        "id": "276e32d9-8f27-42fa-b629-bdee95c5613c",
+        "input": {
+          "projectId": "p14e-water-loop",
+          "submissionId": "9f1116e1-0046-41f8-bec8-adaa4ec004aa-preview-82",
+          "runId": "9f1116e1-0046-41f8-bec8-adaa4ec004aa",
+          "callId": "preview-82",
+          "toolVersion": "1.0.0",
+          "snapshot": {
+            "id": "repair-03a5e25c-21b6-4000-ba63-3bdea831cffe",
+            "revisionId": "revision-host-261bb9a81be95ef3e9788a6eafe3a6421feccba6732ee0fd5113a1b0225cdca5",
+            "contentHash": "b5afd0f4e059d105e72dafe5f7e70c4aac1e32ea3661dcd056358eaebbe54029"
+          },
+          "render": {
+            "operation": "preview",
+            "frame": 82
+          },
+          "profile": {
+            "width": 640,
+            "height": 360,
+            "fps": 10
+          },
+          "renderer": {
+            "id": "remotion.project-graph",
+            "version": "1.0.0"
+          }
+        },
+        "inputHash": "8f1a7a92e54b74702f8dac839417e52c16d2094d0007fa5c871acb921e081568",
+        "state": "succeeded",
+        "revision": 7,
+        "createdAt": "2026-11-24T04:27:08.381Z",
+        "updatedAt": "2026-11-24T04:27:09.083Z",
+        "outcomeUnknown": false,
+        "startedAt": "2026-11-24T04:27:08.383Z",
+        "progress": {
+          "phase": "rendering",
+          "fraction": 1,
+          "observedAt": "2026-11-24T04:27:09.057Z"
+        },
+        "publicationStartedAt": "2026-11-24T04:27:09.065Z",
+        "completedAt": "2026-11-24T04:27:09.083Z",
+        "result": {
+          "jobId": "276e32d9-8f27-42fa-b629-bdee95c5613c",
+          "inputHash": "8f1a7a92e54b74702f8dac839417e52c16d2094d0007fa5c871acb921e081568",
+          "artifactId": "sha256:60beb7486c5e3a0ac2859eb1bf5a461895a4a406371fd993ee359d8f58a08038",
+          "contentHash": "60beb7486c5e3a0ac2859eb1bf5a461895a4a406371fd993ee359d8f58a08038",
+          "sizeBytes": 46800,
+          "mediaType": "image/png",
+          "rendererId": "remotion.project-graph",
+          "rendererVersion": "1.0.0"
+        }
+      },
+      "rgbaHash": "caba1ec32cc9b7244fec7324a758880a4e37899e4d380319f725b7939bddcd67"
+    },
+    {
+      "frame": 159,
+      "job": {
+        "schemaVersion": "1.0.0",
+        "id": "0192435a-1466-49f8-9757-a13158a7d0c8",
+        "input": {
+          "projectId": "p14e-water-loop",
+          "submissionId": "9f1116e1-0046-41f8-bec8-adaa4ec004aa-preview-159",
+          "runId": "9f1116e1-0046-41f8-bec8-adaa4ec004aa",
+          "callId": "preview-159",
+          "toolVersion": "1.0.0",
+          "snapshot": {
+            "id": "repair-03a5e25c-21b6-4000-ba63-3bdea831cffe",
+            "revisionId": "revision-host-261bb9a81be95ef3e9788a6eafe3a6421feccba6732ee0fd5113a1b0225cdca5",
+            "contentHash": "b5afd0f4e059d105e72dafe5f7e70c4aac1e32ea3661dcd056358eaebbe54029"
+          },
+          "render": {
+            "operation": "preview",
+            "frame": 159
+          },
+          "profile": {
+            "width": 640,
+            "height": 360,
+            "fps": 10
+          },
+          "renderer": {
+            "id": "remotion.project-graph",
+            "version": "1.0.0"
+          }
+        },
+        "inputHash": "db8bed226a2856bc6b031656523c517413a6253f1491f186226f390f927fdc05",
+        "state": "succeeded",
+        "revision": 7,
+        "createdAt": "2026-11-24T04:27:09.266Z",
+        "updatedAt": "2026-11-24T04:27:09.913Z",
+        "outcomeUnknown": false,
+        "startedAt": "2026-11-24T04:27:09.270Z",
+        "progress": {
+          "phase": "rendering",
+          "fraction": 1,
+          "observedAt": "2026-11-24T04:27:09.890Z"
+        },
+        "publicationStartedAt": "2026-11-24T04:27:09.902Z",
+        "completedAt": "2026-11-24T04:27:09.913Z",
+        "result": {
+          "jobId": "0192435a-1466-49f8-9757-a13158a7d0c8",
+          "inputHash": "db8bed226a2856bc6b031656523c517413a6253f1491f186226f390f927fdc05",
+          "artifactId": "sha256:cb1c54902f8aad93b08725b63527dd006d1391fa21d73dbcae223c16d1186538",
+          "contentHash": "cb1c54902f8aad93b08725b63527dd006d1391fa21d73dbcae223c16d1186538",
+          "sizeBytes": 30383,
+          "mediaType": "image/png",
+          "rendererId": "remotion.project-graph",
+          "rendererVersion": "1.0.0"
+        }
+      },
+      "rgbaHash": "98e452fa589fa0622352e832cde0b365aa52014e1e129674bd48366c13b10338"
+    }
+  ],
+  "video": {
+    "job": {
+      "schemaVersion": "1.0.0",
+      "id": "d5836b8b-f5a5-4a53-bffa-c0ec20b0d2ad",
+      "input": {
+        "projectId": "p14e-water-loop",
+        "submissionId": "9f1116e1-0046-41f8-bec8-adaa4ec004aa-video",
+        "runId": "9f1116e1-0046-41f8-bec8-adaa4ec004aa",
+        "callId": "video",
+        "toolVersion": "1.0.0",
+        "snapshot": {
+          "id": "repair-03a5e25c-21b6-4000-ba63-3bdea831cffe",
+          "revisionId": "revision-host-261bb9a81be95ef3e9788a6eafe3a6421feccba6732ee0fd5113a1b0225cdca5",
+          "contentHash": "b5afd0f4e059d105e72dafe5f7e70c4aac1e32ea3661dcd056358eaebbe54029"
+        },
+        "render": {
+          "operation": "video",
+          "startFrame": 0,
+          "durationFrames": 160
+        },
+        "profile": {
+          "width": 640,
+          "height": 360,
+          "fps": 10
+        },
+        "renderer": {
+          "id": "remotion.project-graph",
+          "version": "1.0.0"
+        }
+      },
+      "inputHash": "e52e4d941be2cd246c0b963ed6fc57f446c9f2f1f2d2c0a46c2df7e70180ae7e",
+      "state": "succeeded",
+      "revision": 23,
+      "createdAt": "2026-11-24T04:27:10.078Z",
+      "updatedAt": "2026-11-24T04:27:14.848Z",
+      "outcomeUnknown": false,
+      "startedAt": "2026-11-24T04:27:10.080Z",
+      "progress": {
+        "phase": "encoding",
+        "fraction": 1,
+        "observedAt": "2026-11-24T04:27:14.815Z"
+      },
+      "publicationStartedAt": "2026-11-24T04:27:14.833Z",
+      "completedAt": "2026-11-24T04:27:14.848Z",
+      "result": {
+        "jobId": "d5836b8b-f5a5-4a53-bffa-c0ec20b0d2ad",
+        "inputHash": "e52e4d941be2cd246c0b963ed6fc57f446c9f2f1f2d2c0a46c2df7e70180ae7e",
+        "artifactId": "sha256:10265c8ee00b3731b70f7d3d44662b64ba953278279a3d7875b48c43084e1b49",
+        "contentHash": "10265c8ee00b3731b70f7d3d44662b64ba953278279a3d7875b48c43084e1b49",
+        "sizeBytes": 55908,
+        "mediaType": "video/mp4",
+        "rendererId": "remotion.project-graph",
+        "rendererVersion": "1.0.0"
+      }
+    },
+    "decoded": {
+      "codec": "h264",
+      "frames": 160,
+      "durationSeconds": 16,
+      "rgbHash": "5301847b8a44f3ffa608e93f45381237d74e60eb29c5e7cd5485838e5dc79788"
+    }
+  }
+}

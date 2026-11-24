@@ -56,7 +56,7 @@ The host has 25 executable built-ins. The P1.1 two-topic scenario adds one execu
 
 P1.1 has evidence for 23 of 25 acceptance items, and the two human-review items are assigned to final acceptance. The recorded AI trial created a 12-second video through discovered tools and repaired it using a layout report. [P1.1 acceptance](docs/P1.1-ACCEPTANCE.md) · [Sample review](docs/P1.1-REVIEW.md) · [Recorded AI trial](docs/P1.1-AI-TRIAL.md) · [Revised video](docs/ai-trials/cache-hit-2026-11-17/video-final.mp4).
 
-P1.2 and P1.3 are implemented. P1.4-A through D validate provider-independent proposals, execute bounded runs, repair inspection findings and verify media from approved snapshots. P1.4-E covers end-to-end acceptance. [P1.4 plan](docs/P1.4-PLAN.md).
+P1.2 and P1.3 are implemented. P1.4 validates provider-independent planning, bounded execution, targeted repair and media delivery on two approved topics. The live Codex trial has its own transcript and media. [P1.4 plan](docs/P1.4-PLAN.md).
 
 ## Development checks
 
@@ -124,6 +124,8 @@ The combined acceptance enables all resource budgets in the same host, verifies 
 `npm run accept:p1-4-c` uses a local adapter to repair model, browser layout and timeline findings and verify the saved result on the same coverage. CI publishes the accepted and rejected runs and reopened snapshots as `creative-repair-evidence`. [P1.4-C verification](docs/P1.4-PLAN.md#c--inspection-and-repair).
 
 `npm run accept:p1-4-d` selects representative frames from the approved snapshot, verifies the PNGs and narrated MP4, and compares decoded pixels and audio after reopening and restore. CI publishes both deliveries, their receipts and frame-scoped observations as `creative-delivery-evidence`. [P1.4-D verification](docs/P1.4-PLAN.md#d--preview-and-delivery-checks).
+
+`npm run accept:p1-4-e` uses the same planning, repair and delivery path for two approved topics and verifies a bounded regression and restored media. CI publishes `creative-acceptance-evidence`. The recorded Codex trial is retained in the repository. [P1.4-E verification and live trial](docs/P1.4-PLAN.md#e--end-to-end-acceptance).
 
 ## Design and documentation
 
