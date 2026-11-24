@@ -10,7 +10,7 @@ Prioritize a small demonstrated creation-and-repair workflow on Remotion. Progra
 
 [Platform Vision](PLATFORM_VISION.md) owns durable principles, [Architecture](ARCHITECTURE.md) implementation boundaries, and [P1.1 Acceptance](P1.1-ACCEPTANCE.md) measurable exit gates. Test counts and catalogue size are not product-completion percentages.
 
-P1.2 delivers isolated local jobs with resource limits and measured bundle reuse. P1.3 delivers editable media, timelines, 2D graphics, keyframes, crossfades, WAV narration and timed captions. P1.4 delivers provider-independent proposal preflight, result-driven execution and inspection-driven repair with a retained checkpoint. Preview and delivery checks are next. Human effect review is assigned to the final acceptance workstream. [P1.2 plan](P1.2-PLAN.md) · [P1.3 plan](P1.3-PLAN.md) · [P1.4 plan](P1.4-PLAN.md).
+P1.2 delivers isolated local jobs with resource limits and measured bundle reuse. P1.3 delivers editable media, timelines, 2D graphics, keyframes, crossfades, WAV narration and timed captions. P1.4 delivers provider-independent proposal preflight, result-driven execution, inspection-driven repair and snapshot-bound media verification. End-to-end acceptance is next. Human effect review is assigned to the final acceptance workstream. [P1.2 plan](P1.2-PLAN.md) · [P1.3 plan](P1.3-PLAN.md) · [P1.4 plan](P1.4-PLAN.md).
 
 ## Main is the delivery baseline
 
@@ -79,7 +79,8 @@ P1.1's engineering gates have evidence; full visual closure is deferred to the f
 | 12a — implemented | P1.4-A planning interface | One provider-independent proposal preflight using the live scoped catalogue, exact versions and input schemas |
 | 12b — implemented | P1.4-B bounded execution | A result-driven run to a saved and reopened draft, with budget and cancellation tests and ledger reconciliation after a lost reply |
 | 12c — implemented | P1.4-C inspection and repair | Scoped model, browser and timeline repairs with matched coverage and retained snapshots on bounded stops |
-| 12d — next implementation | P1.4-D preview and delivery checks | Select representative frames, verify output media and compare a recovered export |
+| 12d — implemented | P1.4-D preview and delivery checks | Representative frames, scoped job receipts and optional review observations, verified MP4, and matching decoded pixels and audio after restoring the approved snapshot |
+| 12e — next implementation | P1.4-E end-to-end acceptance | Two approved topics using the same workflow, bounded failure and recovery, and measured evidence with separate live model provenance |
 | Final acceptance workstream — deferred | Consolidated human effect review | Review both P1.1 fixtures and representative later outputs, record defects/fixes and final reviewed main evidence |
 
 Land each verified increment independently. I2 is a bounded measurement feature, not a new Studio UI or a general autonomous video critic. Additional infrastructure needs an acceptance case that depends on it.

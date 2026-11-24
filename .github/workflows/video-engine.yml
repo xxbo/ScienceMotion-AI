@@ -301,6 +301,18 @@ jobs:
           path: out/creative-repair/
           if-no-files-found: error
 
+      - name: Verify approved previews, export and restored media
+        id: creative-delivery
+        run: npm run accept:p1-4-d
+
+      - name: Upload creative delivery acceptance evidence
+        if: ${{ !cancelled() && (steps.creative-delivery.outcome == 'success' || steps.creative-delivery.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: creative-delivery-evidence
+          path: out/creative-delivery/
+          if-no-files-found: error
+
       - name: Verify recorded AI trial and deterministic stdio replay
         # Replay is a regression of the retained interaction, not a new model trial.
         run: npm run accept:ai-trial
