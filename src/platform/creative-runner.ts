@@ -3,6 +3,7 @@ import type { ToolResult } from "../contracts/agent-tool";
 import type { CreativeSession } from "../contracts/creative-host";
 import type { CreativePlanner, CreativePlannerDecision, CreativePlannerObservation, CreativeRunLimits, CreativeRunOptions,
   CreativeRunReport, CreativeRunStop, CreativeRunTurn } from "../contracts/creative-planner";
+import { abortable } from "./abortable";
 import { CreativePlanningError, planCreativeStep } from "./creative-planner";
 
 function resolveLimits(input: Partial<CreativeRunLimits> = {}): CreativeRunLimits {
@@ -12,21 +13,6 @@ function resolveLimits(input: Partial<CreativeRunLimits> = {}): CreativeRunLimit
       throw new CreativePlanningError("PLANNER_RUN_LIMITS_INVALID", `Invalid ${name}`);
   }
   return limits;
-}
-
-async function abortable<T>(signal: AbortSignal, start: () => Promise<T>): Promise<T> {
-  signal.throwIfAborted();
-  let onAbort!: () => void;
-  const aborted = new Promise<never>((_, reject) => {
-    onAbort = () => reject(signal.reason);
-    signal.addEventListener("abort", onAbort, { once: true });
-  });
-  const work = Promise.resolve().then(() => {
-    signal.throwIfAborted();
-    return start();
-  });
-  try { return await Promise.race([aborted, work]); }
-  finally { signal.removeEventListener("abort", onAbort); }
 }
 
 /** Drive one scoped session and retain enough evidence to reconcile an uncertain call. */

@@ -30,6 +30,7 @@
     "scripts/integrated-creative-acceptance.ts",
     "scripts/creative-run-acceptance.ts",
     "scripts/creative-repair-acceptance.ts",
+    "scripts/creative-delivery-acceptance.ts",
     "scripts/catalogue-scale-acceptance.ts",
     "scripts/creative-host-server.ts",
     "scripts/ai-trial-acceptance.ts",

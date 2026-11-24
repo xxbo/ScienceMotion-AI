@@ -56,7 +56,7 @@ The host has 25 executable built-ins. The P1.1 two-topic scenario adds one execu
 
 P1.1 has evidence for 23 of 25 acceptance items, and the two human-review items are assigned to final acceptance. The recorded AI trial created a 12-second video through discovered tools and repaired it using a layout report. [P1.1 acceptance](docs/P1.1-ACCEPTANCE.md) · [Sample review](docs/P1.1-REVIEW.md) · [Recorded AI trial](docs/P1.1-AI-TRIAL.md) · [Revised video](docs/ai-trials/cache-hit-2026-11-17/video-final.mp4).
 
-P1.2 and P1.3 are implemented. P1.4-A through C validate provider-independent proposals, execute bounded runs and use inspection findings for targeted repair. P1.4-D covers preview and delivery checks. [P1.4 plan](docs/P1.4-PLAN.md).
+P1.2 and P1.3 are implemented. P1.4-A through D validate provider-independent proposals, execute bounded runs, repair inspection findings and verify media from approved snapshots. P1.4-E covers end-to-end acceptance. [P1.4 plan](docs/P1.4-PLAN.md).
 
 ## Development checks
 
@@ -122,6 +122,8 @@ The combined acceptance enables all resource budgets in the same host, verifies 
 `npm run accept:p1-4-b` runs local planning against the Creative Host, saves and reopens a draft and reconciles a deliberately lost response against the execution ledger. CI publishes the run traces, draft and ledger entries as `creative-run-evidence`. [P1.4-B verification](docs/P1.4-PLAN.md#b--bounded-execution).
 
 `npm run accept:p1-4-c` uses a local adapter to repair model, browser layout and timeline findings and verify the saved result on the same coverage. CI publishes the accepted and rejected runs and reopened snapshots as `creative-repair-evidence`. [P1.4-C verification](docs/P1.4-PLAN.md#c--inspection-and-repair).
+
+`npm run accept:p1-4-d` selects representative frames from the approved snapshot, verifies the PNGs and narrated MP4, and compares decoded pixels and audio after reopening and restore. CI publishes both deliveries, their receipts and frame-scoped observations as `creative-delivery-evidence`. [P1.4-D verification](docs/P1.4-PLAN.md#d--preview-and-delivery-checks).
 
 ## Design and documentation
 
