@@ -16,7 +16,7 @@ export class CreativePlanningError extends Error {
   }
 }
 
-function parseDecision(text: string): CreativePlannerDecision {
+export function parseCreativeDecision(text: string): CreativePlannerDecision {
   if (typeof text !== "string") throw new CreativePlanningError("PLANNER_DECISION_INVALID", "Planner must return JSON text");
   if (Buffer.byteLength(text) > MAX_DECISION_BYTES)
     throw new CreativePlanningError("PLANNER_DECISION_TOO_LARGE", "Planner decision exceeds the 1 MiB limit");
@@ -46,7 +46,7 @@ export async function planCreativeStep(
   const raw = await planner.propose({ protocolVersion: CREATIVE_PLANNER_PROTOCOL, projectId: session.projectId,
     brief, catalogue: structuredClone(catalogue), ...(observation ? { observation: structuredClone(observation) } : {}) }, signal);
   signal?.throwIfAborted();
-  const decision = parseDecision(raw);
+  const decision = parseCreativeDecision(raw);
   if (decision.kind !== "invoke") return decision;
 
   const offered = catalogue.tools.find(tool => tool.id === decision.toolId);

@@ -289,6 +289,18 @@ jobs:
           path: out/integrated-creative/
           if-no-files-found: error
 
+      - name: Verify inspection-driven repair and retained fallback
+        id: creative-repair
+        run: npm run accept:p1-4-c
+
+      - name: Upload creative repair acceptance evidence
+        if: ${{ !cancelled() && (steps.creative-repair.outcome == 'success' || steps.creative-repair.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: creative-repair-evidence
+          path: out/creative-repair/
+          if-no-files-found: error
+
       - name: Verify recorded AI trial and deterministic stdio replay
         # Replay is a regression of the retained interaction, not a new model trial.
         run: npm run accept:ai-trial
