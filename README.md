@@ -58,7 +58,7 @@ P1.1 has evidence for 23 of 25 acceptance items, and the two human-review items 
 
 P1.2 and P1.3 are implemented. P1.4 validates provider-independent planning, bounded execution, targeted repair and media delivery on two approved topics. The live Codex trial has its own transcript and media. [P1.4 plan](docs/P1.4-PLAN.md).
 
-P1.5-A fixes the shared water-motion workload, and P1.5-B verifies cross-plugin composition and checkpoint recovery. The next increment connects the second render engine. [P1.5 plan](docs/P1.5-PLAN.md).
+P1.5 verifies cross-plugin composition and compares two rendering engines on a frozen workload, including shared delivery and restore. P2 starts with a pinned pendulum reference for reusable motion and later specialist rendering. [P1.5 plan](docs/P1.5-PLAN.md) · [P2 plan](docs/P2-PLAN.md).
 
 ## Development checks
 
@@ -136,6 +136,8 @@ The combined acceptance enables all resource budgets in the same host, verifies 
 Creative Host can opt into `SvgFfmpegProjectGraphRenderer` for a single shot of flat, opaque 2D shapes. Remotion remains the default. `npm run accept:p1-5-c` verifies a PNG preview and silent H.264 MP4 from the shared snapshot and checks that unsupported content publishes no artifact. CI publishes `svg-ffmpeg-renderer-evidence`. [P1.5-C setup and scope](docs/P1.5-PLAN.md#c--second-engine).
 
 `npm run bench:p1-5-d` compares both engines on that snapshot in paired runs. `npm run accept:p1-5-d` switches engines in one retained workspace and verifies delivery and recovery using the same Host workflow. CI publishes `render-engine-comparison` and `engine-delivery-evidence`. [P1.5-D measurement and recovery](docs/P1.5-PLAN.md#d--performance-and-integration).
+
+`npm run accept:p2-1-a` renders the pinned pendulum snapshot with Remotion. It verifies three preview poses and the arc, hold and direction checks in the six-second export. CI publishes `pendulum-reference-evidence`. [P2.1-A specification](docs/P2-PLAN.md#a--pendulum-reference).
 
 ## Design and documentation
 
