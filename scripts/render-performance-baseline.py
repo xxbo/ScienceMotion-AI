@@ -21,9 +21,12 @@ CASE = ROOT / "scripts/fixtures/render-performance-case.ts"
 ENGINE_FIXTURE = ROOT / "examples/water-motion-baseline.json"
 INTERVAL = 0.1
 MIB = 1024 ** 2
-COMPARISONS = {"execution": ("in-process", "worker"), "bundle": ("worker", "worker-prepared"), "engine": ("in-process",)}
+COMPARISONS = {"execution": ("in-process", "worker"), "bundle": ("worker", "worker-prepared"),
+               "engine": ("in-process",), "engine-pair": ("in-process", "svg-ffmpeg")}
 PREVIEWS = ("cold-preview", "repeat-preview", "recovery-preview")
 ENGINE_MEDIA = ("cold-preview.png", "repeat-preview.png", "first-video.mp4", "repeat-video.mp4")
+ENGINE_NAMES = {"in-process": "Remotion", "svg-ffmpeg": "SVG + FFmpeg"}
+ENGINE_IDENTITIES = {"in-process": "remotion.project-graph", "svg-ffmpeg": "svg-ffmpeg-project-graph"}
 
 
 def command(*args):
@@ -288,24 +291,34 @@ def span(values):
     return f"{statistics.median(values):.1f} [{min(values):.1f}–{max(values):.1f}]"
 
 
+def phase_span(calls, key):
+    values = [call[key] for call in calls if call[key] is not None]
+    return span(values) if values else "—"
+
+
 def summary(report, modes):
     environment, runs = report["environment"], report["runs"]
     checkout = " with local changes" if environment["dirty"] else ""
     comparison = report["comparison"]
-    engine = comparison == "engine"
+    paired = comparison == "engine-pair"
+    engine = comparison in ("engine", "engine-pair")
+    mode_name = ENGINE_NAMES.__getitem__ if paired else str
     title = {"execution": "Render performance baseline", "bundle": "Render bundle reuse comparison",
-             "engine": "Remotion baseline for the shared engine workload"}[comparison]
-    repetitions = f"{report['samples']} repetitions" if engine else f"{report['pairs']} paired repetitions"
+             "engine": "Remotion baseline for the shared engine workload", "engine-pair": "Paired render engine comparison"}[comparison]
+    count = report["samples"] if comparison == "engine" else report["pairs"]
+    repetitions = f"{count} {'paired ' if comparison != 'engine' else ''}repetition{'s' if count != 1 else ''}"
+    startup = "Request to first phase" if paired else "Request to bundle"
+    selection = "Selection or preflight" if paired else "Composition selection"
     lines = [f"# {title}", "",
              f"Commit `{environment['commit']}`{checkout} · {environment['os']} · Node {environment['node']} · {repetitions}", "",
              "Times are milliseconds. Values show the median and observed range. Raw fields are in `baseline.json`.", "",
-             "| Operation | Mode | Total | Request to bundle | Bundle stage | Composition selection | Render to settlement |",
+             f"| Operation | Mode | Total | {startup} | Bundle stage | {selection} | Render to settlement |",
              "| --- | --- | ---: | ---: | ---: | ---: | ---: |"]
     for name in (call["name"] for call in runs[0]["calls"]):
         for mode in modes:
             calls = [call for run in runs if run["mode"] == mode for call in run["calls"] if call["name"] == name]
             fields = ("totalMs", "startupMs", "bundleMs", "selectionMs", "renderToSettleMs")
-            lines.append(f"| {name} | {mode} | " + " | ".join(span([call[key] for call in calls]) for key in fields) + " |")
+            lines.append(f"| {name} | {mode_name(mode)} | " + " | ".join(phase_span(calls, key) for key in fields) + " |")
     if not engine:
         lines += ["", "| Mode | Cancel to rejection | Cancel to reaping confirmation | Host startup | Shutdown to reaping | Scratch reclamation |",
                   "| --- | ---: | ---: | ---: | ---: | ---: |"]
@@ -322,7 +335,7 @@ def summary(report, modes):
         spans = [span([sum(run["cpuSeconds"].values()) for run in own])]
         spans += [span([run[field] / MIB for run in own]) for field in
                   ("peakProcessTreeRssBytes", "peakTemporaryBytes", "peakBundleCacheBytes")]
-        lines.append(f"| {mode} | " + " | ".join(spans) + " |")
+        lines.append(f"| {mode_name(mode)} | " + " | ".join(spans) + " |")
     if comparison == "bundle":
         prepared = [r for r in runs if r["mode"] == "worker-prepared"]
         build_ms = [r["preparation"]["elapsedMs"] for r in prepared]
@@ -332,10 +345,18 @@ def summary(report, modes):
                   *[f"| {mode} | {totals[mode]} |" for mode in modes]]
     if engine:
         snapshot = runs[0]["fixture"]["snapshotHash"]
+        media_location = "reference/<mode>/" if paired else "reference/"
         lines += ["", f"Snapshot SHA-256 `{snapshot}`.", "",
-                  "Each sample starts with a fresh bundle cache. Both video calls follow the preview calls in the same renderer.",
-                  "The PNG pixels and all decoded video frames matched across repetitions. Sampled interior pixels verified the marker motion.",
-                  "The media checks run outside the measured process tree. The first sample's media are in `reference/`.", ""]
+                  "Each sample starts in a fresh process and workspace. Both video calls follow the preview calls in the same renderer.",
+                  "All decoded pixels matched within each engine across its first and repeat renders and across repetitions.",
+                  "Both engines use the same interior color and motion checks on the shared workload." if paired
+                  else "Sampled interior pixels verified the marker motion.",
+                  f"The media checks run outside the measured process tree. First samples are in `{media_location}`.", ""]
+        if paired:
+            lines += ["Pair order alternates on the same runner. Only Remotion bundles and selects a browser composition.",
+                      "SVG and FFmpeg use the selecting phase for graph preflight and encode in the rasterization process.",
+                      "The elapsed times and sampled resource peaks describe this single shape-only workload. They are not CI speed thresholds.",
+                      "Cross-engine equality is checked at the reference interior pixels with the declared tolerance, not at antialiased edges.", ""]
     else:
         lines += ["", "Preview bytes, decoded video frames and layout measurements matched across all runs. Every cancelled video",
                   "rejected after live frame progress and its observed processes were reaped before the recovery preview.", ""]
@@ -345,7 +366,7 @@ def summary(report, modes):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--samples", type=int, default=3, help="repetitions per mode")
-    parser.add_argument("--compare", choices=COMPARISONS, default="execution", help="execution modes, worker bundle reuse or the shared engine workload")
+    parser.add_argument("--compare", choices=COMPARISONS, default="execution", help="execution modes, worker bundle reuse or single/paired engines")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     if args.samples < 1 or sys.platform != "linux":
@@ -358,12 +379,14 @@ def main():
         raise InterruptedError("The performance baseline was stopped")
 
     signal.signal(signal.SIGTERM, interrupt)
-    engine = args.compare == "engine"
+    paired = args.compare == "engine-pair"
+    engine = args.compare in ("engine", "engine-pair")
     output = args.output or ROOT / "out" / {"execution": "render-performance", "bundle": "render-bundle-reuse",
-                                           "engine": "render-engine-baseline"}[args.compare]
+                                           "engine": "render-engine-baseline", "engine-pair": "render-engine-comparison"}[args.compare]
     output.mkdir(parents=True, exist_ok=True)
     modes = COMPARISONS[args.compare]
-    report = {"schemaVersion": "1.0.0", "status": "running", "comparison": args.compare, ("samples" if engine else "pairs"): args.samples,
+    repetition_key = "sample" if args.compare == "engine" else "pair"
+    report = {"schemaVersion": "1.0.0", "status": "running", "comparison": args.compare, repetition_key + "s": args.samples,
               "sampleIntervalMs": INTERVAL * 1000, "runs": []}
     try:
         if engine:
@@ -376,26 +399,41 @@ def main():
         if engine:
             ffprobe, ffmpeg = "ffprobe", "ffmpeg"
             report["environment"]["verificationFfmpeg"] = command(ffmpeg, "-version").splitlines()[0]
-        reference = None
+            report["environment"]["verificationFfprobe"] = command(ffprobe, "-version").splitlines()[0]
+            if paired:
+                report["environment"]["svgEncoderFfmpeg"] = report["environment"]["verificationFfmpeg"]
+        references = {}
+        common_fixture = None
         for index in range(args.samples):
             for mode in (modes if index % 2 == 0 else reversed(modes)):
                 with tempfile.TemporaryDirectory(prefix="sm-render-bench-") as directory:
                     row, results = measure(mode, Path(directory), engine)
-                    row["sample" if engine else "pair"] = index + 1
+                    row[repetition_key] = index + 1
                     verify = engine_fingerprint if engine else fingerprint
                     row["outputVerification"] = verify(row, results, ffprobe, ffmpeg)
                     report["runs"].append(row)
-                    reference = reference if reference is not None else row["outputVerification"]
+                    verification_key = mode if engine else "common"
+                    reference = references.setdefault(verification_key, row["outputVerification"])
                     if row["outputVerification"] != reference:
                         raise ValueError(f"Output mismatch in repetition {index + 1}, {mode}")
+                    if engine:
+                        fixture = {key: value for key, value in row["fixture"].items() if key != "renderer"}
+                        if common_fixture is None:
+                            common_fixture = fixture
+                        if fixture != common_fixture or row["fixture"]["renderer"]["id"] != ENGINE_IDENTITIES[mode]:
+                            raise ValueError(f"Engine {mode} did not verify the common workload with the expected adapter")
                     if engine and index == 0:
-                        media = output / "reference"
-                        media.mkdir(exist_ok=True)
+                        media = output / "reference" / mode if paired else output / "reference"
+                        media.mkdir(parents=True, exist_ok=True)
                         for name in ENGINE_MEDIA:
                             shutil.copy2(results / name, media / name)
                         shutil.copy2(ENGINE_FIXTURE, output / "workload.json")
-                        report["referenceSha256"] = {name: hashlib.sha256((media / name).read_bytes()).hexdigest() for name in ENGINE_MEDIA}
-                    print(f"{'Sample' if engine else 'Pair'} {index + 1}/{args.samples} {mode}: {row['hostWallMs'] / 1000:.1f}s", flush=True)
+                        hashes = {name: hashlib.sha256((media / name).read_bytes()).hexdigest() for name in ENGINE_MEDIA}
+                        if paired:
+                            report.setdefault("referenceSha256", {})[mode] = hashes
+                        else:
+                            report["referenceSha256"] = hashes
+                    print(f"{repetition_key.capitalize()} {index + 1}/{args.samples} {mode}: {row['hostWallMs'] / 1000:.1f}s", flush=True)
         report["status"] = "passed"
         (output / "summary.md").write_text(summary(report, modes), encoding="utf8")
     except (Exception, KeyboardInterrupt) as error:

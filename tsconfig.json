@@ -34,6 +34,7 @@
     "scripts/creative-acceptance.ts",
     "scripts/cross-plugin-composition-acceptance.ts",
     "scripts/svg-ffmpeg-acceptance.ts",
+    "scripts/engine-delivery-acceptance.ts",
     "scripts/catalogue-scale-acceptance.ts",
     "scripts/creative-host-server.ts",
     "scripts/ai-trial-acceptance.ts",

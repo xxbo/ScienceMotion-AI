@@ -41,6 +41,7 @@
     "trial:p1-4-e": "tsx scripts/creative-acceptance.ts --interactive",
     "accept:p1-5-b": "tsx scripts/cross-plugin-composition-acceptance.ts",
     "accept:p1-5-c": "tsx scripts/svg-ffmpeg-acceptance.ts",
+    "accept:p1-5-d": "tsx scripts/engine-delivery-acceptance.ts",
     "accept:catalogue-scale": "tsx scripts/catalogue-scale-acceptance.ts",
     "host:stdio": "tsx scripts/creative-host-server.ts",
     "accept:ai-trial": "tsx scripts/ai-trial-acceptance.ts",
@@ -51,7 +52,8 @@
     "probe:render-resources": "tsx scripts/probe-render-resources.ts",
     "prepare:render-bundle": "tsx scripts/prepare-render-bundle.ts",
     "bench:render": "python3 scripts/render-performance-baseline.py",
-    "bench:p1-5-a": "python3 scripts/render-performance-baseline.py --compare engine"
+    "bench:p1-5-a": "python3 scripts/render-performance-baseline.py --compare engine",
+    "bench:p1-5-d": "python3 scripts/render-performance-baseline.py --compare engine-pair"
   },
   "dependencies": {
     "@remotion/cli": "^4.0.0",

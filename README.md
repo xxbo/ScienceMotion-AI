@@ -129,11 +129,13 @@ The combined acceptance enables all resource budgets in the same host, verifies 
 
 `npm run accept:p1-4-e` uses the same planning, repair and delivery path for two approved topics and verifies a bounded regression and restored media. CI publishes `creative-acceptance-evidence`. The recorded Codex trial is retained in the repository. [P1.4-E verification and live trial](docs/P1.4-PLAN.md#e--end-to-end-acceptance).
 
-`npm run bench:p1-5-a` measures first and repeat Remotion previews and exports on a frozen water-motion snapshot. CI publishes raw measurements, verified media and the shared workload as `render-engine-baseline`. [P1.5-A benchmark](docs/P1.5-PLAN.md#a--interfaces-and-baseline).
+`npm run bench:p1-5-a` measures first and repeat Remotion previews and exports on a frozen water-motion snapshot. The paired CI benchmark reruns the same workload. [P1.5-A benchmark](docs/P1.5-PLAN.md#a--interfaces-and-baseline).
 
 `npm run accept:p1-5-b` follows the PNG import, fit and patch handoffs in a real planning run. It rejects a stale artifact binding, restores the retained composition and verifies a fresh edit after reopening. CI publishes `cross-plugin-composition-evidence`. [P1.5-B acceptance](docs/P1.5-PLAN.md#b--cross-plugin-composition).
 
 Creative Host can opt into `SvgFfmpegProjectGraphRenderer` for a single shot of flat, opaque 2D shapes. Remotion remains the default. `npm run accept:p1-5-c` verifies a PNG preview and silent H.264 MP4 from the shared snapshot and checks that unsupported content publishes no artifact. CI publishes `svg-ffmpeg-renderer-evidence`. [P1.5-C setup and scope](docs/P1.5-PLAN.md#c--second-engine).
+
+`npm run bench:p1-5-d` compares both engines on that snapshot in paired runs. `npm run accept:p1-5-d` switches engines in one retained workspace and verifies delivery and recovery using the same Host workflow. CI publishes `render-engine-comparison` and `engine-delivery-evidence`. [P1.5-D measurement and recovery](docs/P1.5-PLAN.md#d--performance-and-integration).
 
 ## Design and documentation
 
