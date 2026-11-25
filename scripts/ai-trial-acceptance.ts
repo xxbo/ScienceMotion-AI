@@ -4,6 +4,7 @@ import { spawnSync } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import patchSchema from "../schemas/project-patch.schema.json";
 import type { CreativeClientRequest, CreativeLocalConfig } from "../src/contracts/creative-client";
 import type { ProjectDocument } from "../src/contracts/project";
 import type { SnapshotLayoutInspectionReport } from "../src/contracts/layout-inspection";
@@ -200,12 +201,19 @@ try {
   const replay = transcript(await readFile(tracePath, "utf8")), replayProjects = checkProjectsAndReports(replay);
   assert.equal(replay.records[0].data.renderExecution.mode, processWorker ? "local-process" : "in-process");
   assert.deepEqual(replay.requests, original.requests);
-  // Compare the historical catalogue with the additive P1.3-A image layout case.
+  // Preserve exact comparison after applying only the known additions to the recorded catalogue.
   const expectedCatalogue = structuredClone(original.catalogue);
   const layoutTool = expectedCatalogue.tools.find((tool: { id: string }) => tool.id === "inspect.layout");
   const nodeTypes = layoutTool.outputSchema.properties.frames.items.properties.nodes.items.properties.type.enum;
   assert.deepEqual(nodeTypes, ["text", "shape", "path", "chart"]);
   nodeTypes.push("image");
+  const patch = expectedCatalogue.tools.find((tool: { id: string }) => tool.id === "project.patch.apply").inputSchema;
+  patch.$comment = patchSchema.$comment;
+  for (const name of ["bindFollowPath", "editFollowPath", "pathProgressKeys"] as const) {
+    assert.equal(Object.hasOwn(patch.definitions, name), false);
+    patch.definitions[name] = patchSchema.definitions[name];
+  }
+  patch.properties.patches.items.oneOf.push({ $ref: "#/definitions/bindFollowPath" }, { $ref: "#/definitions/editFollowPath" });
   assert.deepEqual(replay.catalogue, expectedCatalogue);
   assert.deepEqual(child.stdout.trim().split("\n").map(line => JSON.parse(line)), replay.records.filter(r => r.kind === "response").map(r => r.data));
   for (const stage of ["before", "after"] as const) {
