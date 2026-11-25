@@ -39,6 +39,7 @@
     "accept:p1-4-d": "tsx scripts/creative-delivery-acceptance.ts",
     "accept:p1-4-e": "tsx scripts/creative-acceptance.ts",
     "trial:p1-4-e": "tsx scripts/creative-acceptance.ts --interactive",
+    "accept:p1-5-b": "tsx scripts/cross-plugin-composition-acceptance.ts",
     "accept:catalogue-scale": "tsx scripts/catalogue-scale-acceptance.ts",
     "host:stdio": "tsx scripts/creative-host-server.ts",
     "accept:ai-trial": "tsx scripts/ai-trial-acceptance.ts",
