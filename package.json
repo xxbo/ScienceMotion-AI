@@ -48,7 +48,8 @@
     "accept:render-maintenance": "tsx scripts/render-job-maintenance-acceptance.ts",
     "probe:render-resources": "tsx scripts/probe-render-resources.ts",
     "prepare:render-bundle": "tsx scripts/prepare-render-bundle.ts",
-    "bench:render": "python3 scripts/render-performance-baseline.py"
+    "bench:render": "python3 scripts/render-performance-baseline.py",
+    "bench:p1-5-a": "python3 scripts/render-performance-baseline.py --compare engine"
   },
   "dependencies": {
     "@remotion/cli": "^4.0.0",

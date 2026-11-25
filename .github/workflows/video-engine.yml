@@ -126,6 +126,23 @@ jobs:
           path: out/render-bundle-reuse/
           if-no-files-found: error
 
+      - name: Measure Remotion on the shared engine workload
+        id: render-engine-baseline
+        run: |
+          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
+          fi
+          npm run bench:p1-5-a
+
+      - name: Upload shared engine baseline evidence
+        if: ${{ !cancelled() && (steps.render-engine-baseline.outcome == 'success' || steps.render-engine-baseline.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: render-engine-baseline
+          path: out/render-engine-baseline/
+          if-no-files-found: error
+
   validate-and-render:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
