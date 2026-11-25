@@ -11,6 +11,7 @@ import type { PcmWavInfo, ProjectDocument } from "../contracts/project";
 import type { ProjectPatchDocument, ProjectPatchResult } from "../contracts/project-patch";
 import type { ProjectSnapshot } from "./project-snapshots";
 import { applyProjectPatch } from "./project-patches";
+import { ProjectEditError } from "./project-edit-error";
 import { assertCreativeDocument, assertFiniteJson } from "./project-creative-edits";
 import { projectArtifactBindings } from "./project-assets";
 import { hashProject } from "./project-snapshots";
@@ -465,6 +466,9 @@ export async function assembleCreativeHost(runtime: CreativeHostRuntime, factori
               return result;
             } catch (error) {
               scope.accepting = false; await Promise.allSettled([...scope.pending]);
+              if (!scope.writesStarted && error instanceof ProjectEditError) {
+                return { ok: false, diagnostics: [{ level: "error", code: error.code, message: error.message, details: error.details }] };
+              }
               const result = failure(error instanceof CreativeHostError ? error.code : "HOST_SERVICE_FAILED", error instanceof Error ? error.message : String(error));
               if (scope.writesStarted) result.metadata = { outcomeUnknown: true };
               return result;

@@ -86,7 +86,7 @@ export function applyCreativeOperation(project: ProjectDocument, op: CreativePat
   }
 }
 /** Semantic gate for creative documents. Renderer-specific component support remains adapter-owned. */
-export function assertCreativeDocument(project: ProjectDocument): void {
+export function assertCreativeDocument(project: ProjectDocument, editedConstraintIds?: ReadonlySet<string>): void {
   if (project.schemaVersion !== "1.1.0") throw new Error("Unsupported creative project format");
   nonempty(project.project.id, "project ID"); integer(project.project.timebase.fps, "project FPS");
   const unique = <T extends { id: string }>(items: T[], label: string): Map<string, T> => {
@@ -164,11 +164,11 @@ export function assertCreativeDocument(project: ProjectDocument): void {
     if (!prefab.rootNodeIds.length || new Set(prefab.rootNodeIds).size !== prefab.rootNodeIds.length) throw new Error("Invalid prefab roots");
     for (const id of prefab.rootNodeIds) if (!nodes.has(id)) throw new Error("Missing prefab root");
   }
+  assertValidFollowPaths(project, editedConstraintIds);
   for (const constraint of project.constraints) {
     const a = sceneOf.get(constraint.sourceNodeId), b = sceneOf.get(constraint.targetNodeId);
     if (!a || !b || (constraint.enabled && a !== b)) throw new Error("Invalid constraint scene references");
   }
-  assertValidFollowPaths(project);
   const entities = { node: nodes, scene: scenes, shot: shots, asset: assets, prefab: prefabs, clip: clips };
   for (const d of project.dependencies) if (!entities[d.fromType]?.has(d.fromId) || !entities[d.toType]?.has(d.toId)) throw new Error("Dangling project dependency");
   for (const asset of project.assets) assertProjectAsset(asset);

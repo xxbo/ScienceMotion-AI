@@ -42,7 +42,7 @@ Recorded baselines are historical evidence, not aliases for main HEAD. [PR #1](h
 | P1.2-C2 | Trusted retention inspection, durable reconciliation, job-specific output ownership, release and pruning | D aggregate quotas |
 | P1.2-C3 | Real-worker concurrent edit, project isolation, scoped GC, plugin and shutdown behavior with a full queue, and durable restart records | D aggregate quotas |
 
-The built-in workspace catalogue has 25 executable tools including inspection and workspace operations. The two-topic scenario adds one executable test extension using public services. The catalogue also has one JSON catalogue-only manifest and 300 synthetic scale entries (100 IDs × 3 versions). Plugin administration is available through the trusted application API. [PNG import](P1.3-PLAN.md#a--approved-png-imports) · [Timeline editing](P1.3-PLAN.md#b--timeline-editing) · [2D graphics editing](P1.3-PLAN.md#c--edit-existing-2d-graphics) · [Keyframes and crossfades](P1.3-PLAN.md#d--keyframes-and-crossfades) · [Integrated inspection](P1.3-PLAN.md#f--integrated-inspection-and-repair).
+The built-in workspace catalogue has 27 executable tools including inspection and workspace operations. The two-topic scenario adds one executable test extension using public services. The catalogue also has one JSON catalogue-only manifest and 300 synthetic scale entries (100 IDs × 3 versions). Plugin administration is available through the trusted application API. [PNG import](P1.3-PLAN.md#a--approved-png-imports) · [Timeline editing](P1.3-PLAN.md#b--timeline-editing) · [2D graphics editing](P1.3-PLAN.md#c--edit-existing-2d-graphics) · [Keyframes and crossfades](P1.3-PLAN.md#d--keyframes-and-crossfades) · [Integrated inspection](P1.3-PLAN.md#f--integrated-inspection-and-repair) · [Editable motion](P2-PLAN.md#c--editable-motion).
 
 ## Next delivery sequence
 
@@ -87,7 +87,8 @@ P1.1's engineering gates have evidence; full visual closure is deferred to the f
 | 13d — implemented | P1.5-D performance and integration | Three paired engine samples on the same snapshot, verified outputs and receipts, and matching decoded media per engine after restore and reopen |
 | 14a — implemented | P2.1-A pendulum motion reference | Frozen 6-second reference, explicit phase and geometry checks, verified previews and 120-frame Remotion export |
 | 14b — implemented | P2.1-B path following | A reusable 2D guide binding with length-based motion, scene-local keys and a verified 120-frame pendulum comparison |
-| 14c — next implementation | P2.1-C editable motion | Scoped path and timing edits with targeted diagnostics and unchanged unrelated nodes |
+| 14c — implemented | P2.1-C editable motion | Revisioned bind and edit tools, three scoped Remotion previews, and persisted diagnostics for rejected edits with unchanged revision and hash |
+| 14d — next implementation | P2.1-D delivery and restore | Tool-authored path motion sample with verified before, edited and restored media |
 | Final acceptance workstream — deferred | Consolidated human effect review | Review both P1.1 fixtures and representative later outputs, record defects/fixes and final reviewed main evidence |
 
 Land each verified increment independently. I2 is a bounded measurement feature, not a new Studio UI or a general autonomous video critic. Additional infrastructure needs an acceptance case that depends on it.
@@ -163,7 +164,7 @@ Project/plugin operation remains trusted and single-writer. The [P1.2 first slic
 | P1.3 | A–F implemented, including an integrated short with inspection, targeted repair, export and recovery. [P1.3 plan](P1.3-PLAN.md) |
 | P1.4 | A–C deliver proposal preflight, bounded execution and inspection-driven repair. D–E cover delivery checks and end-to-end acceptance. [P1.4 plan](P1.4-PLAN.md) |
 | P1.5 | A–D implemented, with cross-plugin composition, paired engine measurements and shared snapshot delivery and recovery. [P1.5 plan](P1.5-PLAN.md) |
-| P2 | Six milestones covering motion, Three.js and cinematography, simulation and Manim, multi-engine editing, Blender and audio delivery. P2.1-A and B are implemented. [P2 plan](P2-PLAN.md) |
+| P2 | Six milestones covering motion, Three.js and cinematography, simulation and Manim, multi-engine editing, Blender and audio delivery. P2.1-A through C are implemented. [P2 plan](P2-PLAN.md) |
 | P3 | Research/LLM/TTS/media providers, claims/sources, asset provenance and licensing |
 | P4 | Remote workers/storage, resumable/batch exports, metrics and optional Studio UI |
 

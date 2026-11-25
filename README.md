@@ -52,7 +52,7 @@ Approved content -> AI tool calls -> Project Graph -> immutable snapshot
   -> structured inspection -> targeted edit -> representative preview -> video export / restore
 ```
 
-The host has 25 executable built-ins. The P1.1 two-topic scenario adds one executable test extension. The catalogue also includes one catalogue-only manifest and 300 synthetic scale entries (100 IDs × 3 versions).
+The host has 27 executable built-ins. The P1.1 two-topic scenario adds one executable test extension. The catalogue also includes one catalogue-only manifest and 300 synthetic scale entries (100 IDs × 3 versions).
 
 P1.1 has evidence for 23 of 25 acceptance items, and the two human-review items are assigned to final acceptance. The recorded AI trial created a 12-second video through discovered tools and repaired it using a layout report. [P1.1 acceptance](docs/P1.1-ACCEPTANCE.md) · [Sample review](docs/P1.1-REVIEW.md) · [Recorded AI trial](docs/P1.1-AI-TRIAL.md) · [Revised video](docs/ai-trials/cache-hit-2026-11-17/video-final.mp4).
 
@@ -140,6 +140,8 @@ Creative Host can opt into `SvgFfmpegProjectGraphRenderer` for a single shot of 
 `npm run accept:p2-1-a` renders the pinned pendulum snapshot with Remotion. It verifies three preview poses and the arc, hold and direction checks in the six-second export. CI publishes `pendulum-reference-evidence`. [P2.1-A specification](docs/P2-PLAN.md#a--pendulum-reference).
 
 `npm run accept:p2-1-b` uses a separate path-following snapshot and verifies it against the same frozen pendulum workload. CI publishes `pendulum-path-following-evidence`. [P2.1-B scope and checks](docs/P2-PLAN.md#b--path-following).
+
+`animation.path.bind` and `animation.path.edit` expose revisioned path and timing authoring. `npm run accept:p2-1-c` verifies three Remotion previews on the pendulum canvas and proves rejected edits leave the prior revision intact. CI publishes `pendulum-motion-edit-evidence`. [P2.1-C tool inputs and checks](docs/P2-PLAN.md#c--editable-motion).
 
 ## Design and documentation
 

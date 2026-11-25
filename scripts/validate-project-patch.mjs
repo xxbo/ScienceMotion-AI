@@ -27,6 +27,8 @@ const creative = [
   { op: "remove-shot", shotId: "shot-new" },
   { op: "put-animation-track", track: { id: "track-new", targetNodeId: "node-test", targetProperty: "opacity", keyframes: [{ frame: 0, value: 0 }, { frame: 30, value: 1, interpolation: "bezier", easing: "ease-in-out" }] } },
   { op: "remove-animation-track", trackId: "track-new" },
+  { op: "bind-follow-path", constraintId: "guide-motion", followerNodeId: "node-test", guideNodeId: "guide-node", keyframes: [{ frame: 0, value: 0 }, { frame: 30, value: 1 }], anchor: [5, 5] },
+  { op: "edit-follow-path", constraintId: "guide-motion", changes: { pathData: "M0 0 L40 30 H96", loop: false } },
 ];
 const check = (value, expected, label, validator = validate) => {
   const valid = validator(value);
@@ -44,6 +46,9 @@ for (const invalid of [
   { op: "add-scene", scene: { id: "s", name: "S", durationFrames: 0, rootNodeIds: [] } },
   { op: "put-animation-track", track: { id: "t", targetProperty: "opacity", keyframes: [] } },
   { op: "update-shot", shotId: "x", changes: { id: "mutate-identity" } },
+  { op: "edit-follow-path", constraintId: "x", changes: {} },
+  { op: "edit-follow-path", constraintId: "x", changes: { guideNodeId: "rewire" } },
+  { op: "bind-follow-path", constraintId: "x", followerNodeId: "a", guideNodeId: "b", keyframes: [{ frame: 0, value: [0, 1] }] },
 ]) check({ ...base, schemaVersion: "1.3.0", patches: [invalid] }, false, `Invalid Patch 1.3 ${invalid.op}`);
 const timelineSchema = JSON.parse(await readFile("schemas/project-timeline-patch.schema.json", "utf8"));
 const validateTimeline = ajv.compile(timelineSchema);

@@ -402,6 +402,18 @@ jobs:
           path: out/pendulum-path-following/
           if-no-files-found: error
 
+      - name: Verify scoped edits of motion path and timing
+        id: pendulum-motion-edit
+        run: npm run accept:p2-1-c
+
+      - name: Upload scoped motion edit evidence
+        if: ${{ !cancelled() && (steps.pendulum-motion-edit.outcome == 'success' || steps.pendulum-motion-edit.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: pendulum-motion-edit-evidence
+          path: out/pendulum-motion-edit/
+          if-no-files-found: error
+
       - name: Verify recorded AI trial and deterministic stdio replay
         # Replay is a regression of the retained interaction, not a new model trial.
         run: npm run accept:ai-trial
