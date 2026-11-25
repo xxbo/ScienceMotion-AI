@@ -11,7 +11,7 @@ import { InMemoryPluginManager } from "./plugin-manager";
 import { InMemoryAgentToolRegistry, LocalAgentToolGateway } from "./tool-registry";
 import { assembleCreativeHost, CreativeHostError, resolveCreativeLimits, type CreativeHostRuntime } from "./creative-host-core";
 import { workspacePlugin } from "./workspace-tools";
-import type { ProjectGraphRenderRequest, ProjectGraphSnapshotRenderer } from "../contracts/renderer";
+import { ProjectGraphRendererError, type ProjectGraphRenderRequest, type ProjectGraphSnapshotRenderer } from "../contracts/renderer";
 import { RemotionProjectGraphRenderer } from "../renderers/remotion/remotion-project-graph-renderer";
 import { LocalRenderWorker, RenderWorkerError, renderWorkerPolicy } from "./render-worker";
 import type { RenderWorkerEvent, RenderWorkerPolicy } from "../contracts/render-worker";
@@ -102,7 +102,7 @@ export async function openCreativeHost(options: OpenCreativeHostOptions): Promis
         const imageAssets = await loadRenderPngAssets(request, artifacts);
         return await work(imageAssets ? { ...request, imageAssets } : request);
       } catch (error) {
-        if (error instanceof RenderWorkerError || error instanceof PngInputError || error instanceof WavInputError)
+        if (error instanceof ProjectGraphRendererError || error instanceof RenderWorkerError || error instanceof PngInputError || error instanceof WavInputError)
           throw new CreativeHostError(error.code, error.message);
         throw error;
       }

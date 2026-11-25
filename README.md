@@ -133,6 +133,8 @@ The combined acceptance enables all resource budgets in the same host, verifies 
 
 `npm run accept:p1-5-b` follows the PNG import, fit and patch handoffs in a real planning run. It rejects a stale artifact binding, restores the retained composition and verifies a fresh edit after reopening. CI publishes `cross-plugin-composition-evidence`. [P1.5-B acceptance](docs/P1.5-PLAN.md#b--cross-plugin-composition).
 
+Creative Host can opt into `SvgFfmpegProjectGraphRenderer` for a single shot of flat, opaque 2D shapes. Remotion remains the default. `npm run accept:p1-5-c` verifies a PNG preview and silent H.264 MP4 from the shared snapshot and checks that unsupported content publishes no artifact. CI publishes `svg-ffmpeg-renderer-evidence`. [P1.5-C setup and scope](docs/P1.5-PLAN.md#c--second-engine).
+
 ## Design and documentation
 
 Content generation and rendering remain independent. Creative tools share the canonical Project Graph; renderers interpret approved data without rewriting meaning. Track executable tools, catalogue entries and visually verified outputs separately.

@@ -82,3 +82,11 @@ export interface ProjectGraphRenderOutput { bytes: Uint8Array; mediaType: "image
   execution?: { kind: "local-process"; protocolVersion: "1.0.0"; jobId: string; processId: number; elapsedMs: number; resourceUsage?: RenderWorkerResourceUsage } }
 export interface ProjectGraphLayoutRequest extends ProjectGraphRenderRequest { frames: number[]; signal?: AbortSignal }
 export interface ProjectGraphSnapshotRenderer { readonly id: string; readonly version: string; renderPreview(request: ProjectGraphPreviewRequest): Promise<ProjectGraphRenderOutput>; renderVideo(request: ProjectGraphVideoRequest): Promise<ProjectGraphRenderOutput>; measureLayout?(request: ProjectGraphLayoutRequest): Promise<LayoutFrameMeasurement[]> }
+
+/** A renderer diagnostic that is safe to return through foreground tools and render jobs. */
+export class ProjectGraphRendererError extends Error {
+  constructor(readonly code: string, message: string) {
+    super(message);
+    this.name = "ProjectGraphRendererError";
+  }
+}
