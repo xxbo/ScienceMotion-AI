@@ -354,6 +354,18 @@ jobs:
           path: out/cross-plugin-composition/
           if-no-files-found: error
 
+      - name: Verify the SVG and FFmpeg snapshot adapter
+        id: svg-ffmpeg-renderer
+        run: npm run accept:p1-5-c
+
+      - name: Upload SVG and FFmpeg renderer evidence
+        if: ${{ !cancelled() && (steps.svg-ffmpeg-renderer.outcome == 'success' || steps.svg-ffmpeg-renderer.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: svg-ffmpeg-renderer-evidence
+          path: out/svg-ffmpeg-renderer/
+          if-no-files-found: error
+
       - name: Verify recorded AI trial and deterministic stdio replay
         # Replay is a regression of the retained interaction, not a new model trial.
         run: npm run accept:ai-trial
