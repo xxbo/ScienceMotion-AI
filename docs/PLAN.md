@@ -1,6 +1,6 @@
 # Development Plan
 
-Last updated 2026-11-24
+Last updated 2026-11-25
 
 ## Goal and current priority
 
@@ -10,7 +10,7 @@ Prioritize a small demonstrated creation-and-repair workflow on Remotion. Progra
 
 [Platform Vision](PLATFORM_VISION.md) owns durable principles, [Architecture](ARCHITECTURE.md) implementation boundaries, and [P1.1 Acceptance](P1.1-ACCEPTANCE.md) measurable exit gates. Test counts and catalogue size are not product-completion percentages.
 
-P1.2 delivers isolated local jobs with resource limits and measured bundle reuse. P1.3 delivers editable media, timelines, 2D graphics, keyframes, crossfades, WAV narration and timed captions. P1.4 delivers provider-independent planning through snapshot-bound media verification, with two completed engineering acceptance cases and a recorded Codex trial. Human effect review is assigned to the final acceptance workstream. [P1.2 plan](P1.2-PLAN.md) · [P1.3 plan](P1.3-PLAN.md) · [P1.4 plan](P1.4-PLAN.md).
+P1.2 delivers isolated local jobs with resource limits and measured bundle reuse. P1.3 delivers editable media, timelines, 2D graphics, keyframes, crossfades, WAV narration and timed captions. P1.4 delivers provider-independent planning through snapshot-bound media verification, with two completed engineering acceptance cases and a recorded Codex trial. P1.5 starts with documented tool handoffs and a measured Remotion baseline for the shared engine workload. Human effect review is assigned to the final acceptance workstream. [P1.2 plan](P1.2-PLAN.md) · [P1.3 plan](P1.3-PLAN.md) · [P1.4 plan](P1.4-PLAN.md) · [P1.5 plan](P1.5-PLAN.md).
 
 ## Main is the delivery baseline
 
@@ -81,6 +81,10 @@ P1.1's engineering gates have evidence; full visual closure is deferred to the f
 | 12c — implemented | P1.4-C inspection and repair | Scoped model, browser and timeline repairs with matched coverage and retained snapshots on bounded stops |
 | 12d — implemented | P1.4-D preview and delivery checks | Representative frames, scoped job receipts and optional review observations, verified MP4, and matching decoded pixels and audio after restoring the approved snapshot |
 | 12e — implemented | P1.4-E end-to-end acceptance | Two approved topics using the same workflow, narrated transition, bounded failure and restored delivery, with a separately retained live Codex trial |
+| 13a — implemented | P1.5-A interfaces and baseline | Pinned water-motion snapshot, tool and engine handoffs, and measured first/repeat Remotion output with decoded-pixel checks |
+| 13b — next implementation | P1.5-B cross-plugin composition | Real producer and consumer in the same planning run, with a verified handoff and recovery case |
+| 13c — planned | P1.5-C second engine | Real SVG and FFmpeg adapter selected by the Host, scoped diagnostics and verified outputs |
+| 13d — planned | P1.5-D performance and integration | Paired measurements, artifact evidence and restore checks through the shared workflow |
 | Final acceptance workstream — deferred | Consolidated human effect review | Review both P1.1 fixtures and representative later outputs, record defects/fixes and final reviewed main evidence |
 
 Land each verified increment independently. I2 is a bounded measurement feature, not a new Studio UI or a general autonomous video critic. Additional infrastructure needs an acceptance case that depends on it.
@@ -155,7 +159,7 @@ Project/plugin operation remains trusted and single-writer. The [P1.2 first slic
 | P1.2 | A–E implemented. [P1.2 plan](P1.2-PLAN.md) |
 | P1.3 | A–F implemented, including an integrated short with inspection, targeted repair, export and recovery. [P1.3 plan](P1.3-PLAN.md) |
 | P1.4 | A–C deliver proposal preflight, bounded execution and inspection-driven repair. D–E cover delivery checks and end-to-end acceptance. [P1.4 plan](P1.4-PLAN.md) |
-| P1.5 | Multi-tool composition, performance evidence and new engines without orchestration rewrites |
+| P1.5 | Multi-tool composition, performance evidence and new engines without orchestration rewrites. [P1.5 plan](P1.5-PLAN.md) |
 | P2 | Advanced motion design, Three.js/Blender, Manim, simulation, cinematography and audio |
 | P3 | Research/LLM/TTS/media providers, claims/sources, asset provenance and licensing |
 | P4 | Remote workers/storage, resumable/batch exports, metrics and optional Studio UI |

@@ -1,0 +1,283 @@
+{
+  "source": {
+    "trialId": "p1-4-water-loop-2026-11-24",
+    "sceneId": "evaporate",
+    "snapshot": {
+      "id": "repair-03a5e25c-21b6-4000-ba63-3bdea831cffe",
+      "revisionId": "revision-host-261bb9a81be95ef3e9788a6eafe3a6421feccba6732ee0fd5113a1b0225cdca5",
+      "contentHash": "b5afd0f4e059d105e72dafe5f7e70c4aac1e32ea3661dcd056358eaebbe54029"
+    }
+  },
+  "snapshot": {
+    "id": "water-motion-v1",
+    "projectId": "water-motion-baseline",
+    "schemaVersion": "1.1.0",
+    "createdAt": "2026-11-24T04:27:03.892Z",
+    "contentHash": "9634fd44e2c6342eb95b44c2c76d0a3954a1ecdc7556423912f9d9ea234def45",
+    "document": {
+      "schemaVersion": "1.1.0",
+      "project": {
+        "id": "water-motion-baseline",
+        "name": "Evaporation motion baseline",
+        "createdAt": "2026-11-24T04:27:03.892Z",
+        "updatedAt": "2026-11-24T04:27:03.892Z",
+        "units": "unitless",
+        "coordinateSystem": "screen-y-down",
+        "timebase": {
+          "fps": 10,
+          "ticksPerFrame": 1
+        },
+        "colorSpace": "srgb"
+      },
+      "editorial": {
+        "episodeId": "water-loop"
+      },
+      "sequences": [
+        {
+          "id": "sequence-main",
+          "name": "Main Sequence",
+          "fps": 10,
+          "durationFrames": 80,
+          "width": 640,
+          "height": 360,
+          "shotIds": [
+            "shot-evaporate"
+          ]
+        }
+      ],
+      "scenes": [
+        {
+          "id": "evaporate",
+          "name": "水受热后更容易蒸发",
+          "durationFrames": 80,
+          "rootNodeIds": [
+            "evaporation-background",
+            "water-surface",
+            "marker"
+          ]
+        }
+      ],
+      "nodes": [
+        {
+          "id": "evaporation-background",
+          "name": "evaporation-background",
+          "type": "shape",
+          "transform": {
+            "position": [
+              0,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "components": [
+            {
+              "kind": "geometry",
+              "data": {
+                "primitive": "rect",
+                "width": 640,
+                "height": 360,
+                "fill": "#102740",
+                "stroke": "transparent",
+                "strokeWidth": 0,
+                "radius": 0
+              }
+            }
+          ]
+        },
+        {
+          "id": "water-surface",
+          "name": "water-surface",
+          "type": "shape",
+          "transform": {
+            "position": [
+              96,
+              261,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "components": [
+            {
+              "kind": "geometry",
+              "data": {
+                "primitive": "ellipse",
+                "width": 448,
+                "height": 51,
+                "fill": "#28668b",
+                "stroke": "transparent",
+                "strokeWidth": 0,
+                "radius": 0
+              }
+            }
+          ]
+        },
+        {
+          "id": "marker",
+          "name": "marker",
+          "type": "shape",
+          "transform": {
+            "position": [
+              305,
+              242,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "components": [
+            {
+              "kind": "geometry",
+              "data": {
+                "primitive": "circle",
+                "width": 24,
+                "height": 24,
+                "fill": "#82e2fb",
+                "stroke": "transparent",
+                "strokeWidth": 0,
+                "radius": 0
+              }
+            }
+          ]
+        }
+      ],
+      "animationTracks": [
+        {
+          "id": "marker-motion",
+          "targetNodeId": "marker",
+          "targetProperty": "transform.position",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": [
+                305,
+                242,
+                0
+              ],
+              "interpolation": "linear"
+            },
+            {
+              "frame": 40,
+              "value": [
+                329,
+                184,
+                0
+              ],
+              "interpolation": "linear"
+            },
+            {
+              "frame": 79,
+              "value": [
+                351,
+                113,
+                0
+              ],
+              "interpolation": "linear"
+            }
+          ]
+        }
+      ],
+      "shots": [
+        {
+          "id": "shot-evaporate",
+          "name": "水受热后更容易蒸发",
+          "sceneId": "evaporate",
+          "startFrame": 0,
+          "durationFrames": 80
+        }
+      ],
+      "clips": [],
+      "tracks": [],
+      "assets": [],
+      "prefabs": [],
+      "constraints": [],
+      "dependencies": [],
+      "revisions": [
+        {
+          "id": "revision-initial",
+          "createdAt": "2026-11-24T04:27:03.892Z",
+          "message": "Derive the evaporation motion fixture from the verified water-cycle snapshot",
+          "author": "ScienceMotion"
+        }
+      ]
+    }
+  },
+  "workload": {
+    "previewFrame": 40,
+    "video": {
+      "startFrame": 12,
+      "durationFrames": 40
+    },
+    "markerSamples": [
+      {
+        "frame": 12,
+        "x": 324,
+        "y": 237
+      },
+      {
+        "frame": 40,
+        "x": 341,
+        "y": 196
+      },
+      {
+        "frame": 51,
+        "x": 347,
+        "y": 176
+      }
+    ],
+    "swatches": [
+      {
+        "name": "background",
+        "x": 26,
+        "y": 26,
+        "rgb": [
+          16,
+          39,
+          64
+        ]
+      },
+      {
+        "name": "water",
+        "x": 320,
+        "y": 286,
+        "rgb": [
+          40,
+          102,
+          139
+        ]
+      }
+    ],
+    "markerRgb": [
+      130,
+      226,
+      251
+    ],
+    "videoColorTolerance": 8
+  }
+}

@@ -11,16 +11,24 @@ import { LocalRenderWorker } from "../../src/platform/render-worker";
 import { prepareRenderBundle } from "../../src/renderers/remotion/prepared-render-bundle";
 import { RemotionProjectGraphRenderer } from "../../src/renderers/remotion/remotion-project-graph-renderer";
 import { processes, waitReaped, type ObservedProcess } from "./owned-processes";
+import type { WaterMotionBaseline } from "./water-motion-baseline";
 
-const [mode, evidence] = process.argv.slice(2);
+const [mode, evidence, scenario] = process.argv.slice(2);
 assert.ok(mode === "in-process" || mode === "worker" || mode === "worker-prepared");
 assert.ok(evidence);
-const fixture = JSON.parse(await readFile("examples/project-graph-demo.props.json", "utf8")) as { project: ProjectDocument };
-const project = fixture.project;
+assert.ok(scenario === undefined || (scenario === "engine" && mode === "in-process"));
+const engineFixture = scenario === "engine"
+  ? JSON.parse(await readFile("examples/water-motion-baseline.json", "utf8")) as WaterMotionBaseline
+  : undefined;
+const project = engineFixture?.snapshot.document ??
+  (JSON.parse(await readFile("examples/project-graph-demo.props.json", "utf8")) as { project: ProjectDocument }).project;
 const { width, height, fps } = project.sequences[0];
 const snapshotHash = hashProject(project);
+if (engineFixture) assert.equal(snapshotHash, engineFixture.snapshot.contentHash);
 const request = { project, snapshotHash, revisionId: project.revisions.at(-1)!.id, profile: { width, height, fps } };
-const previewFrame = 45, videoFrames = 30, cancelFrames = 180, layoutFrames = [0, 45, 90];
+const previewFrame = engineFixture?.workload.previewFrame ?? 45;
+const { startFrame: videoStart, durationFrames: videoFrames } = engineFixture?.workload.video ?? { startFrame: 0, durationFrames: 30 };
+const cancelFrames = 180, layoutFrames = [0, 45, 90];
 const entryPoint = resolve("src/index.ts");
 const round = (ms: number) => Math.round(ms * 10) / 10;
 const preparationStarted = performance.now();
@@ -63,7 +71,7 @@ async function render(name: string, operation: "preview" | "video" | "layout", c
   let output, renderError;
   try {
     output = await (operation === "preview" ? renderer.renderPreview({ ...args, frame: previewFrame }) :
-      operation === "video" ? renderer.renderVideo({ ...args, startFrame: 0, durationFrames: cancel ? cancelFrames : videoFrames }) :
+      operation === "video" ? renderer.renderVideo({ ...args, startFrame: videoStart, durationFrames: cancel ? cancelFrames : videoFrames }) :
         renderer.measureLayout({ ...args, frames: layoutFrames }));
   } catch (error) { renderError = error; }
   const settled = performance.now();
@@ -117,13 +125,19 @@ try {
   await writeFile(join(evidence, "ready"), "", { flag: "wx" });
   await render("cold-preview", "preview");
   await render("repeat-preview", "preview");
-  await render("video", "video");
-  await render("layout", "layout");
-  await render("cancel-video", "video", true);
-  await render("recovery-preview", "preview");
+  if (engineFixture) {
+    await render("first-video", "video");
+    await render("repeat-video", "video");
+  } else {
+    await render("video", "video");
+    await render("layout", "layout");
+    await render("cancel-video", "video", true);
+    await render("recovery-preview", "preview");
+  }
   await writeFile(join(evidence, "calls.json"), JSON.stringify({ mode, ...(preparation ? { preparation } : {}), fixture: {
     projectId: project.project.id, revisionId: request.revisionId, snapshotHash, profile: request.profile,
-    previewFrame, videoFrames, cancelFrames, layoutFrames,
+    ...(engineFixture ? { snapshotId: engineFixture.snapshot.id, source: engineFixture.source, workload: engineFixture.workload,
+      renderer: { id: renderer.id, version: renderer.version } } : { previewFrame, videoFrames, cancelFrames, layoutFrames }),
   }, calls }, null, 2), { flag: "wx" });
   const deadline = performance.now() + 5000;
   while (!existsSync(join(evidence, "shutdown"))) {

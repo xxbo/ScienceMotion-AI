@@ -58,6 +58,8 @@ P1.1 has evidence for 23 of 25 acceptance items, and the two human-review items 
 
 P1.2 and P1.3 are implemented. P1.4 validates provider-independent planning, bounded execution, targeted repair and media delivery on two approved topics. The live Codex trial has its own transcript and media. [P1.4 plan](docs/P1.4-PLAN.md).
 
+P1.5-A defines the tool handoffs and the shared water-motion workload. The next increment verifies cross-plugin composition. [P1.5 plan](docs/P1.5-PLAN.md).
+
 ## Development checks
 
 Node.js 22 is used by CI.
@@ -126,6 +128,8 @@ The combined acceptance enables all resource budgets in the same host, verifies 
 `npm run accept:p1-4-d` selects representative frames from the approved snapshot, verifies the PNGs and narrated MP4, and compares decoded pixels and audio after reopening and restore. CI publishes both deliveries, their receipts and frame-scoped observations as `creative-delivery-evidence`. [P1.4-D verification](docs/P1.4-PLAN.md#d--preview-and-delivery-checks).
 
 `npm run accept:p1-4-e` uses the same planning, repair and delivery path for two approved topics and verifies a bounded regression and restored media. CI publishes `creative-acceptance-evidence`. The recorded Codex trial is retained in the repository. [P1.4-E verification and live trial](docs/P1.4-PLAN.md#e--end-to-end-acceptance).
+
+`npm run bench:p1-5-a` measures first and repeat Remotion previews and exports on a frozen water-motion snapshot. CI publishes raw measurements, verified media and the shared workload as `render-engine-baseline`. [P1.5-A benchmark](docs/P1.5-PLAN.md#a--interfaces-and-baseline).
 
 ## Design and documentation
 
