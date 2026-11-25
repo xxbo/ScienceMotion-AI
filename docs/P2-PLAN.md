@@ -21,8 +21,8 @@ The work starts with P2.1 and P2.2. P2.3 and the initial two-engine cut of P2.4 
 | --- | --- | --- |
 | A — Reference | Implemented | A frozen pendulum snapshot, exact checkpoint and direction expectations, and verified real PNG and MP4 outputs produced with the existing Remotion renderer |
 | B — Path following | Implemented | A reusable 2D guide binding follows straight segments and circular arcs by length. The separate path-driven bob matches A's scene timing and decoded frame checks |
-| C — Editable motion | Next | Scoped edits change the intended path or timing, preserve other nodes and yield actionable diagnostics for invalid input |
-| D — Delivery and restore | Planned | A tool-authored sample uses path following, with verified before, edited and restored media |
+| C — Editable motion | Implemented | Tools bind and edit a single motion path by revision. Decoded previews isolate the changes, and rejected edits keep the same revision and hash |
+| D — Delivery and restore | Next | A tool-authored sample uses path following, with verified before, edited and restored media |
 
 ### A — Pendulum reference
 
@@ -75,3 +75,28 @@ npm run accept:p2-1-b
 ```
 
 The acceptance leaves `pendulum-motion-v1` unchanged and derives a separate retained snapshot, `pendulum-path-motion-v1`. It splits the visible arc from the center guide and detaches the bob from the rotating arm. The arm keeps its original keys for the rod. The independent bob follows the arc with the same timing and easing. Disabling just its path binding leaves the bob at the lowest point in the model, confirming that path motion supplies its position. The two projected bob centers must agree to within 0.002 px across all 120 frames. The decoded PNGs and MP4 must pass A's unchanged position, radius, hold and crossing checks. CI publishes the two snapshot identities, comparison, receipts and media as `pendulum-path-following-evidence`. [Derived reference](../scripts/fixtures/pendulum-path-reference.ts) · [Motion tests](../src/platform/follow-path.test.ts).
+
+### C — Editable motion
+
+`animation.path.bind` attaches an existing follower to an existing sibling SVG path. Supply `baseRevisionId`, a new `constraintId`, `followerNodeId`, `guideNodeId` and `keyframes`. Optional `anchor` and `loop` use B's conventions. `animation.path.edit` addresses that active binding by `baseRevisionId` and `constraintId`. Its `changes` can replace `pathData` on the guide, the complete scene-local progress `keyframes`, or `loop`. Omitted fields stay unchanged, and the edit cannot reassign the nodes or the anchor. [Tool implementations](../src/platform/workspace-tools.ts).
+
+For example, this changes both the path and the time it takes to reach the end in one revision.
+
+```json
+{
+  "baseRevisionId": "current-revision-id",
+  "constraintId": "motion-probe",
+  "changes": {
+    "pathData": "M0 0 L40 30 H96",
+    "keyframes": [{ "frame": 0, "value": 0 }, { "frame": 24, "value": 1 }]
+  }
+}
+```
+
+Both tools require `project.read` and `project.write` and use the canonical `1.3.0` project patch transaction. The receipt names the new revision, affected constraint and any directly updated guide node. A timing-only edit reports no changed node IDs. An edit of shared guide geometry is rejected by the one-binding tool with the IDs of the other affected constraints. Editing just the timing remains possible on a shared guide. Invalid SVG or motion commands, conflicting bindings and invalid progress report error codes plus the binding, follower and guide IDs. Out-of-range progress and out-of-scene keys identify the offending frame. A stale request reports the submitted and current revisions. None of these rejections writes a partial revision. [Patch schema](../schemas/project-patch.schema.json) · [Editing tests](../src/platform/motion-edits.test.ts).
+
+```sh
+npm run accept:p2-1-c
+```
+
+The acceptance adds an independent amber probe to the spare area of B's pendulum canvas through public tools. It preserves the original pendulum and separates path and timing into two edits. The decoded frame-24 dot centers are `(90, 214)` before editing, `(85, 244)` with the reshaped path and `(138, 244)` after retiming. Every pixel outside the probe region must match. An unsupported guide, a combined path edit with invalid timing and a stale edit each preserve the exact prior revision and content hash. CI uploads the three snapshots, PNGs, receipts and recorded diagnostics as `pendulum-motion-edit-evidence`. The full tool-authored sample, export and restored output belong to D. [Acceptance script](../scripts/pendulum-motion-edit-acceptance.ts).

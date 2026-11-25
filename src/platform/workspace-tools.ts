@@ -2,7 +2,7 @@ import type { AgentTool, AgentToolManifest, ToolResult } from "../contracts/agen
 import type { CreativePermission, CreativePluginFactory, CreativeServices } from "../contracts/creative-host";
 import type { TimelineInspectionOptions } from "../contracts/inspection";
 import type { ProjectAsset } from "../contracts/project";
-import type { ProjectPatchDocument, TimelinePatchOperation } from "../contracts/project-patch";
+import type { FollowPathPatchOperation, ProjectPatchDocument, TimelinePatchOperation } from "../contracts/project-patch";
 import { createEmptyProject } from "./empty-project";
 import patchSchema from "../../schemas/project-patch.schema.json";
 import timelinePatchSchema from "../../schemas/project-timeline-patch.schema.json";
@@ -20,6 +20,15 @@ const strings = (names: string[]) => Object.fromEntries(names.map((name) => [nam
 const object = (properties: Record<string, unknown>, required = Object.keys(properties)): Record<string, unknown> => ({ type: "object", additionalProperties: false, properties, required });
 const patchInput = structuredClone(patchSchema) as Record<string, unknown>;
 delete patchInput.$id; // Local #/definitions references remain standalone in the Gateway's Ajv instance.
+const pathEditInput = (schema: typeof patchSchema.definitions.bindFollowPath | typeof patchSchema.definitions.editFollowPath) => {
+  const { op, ...properties } = schema.properties;
+  return { ...object({ ...strings(["baseRevisionId"]), ...properties }, ["baseRevisionId", ...schema.required.filter(key => key !== "op")]),
+    definitions: { pathProgressKeys: patchSchema.definitions.pathProgressKeys } };
+};
+const pathEditOutput = object({ ...strings(["revisionId"]),
+  changedConstraintIds: { type: "array", minItems: 1, maxItems: 1, items: { type: "string", minLength: 1 } },
+  changedNodeIds: { type: "array", maxItems: 1, items: { type: "string", minLength: 1 } } });
+type PathInput<Op extends FollowPathPatchOperation["op"]> = Omit<Extract<FollowPathPatchOperation, { op: Op }>, "op"> & { baseRevisionId: string };
 
 /** Built-in project, creative, rendering and inspection tools behind scoped host services. */
 export const workspacePlugin: CreativePluginFactory = {
@@ -34,6 +43,12 @@ export const workspacePlugin: CreativePluginFactory = {
       return { manifest, execute };
     };
     const ok = (output: unknown): ToolResult => ({ ok: true, output, diagnostics: [] });
+    const applyMotion = async (projectId: string, baseRevisionId: string, operation: FollowPathPatchOperation) => {
+      const { revisionId, changedConstraintIds, changedNodeIds } = await services.project.applyPatch({
+        schemaVersion: "1.3.0", projectId, baseRevisionId, patches: [operation],
+      }, operation.op === "bind-follow-path" ? "Bind motion path" : "Edit motion path");
+      return ok({ revisionId, changedConstraintIds, changedNodeIds });
+    };
     const tools: AgentTool[] = [
       tool("project.create", "Create an empty canonical project bound to the current session; editorial content remains independent.", ["project.write"],
         object({ ...strings(["name", "episodeId"]), durationFrames: { type: "integer", minimum: 1 }, fps: { type: "integer", minimum: 1, maximum: 240 },
@@ -306,6 +321,16 @@ export const workspacePlugin: CreativePluginFactory = {
             patches: keyframeEditPatches(current.animationTracks, edits) }, "Edit animation keyframes");
           return ok({ revisionId: result.revisionId, changedAnimationTrackIds: result.changedAnimationTrackIds ?? [] });
         }),
+      tool("animation.path.bind", "Bind a follower to a sibling SVG path with scene-local progress keys in [0, 1] and an optional local anchor.",
+        ["project.read", "project.write"], pathEditInput(patchSchema.definitions.bindFollowPath), async (input, context) => {
+          const { baseRevisionId, ...binding } = input as PathInput<"bind-follow-path">;
+          return applyMotion(context.projectId, baseRevisionId, { op: "bind-follow-path", ...binding });
+        }, false, pathEditOutput),
+      tool("animation.path.edit", "Edit one active path binding. Replace its dedicated guide pathData, progress keyframes or loop in one revision without rebinding nodes.",
+        ["project.read", "project.write"], pathEditInput(patchSchema.definitions.editFollowPath), async (input, context) => {
+          const { baseRevisionId, ...edit } = input as PathInput<"edit-follow-path">;
+          return applyMotion(context.projectId, baseRevisionId, { op: "edit-follow-path", ...edit });
+        }, false, pathEditOutput),
     ];
     return { manifest: { id: "builtin.workspace", version: "1.0.0", name: "Local workspace tools",
       description: "Revisioned project editing, 2D text/shapes/paths/charts, animation, snapshot-based preview/video rendering and execution inspection behind scoped host services.",

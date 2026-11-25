@@ -1,4 +1,4 @@
-import type { CaptionCue, Clip, ProjectAnimationTrack, ProjectAsset, Scene, SceneNode, Shot, ShotTransition } from "./project";
+import type { CaptionCue, Clip, FollowPathParameters, Keyframe, ProjectAnimationTrack, ProjectAsset, Scene, SceneNode, Shot, ShotTransition } from "./project";
 
 export interface ProjectPatchDocument {
   /** Patch protocol version, independent of the ProjectDocument format. */
@@ -25,6 +25,11 @@ export type TimelinePatchOperation =
   | { op: "set-caption"; captionId: string; caption: Omit<CaptionCue, "id"> | null }
   | { op: "set-transition"; fromShotId: string; toShotId: string; transition: Pick<ShotTransition, "type" | "durationFrames"> | null };
 
+export type FollowPathPatchOperation =
+  | { op: "bind-follow-path"; constraintId: string; followerNodeId: string; guideNodeId: string;
+      keyframes: Keyframe<number>[]; loop?: boolean; anchor?: FollowPathParameters["anchor"] }
+  | { op: "edit-follow-path"; constraintId: string; changes: { pathData?: string; keyframes?: Keyframe<number>[]; loop?: boolean } };
+
 export type ProjectPatchOperation =
   | { op: "add-node"; sceneId: string; node: SceneNode }
   | { op: "update-node"; nodeId: string; changes: Partial<SceneNode> }
@@ -34,8 +39,8 @@ export type ProjectPatchOperation =
   | { op: "add-asset"; asset: ProjectAsset }
   | { op: "replace-asset"; assetId: string; asset: ProjectAsset }
   | { op: "remove-asset"; assetId: string }
-  // Creative scene/timeline edits require Patch 1.3.0.
-  | CreativePatchOperation
+  // Creative scene, animation and motion path edits require Patch 1.3.0.
+  | CreativePatchOperation | FollowPathPatchOperation
   // Timeline transactions use the dedicated Patch 1.4.0 schema.
   | TimelinePatchOperation;
 
@@ -48,5 +53,7 @@ export interface ProjectPatchResult {
   changedClipIds?: string[];
   changedCaptionIds?: string[];
   changedAnimationTrackIds?: string[];
+  /** Bindings affected by a path transaction, including a geometry-only edit. */
+  changedConstraintIds?: string[];
   revisionId: string;
 }

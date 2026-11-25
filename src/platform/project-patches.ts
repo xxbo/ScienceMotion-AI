@@ -3,6 +3,8 @@ import type { ProjectPatchDocument, ProjectPatchResult } from "../contracts/proj
 import { assertAssetReferences, assertAssetRemovable, assertProjectAsset } from "./project-assets";
 import { applyCreativeOperation, assertCreativeDocument, assertFiniteJson, isCreativeOperation, type CreativeChanges } from "./project-creative-edits";
 import { applyTimelineOperation, isTimelineOperation, orderEditedShots } from "./project-timeline";
+import { applyFollowPathOperation, isFollowPathOperation } from "./motion-edits";
+import { ProjectEditError } from "./project-edit-error";
 
 function clone<T>(value: T): T { return structuredClone(value); }
 function assertUniqueNodeIds(nodes: SceneNode[]): void {
@@ -55,7 +57,12 @@ export function applyProjectPatch(
   if (!actualRevisionId || actualRevisionId !== options.currentRevisionId) {
     throw new Error(`Revision conflict: repository is at ${actualRevisionId ?? "no revision"}, expected ${options.currentRevisionId}`);
   }
-  if (patch.baseRevisionId !== actualRevisionId) throw new Error("Revision conflict: project has changed since patch was created");
+  if (patch.baseRevisionId !== actualRevisionId) {
+    const motion = patch.patches.find(isFollowPathOperation);
+    if (motion) throw new ProjectEditError("PROJECT_REVISION_CONFLICT", "Project changed since this motion edit was prepared. Inspect the current revision before retrying.",
+      { constraintId: motion.constraintId, expectedRevisionId: patch.baseRevisionId, currentRevisionId: actualRevisionId });
+    throw new Error("Revision conflict: project has changed since patch was created");
+  }
   if (source.revisions.some((revision) => revision.id === options.newRevisionId)) throw new Error(`Revision already exists: ${options.newRevisionId}`);
   if (validateCreative) {
     assertFiniteJson(patch);
@@ -67,7 +74,7 @@ export function applyProjectPatch(
   }
   const project = clone(source);
   const creative: CreativeChanges = { scenes: new Set(), shots: new Set(), animations: new Set(), clips: new Set(), captions: new Set() };
-  const changed = new Set<string>(); const changedAssets = new Set<string>();
+  const changed = new Set<string>(); const changedAssets = new Set<string>(); const changedConstraints = new Set<string>();
   for (const operation of patch.patches) {
     if (isTimelineOperation(operation)) {
       if (!timeline) throw new Error("Timeline operations require Patch Schema 1.4.0");
@@ -77,6 +84,10 @@ export function applyProjectPatch(
     } else if (isCreativeOperation(operation)) {
       if (patch.schemaVersion !== "1.3.0") throw new Error("Creative operations require Patch Schema 1.3.0");
       applyCreativeOperation(project, operation, creative);
+    } else if (isFollowPathOperation(operation)) {
+      if (patch.schemaVersion !== "1.3.0") throw new Error("Path motion operations require Patch Schema 1.3.0");
+      applyFollowPathOperation(project, operation, changed);
+      changedConstraints.add(operation.constraintId);
     } else if (operation.op === "add-asset" || operation.op === "replace-asset" || operation.op === "remove-asset") {
       if (patch.schemaVersion === "1.1.0") throw new Error("Asset operations require Patch Schema 1.2.0");
       if (operation.op === "add-asset") {
@@ -159,7 +170,7 @@ export function applyProjectPatch(
   }
   assertUniqueNodeIds(project.nodes); assertNoHierarchyCycles(project.nodes);
   if (changedAssets.size) assertAssetReferences(project);
-  if (validateCreative) assertCreativeDocument(project);
+  if (validateCreative) assertCreativeDocument(project, changedConstraints);
   if (timeline) orderEditedShots(project);
   project.project.updatedAt = options.createdAt;
   project.revisions.push({ id: options.newRevisionId, parentRevisionId: options.currentRevisionId, createdAt: options.createdAt, message: options.message, author: "ScienceMotion Agent" });
@@ -168,5 +179,6 @@ export function applyProjectPatch(
     ...(creative.shots.size ? { changedShotIds: [...creative.shots] } : {}),
     ...(creative.clips.size ? { changedClipIds: [...creative.clips] } : {}),
     ...(creative.captions.size ? { changedCaptionIds: [...creative.captions] } : {}),
+    ...(changedConstraints.size ? { changedConstraintIds: [...changedConstraints] } : {}),
     ...(creative.animations.size ? { changedAnimationTrackIds: [...creative.animations] } : {}), revisionId: options.newRevisionId };
 }
