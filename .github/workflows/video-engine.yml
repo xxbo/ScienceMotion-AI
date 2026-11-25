@@ -126,21 +126,21 @@ jobs:
           path: out/render-bundle-reuse/
           if-no-files-found: error
 
-      - name: Measure Remotion on the shared engine workload
-        id: render-engine-baseline
+      - name: Compare both render engines on the shared workload
+        id: render-engine-comparison
         run: |
           if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
             sudo apt-get update
             sudo apt-get install -y ffmpeg
           fi
-          npm run bench:p1-5-a
+          npm run bench:p1-5-d
 
-      - name: Upload shared engine baseline evidence
-        if: ${{ !cancelled() && (steps.render-engine-baseline.outcome == 'success' || steps.render-engine-baseline.outcome == 'failure') }}
+      - name: Upload paired engine comparison evidence
+        if: ${{ !cancelled() && (steps.render-engine-comparison.outcome == 'success' || steps.render-engine-comparison.outcome == 'failure') }}
         uses: actions/upload-artifact@v4
         with:
-          name: render-engine-baseline
-          path: out/render-engine-baseline/
+          name: render-engine-comparison
+          path: out/render-engine-comparison/
           if-no-files-found: error
 
   validate-and-render:
@@ -364,6 +364,18 @@ jobs:
         with:
           name: svg-ffmpeg-renderer-evidence
           path: out/svg-ffmpeg-renderer/
+          if-no-files-found: error
+
+      - name: Verify shared delivery and recovery across engine switches
+        id: engine-delivery
+        run: npm run accept:p1-5-d
+
+      - name: Upload shared engine delivery evidence
+        if: ${{ !cancelled() && (steps.engine-delivery.outcome == 'success' || steps.engine-delivery.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: engine-delivery-evidence
+          path: out/engine-delivery/
           if-no-files-found: error
 
       - name: Verify recorded AI trial and deterministic stdio replay

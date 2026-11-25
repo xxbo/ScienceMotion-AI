@@ -4,19 +4,17 @@ import { readFile, readdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import type { ProjectDocument } from "../../src/contracts/project";
-import type { ProjectGraphRenderProgress } from "../../src/contracts/renderer";
+import type { ProjectGraphRenderProgress, ProjectGraphSnapshotRenderer } from "../../src/contracts/renderer";
 import type { RenderWorkerEvent } from "../../src/contracts/render-worker";
 import { hashProject } from "../../src/platform/project-snapshots";
-import { LocalRenderWorker } from "../../src/platform/render-worker";
-import { prepareRenderBundle } from "../../src/renderers/remotion/prepared-render-bundle";
-import { RemotionProjectGraphRenderer } from "../../src/renderers/remotion/remotion-project-graph-renderer";
 import { processes, waitReaped, type ObservedProcess } from "./owned-processes";
 import type { WaterMotionBaseline } from "./water-motion-baseline";
 
 const [mode, evidence, scenario] = process.argv.slice(2);
-assert.ok(mode === "in-process" || mode === "worker" || mode === "worker-prepared");
+assert.ok(mode === "in-process" || mode === "worker" || mode === "worker-prepared" || mode === "svg-ffmpeg");
 assert.ok(evidence);
-assert.ok(scenario === undefined || (scenario === "engine" && mode === "in-process"));
+assert.ok(scenario === undefined || (scenario === "engine" && (mode === "in-process" || mode === "svg-ffmpeg")));
+assert.ok(mode !== "svg-ffmpeg" || scenario === "engine");
 const engineFixture = scenario === "engine"
   ? JSON.parse(await readFile("examples/water-motion-baseline.json", "utf8")) as WaterMotionBaseline
   : undefined;
@@ -31,17 +29,22 @@ const { startFrame: videoStart, durationFrames: videoFrames } = engineFixture?.w
 const cancelFrames = 180, layoutFrames = [0, 45, 90];
 const entryPoint = resolve("src/index.ts");
 const round = (ms: number) => Math.round(ms * 10) / 10;
+const prepareBundle = mode === "worker-prepared" ? (await import("../../src/renderers/remotion/prepared-render-bundle")).prepareRenderBundle : undefined;
 const preparationStarted = performance.now();
-const preparedBundle = mode === "worker-prepared" ? await prepareRenderBundle(entryPoint, join(tmpdir(), "prepared-bundle")) : undefined;
+const preparedBundle = await prepareBundle?.(entryPoint, join(tmpdir(), "prepared-bundle"));
 const preparation = preparedBundle && { elapsedMs: round(performance.now() - preparationStarted), sha256: preparedBundle.sha256 };
 let workerEvents: RenderWorkerEvent[] = [];
-const worker = mode === "in-process" ? undefined : new LocalRenderWorker({ entryPoint,
-  ...(preparedBundle ? { policy: { preparedBundle } } : {}), onEvent: event => workerEvents.push(event) });
+const worker = mode === "worker" || mode === "worker-prepared"
+  ? new (await import("../../src/platform/render-worker")).LocalRenderWorker({ entryPoint,
+    ...(preparedBundle ? { policy: { preparedBundle } } : {}), onEvent: event => workerEvents.push(event) })
+  : undefined;
 const workerProcesses = new Set<number>();
-const renderer = worker ?? new RemotionProjectGraphRenderer(entryPoint);
+const renderer: ProjectGraphSnapshotRenderer = worker ?? (mode === "svg-ffmpeg"
+  ? new (await import("../../src/renderers/svg-ffmpeg/svg-ffmpeg-project-graph-renderer")).SvgFfmpegProjectGraphRenderer()
+  : new (await import("../../src/renderers/remotion/remotion-project-graph-renderer")).RemotionProjectGraphRenderer(entryPoint));
 const calls: Array<{
   name: string; status: "completed" | "cancelled";
-  totalMs: number; startupMs: number; bundleMs: number; selectionMs: number;
+  totalMs: number; startupMs: number; bundleMs: number | null; selectionMs: number;
   renderToSettleMs: number; lastProgressToSettleMs: number; firstEncodingAtMs?: number;
   abortToRejectionMs?: number; abortToReapConfirmationMs?: number; observedCommands?: string[];
 }> = [];
@@ -72,14 +75,15 @@ async function render(name: string, operation: "preview" | "video" | "layout", c
   try {
     output = await (operation === "preview" ? renderer.renderPreview({ ...args, frame: previewFrame }) :
       operation === "video" ? renderer.renderVideo({ ...args, startFrame: videoStart, durationFrames: cancel ? cancelFrames : videoFrames }) :
-        renderer.measureLayout({ ...args, frames: layoutFrames }));
+        renderer.measureLayout!({ ...args, frames: layoutFrames }));
   } catch (error) { renderError = error; }
   const settled = performance.now();
   if (sampleError) throw sampleError;
   if (renderError && !controller.signal.aborted) throw renderError;
-  assert.ok(phases.bundling !== undefined && phases.selecting !== undefined && phases.rendering !== undefined);
-  const startupMs = round(phases.bundling - started);
-  const bundleMs = round(phases.selecting - phases.bundling);
+  assert.ok(phases.selecting !== undefined && phases.rendering !== undefined);
+  assert.equal(phases.bundling === undefined, mode === "svg-ffmpeg");
+  const startupMs = round((phases.bundling ?? phases.selecting) - started);
+  const bundleMs = phases.bundling === undefined ? null : round(phases.selecting - phases.bundling);
   const selectionMs = round(phases.rendering - phases.selecting);
   const renderToSettleMs = round(settled - phases.rendering);
   const totalMs = round(settled - started);
@@ -106,6 +110,8 @@ async function render(name: string, operation: "preview" | "video" | "layout", c
     } else {
       assert.ok(!Array.isArray(output) && output.bytes.byteLength > 0);
       assert.equal(output.mediaType, operation === "preview" ? "image/png" : "video/mp4");
+      assert.equal(output.rendererId, renderer.id);
+      assert.equal(output.rendererVersion, renderer.version);
       if (worker) assert.equal(output.execution?.kind, "local-process");
       await writeFile(join(evidence, name + (operation === "preview" ? ".png" : ".mp4")), output.bytes, { flag: "wx" });
     }
