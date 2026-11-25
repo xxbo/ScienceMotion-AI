@@ -342,6 +342,18 @@ jobs:
           path: out/p1-4-e/
           if-no-files-found: error
 
+      - name: Verify cross-plugin composition and checkpoint recovery
+        id: cross-plugin-composition
+        run: npm run accept:p1-5-b
+
+      - name: Upload cross-plugin composition evidence
+        if: ${{ !cancelled() && (steps.cross-plugin-composition.outcome == 'success' || steps.cross-plugin-composition.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: cross-plugin-composition-evidence
+          path: out/cross-plugin-composition/
+          if-no-files-found: error
+
       - name: Verify recorded AI trial and deterministic stdio replay
         # Replay is a regression of the retained interaction, not a new model trial.
         run: npm run accept:ai-trial
