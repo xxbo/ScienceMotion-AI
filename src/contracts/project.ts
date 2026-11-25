@@ -54,6 +54,12 @@ export interface ProjectAnimationTrack {
 export interface AnimationTrack { id: string; targetProperty: string; keyframes: Keyframe[]; loop?: boolean }
 export interface SimulationSettings { solver: string; timeStep: number; seed: number; parameters: Record<string, unknown>; units?: string; coordinateSystem?: string }
 export interface PhysicsBody { bodyType: "static" | "dynamic" | "kinematic"; mass: number; friction: number; restitution: number; linearDamping?: number; angularDamping?: number }
+/** Parameters for an active 2D follow-path constraint. Progress is a fraction of the guide's local length. */
+export type FollowPathParameters = {
+  pathNodeId: string;
+  progress: { keyframes: Keyframe<number>[]; loop?: boolean };
+  anchor?: [number, number];
+};
 export interface SceneConstraint {
   id: string; type: "look-at" | "parent" | "distance" | "point-to-point" | "follow-path" | "limit-position" | "limit-rotation" | "custom";
   sourceNodeId: string; targetNodeId: string; enabled: boolean; parameters: Record<string, unknown>; engine?: string;

@@ -8,6 +8,7 @@ import type { LayoutFrameMeasurement } from "../../contracts/layout-inspection";
 import type { ProjectGraphLayoutRequest, ProjectGraphPreviewRequest, ProjectGraphRenderProgress, ProjectGraphRenderRequest,
   ProjectGraphSnapshotRenderer, ProjectGraphRenderOutput, ProjectGraphVideoRequest } from "../../contracts/renderer";
 import { verifiedPngSources } from "../../platform/png-render-inputs";
+import { assertValidFollowPaths } from "../../platform/follow-path";
 import { verifiedRenderWavAssets } from "../../platform/wav-render-inputs";
 import { serveRenderWavSources } from "./render-wav-sources";
 
@@ -44,6 +45,7 @@ export class RemotionProjectGraphRenderer implements ProjectGraphSnapshotRendere
     return { cancelSignal, dispose: () => request.signal?.removeEventListener("abort", cancel) };
   }
   private inputProps(request: ProjectGraphRenderRequest) {
+    assertValidFollowPaths(request.project);
     const imageSources = verifiedPngSources(request);
     return { project: structuredClone(request.project), sceneId: request.sceneId, ...(imageSources ? { imageSources } : {}) };
   }

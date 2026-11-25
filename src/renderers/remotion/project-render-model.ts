@@ -1,5 +1,6 @@
 import type { CaptionCue, ProjectDocument, SceneNode } from "../../contracts/project";
 import { sampleAnimationTrack } from "../../platform/animation";
+import { prepareFollowPaths, sampleFollowPath, type PreparedFollowPaths } from "../../platform/follow-path";
 import { isChartData, isSafeSvgPathData, isSupportedPaint, type ChartPoint } from "../../platform/graphic-values";
 import { pngArtifactForAsset, projectImagePlacement } from "../../platform/project-assets";
 import { firstSequencePngClips, firstSequenceShots } from "../../platform/project-timeline";
@@ -62,8 +63,11 @@ function localMatrix(node: SceneNode, project: ProjectDocument, frame: number, d
 }
 
 /** Deterministic renderer-neutral projection of one Project Graph frame into the initial 2D subset. */
-export function buildProjectRenderModel(project: ProjectDocument, frame: number, sceneId?: string): ProjectRenderModel {
-  const diagnostics: ProjectRenderModel["diagnostics"] = [];
+export function buildProjectRenderModel(project: ProjectDocument, frame: number, sceneId?: string,
+  motion: PreparedFollowPaths = prepareFollowPaths(project)): ProjectRenderModel {
+  const diagnostics: ProjectRenderModel["diagnostics"] = motion.issues.map(issue => ({
+    level: "error", code: "RENDER_INVALID_FOLLOW_PATH", nodeId: issue.nodeId, message: issue.constraintId + ". " + issue.message,
+  }));
   const sequence = project.sequences[0];
   const shots = sceneId ? [] : firstSequenceShots(project);
   const shot = shots.find((item) => item.startFrame <= frame && frame < item.startFrame + item.durationFrames);
@@ -93,6 +97,21 @@ export function buildProjectRenderModel(project: ProjectDocument, frame: number,
     if (!node) { diagnostics.push({ level: "error", code: "RENDER_NODE_MISSING", nodeId: id, message: "Missing node: " + id }); return; }
     visited.add(id);
     const local = localMatrix(node, project, sceneFrame, diagnostics);
+    const follower = motion.byNode.get(id);
+    if (follower) {
+      try {
+        const [x, y] = sampleFollowPath(follower, sceneFrame);
+        const [a, b, c, d, tx, ty] = localMatrix(follower.guide, project, sceneFrame, diagnostics).matrix;
+        const [sx, sy] = follower.anchor, [fa, fb, fc, fd] = local.matrix;
+        // The guide and follower share a parent. Put the follower's local anchor on the transformed guide.
+        const position = [a*x + c*y + tx - (fa*sx + fc*sy), b*x + d*y + ty - (fb*sx + fd*sy)];
+        if (!position.every(Number.isFinite)) throw new Error("Path following produced a non-finite position");
+        [local.matrix[4], local.matrix[5]] = position;
+      } catch (error) {
+        diagnostics.push({ level: "error", code: "RENDER_INVALID_FOLLOW_PATH", nodeId: id,
+          message: follower.constraintId + ". " + (error instanceof Error ? error.message : String(error)) });
+      }
+    }
     const matrix = multiply(parent, local.matrix);
     const opacity = parentOpacity * local.opacity;
     const image = projectImagePlacement(node), imageArtifactId = image && pngArtifactForAsset(assets.get(image.assetId));
@@ -170,7 +189,9 @@ export function buildProjectRenderModel(project: ProjectDocument, frame: number,
     const outgoing = transition && shots.find(item => item.id === transition.fromShotId);
     if (transition && outgoing) {
       const outgoingSceneFrame = (outgoing.inFrame ?? 0) + outgoing.durationFrames - 1;
-      const source = buildProjectRenderModel(project, outgoingSceneFrame, outgoing.sceneId);
+      const source = buildProjectRenderModel(project, outgoingSceneFrame, outgoing.sceneId, motion);
+      diagnostics.push(...source.diagnostics.filter(issue => issue.code === "RENDER_INVALID_FOLLOW_PATH" &&
+        !diagnostics.some(existing => existing.code === issue.code && existing.nodeId === issue.nodeId && existing.message === issue.message)));
       result.crossfade = { outgoingElements: source.elements,
         incomingOpacity: elapsed / (transition.durationFrames - 1) };
     }

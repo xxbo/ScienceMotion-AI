@@ -1,4 +1,5 @@
 import type { ProjectDocument, SceneConstraint, Vector3 } from "../contracts/project";
+import { prepareFollowPaths } from "./follow-path";
 
 function finiteVector(value: unknown): value is Vector3 {
   return Array.isArray(value) && value.length === 3 && value.every((item) => typeof item === "number" && Number.isFinite(item));
@@ -60,5 +61,7 @@ export function validateSceneConstraints(
       }
     }
   }
+  for (const issue of prepareFollowPaths({ ...project, constraints }).issues)
+    errors.push(`Constraint ${issue.constraintId}. ${issue.message}`);
   return errors;
 }

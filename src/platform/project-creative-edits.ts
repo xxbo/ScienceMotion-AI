@@ -2,6 +2,7 @@ import type { CreativePatchOperation, ProjectPatchOperation } from "../contracts
 import type { ProjectDocument } from "../contracts/project";
 import { validateAnimationTrack } from "./animation";
 import { assertAssetReferences, assertProjectAsset } from "./project-assets";
+import { assertValidFollowPaths } from "./follow-path";
 import { assertSequenceCaptions, assertSequenceTransitions, assertTimelineTracks } from "./project-timeline";
 
 export const creativeOperations = new Set([
@@ -167,6 +168,7 @@ export function assertCreativeDocument(project: ProjectDocument): void {
     const a = sceneOf.get(constraint.sourceNodeId), b = sceneOf.get(constraint.targetNodeId);
     if (!a || !b || (constraint.enabled && a !== b)) throw new Error("Invalid constraint scene references");
   }
+  assertValidFollowPaths(project);
   const entities = { node: nodes, scene: scenes, shot: shots, asset: assets, prefab: prefabs, clip: clips };
   for (const d of project.dependencies) if (!entities[d.fromType]?.has(d.fromId) || !entities[d.toType]?.has(d.toId)) throw new Error("Dangling project dependency");
   for (const asset of project.assets) assertProjectAsset(asset);
