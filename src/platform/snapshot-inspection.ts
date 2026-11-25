@@ -4,6 +4,7 @@ import { buildProjectRenderModel, type ProjectRenderElement } from "../renderers
 import type { ProjectSnapshot } from "./project-snapshots";
 import { hashProject } from "./project-snapshots";
 import { firstSequenceAudioClips, firstSequencePngClips, firstSequenceShots } from "./project-timeline";
+import { prepareFollowPaths, type PreparedFollowPaths } from "./follow-path";
 
 export const MAX_INSPECTION_FRAMES = 120;
 export const MAX_INSPECTION_ISSUES = 200;
@@ -13,7 +14,11 @@ export class SnapshotInspectionError extends Error {
 }
 const reject = (code: string, message: string): never => { throw new SnapshotInspectionError(code, message); };
 
-export function chooseInspectionFrames(project: ProjectDocument, requested?: readonly number[], maxFrames = MAX_INSPECTION_FRAMES) {
+const inspectionTracks = (project: ProjectDocument, motion: PreparedFollowPaths) =>
+  [...project.animationTracks, ...Array.from(motion.byNode.values(), binding => binding.progressTrack)];
+
+export function chooseInspectionFrames(project: ProjectDocument, requested?: readonly number[], maxFrames = MAX_INSPECTION_FRAMES,
+  tracks = inspectionTracks(project, prepareFollowPaths(project))) {
   const duration = project.sequences[0]?.durationFrames;
   if (!Number.isSafeInteger(duration) || duration < 1) reject("INSPECT_SEQUENCE_INVALID", "A bounded sequence duration is required");
   if (requested !== undefined) {
@@ -39,7 +44,7 @@ export function chooseInspectionFrames(project: ProjectDocument, requested?: rea
     }
   }
   const keysByScene = new Map<string, Set<number>>();
-  for (const track of project.animationTracks) if (track.enabled !== false) {
+  for (const track of tracks) if (track.enabled !== false) {
     const scene = nodeScenes.get(track.targetNodeId);
     if (!scene) continue;
     const keys = keysByScene.get(scene) ?? new Set<number>();
@@ -103,8 +108,11 @@ export function inspectProjectSnapshot(saved: ProjectSnapshot, requestedFrames?:
   if (saved.contentHash !== hashProject(project)) reject("INSPECT_SNAPSHOT_CORRUPT", "Snapshot content hash does not match its document");
   if (saved.projectId !== project.project.id || !project.revisions.at(-1)?.id)
     reject("INSPECT_SNAPSHOT_INVALID", "Snapshot project/revision identity is inconsistent");
-  const selection = chooseInspectionFrames(project, requestedFrames);
-  const animationWork = project.animationTracks.reduce((sum, track) => sum + 1 + track.keyframes.length, 0);
+  const motion = prepareFollowPaths(project), tracks = inspectionTracks(project, motion);
+  const selection = chooseInspectionFrames(project, requestedFrames, MAX_INSPECTION_FRAMES, tracks);
+  // Each follower may also evaluate an animated guide's transform.
+  const animationWork = tracks.reduce((sum, track) => sum + 1 + track.keyframes.length, 0) +
+    motion.byNode.size * (1 + project.animationTracks.length);
   if (selection.frames.length * Math.max(1, project.nodes.length) * (1 + animationWork) > MAX_PROJECTION_WORK)
     reject("INSPECT_WORK_LIMIT", "Inspection exceeds the model-work budget; request fewer frames");
   const sequence = project.sequences[0];
@@ -129,7 +137,7 @@ export function inspectProjectSnapshot(saved: ProjectSnapshot, requestedFrames?:
     const item = { ...issue, frames: [frame] }; issues.set(key, item); report.issues.push(item);
   };
   for (const frame of selection.frames) {
-    const model = buildProjectRenderModel(project, frame);
+    const model = buildProjectRenderModel(project, frame, undefined, motion);
     const context = model.sceneId ? { sceneId: model.sceneId } : {};
     for (const issue of model.diagnostics) add({ ...issue, source: "render-model", ...context }, frame);
     const visible = model.elements.filter((element) => element.opacity > 0 && element.width > 0 && element.height > 0);

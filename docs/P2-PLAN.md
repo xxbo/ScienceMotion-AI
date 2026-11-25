@@ -20,8 +20,8 @@ The work starts with P2.1 and P2.2. P2.3 and the initial two-engine cut of P2.4 
 | Step | Status | Completion evidence |
 | --- | --- | --- |
 | A — Reference | Implemented | A frozen pendulum snapshot, exact checkpoint and direction expectations, and verified real PNG and MP4 outputs produced with the existing Remotion renderer |
-| B — Path following | Next | A reusable path-following operation follows the reference arc and meets the same position and timing checks |
-| C — Editable motion | Planned | Scoped edits change the intended path or timing, preserve other nodes and yield actionable diagnostics for invalid input |
+| B — Path following | Implemented | A reusable 2D guide binding follows straight segments and circular arcs by length. The separate path-driven bob matches A's scene timing and decoded frame checks |
+| C — Editable motion | Next | Scoped edits change the intended path or timing, preserve other nodes and yield actionable diagnostics for invalid input |
 | D — Delivery and restore | Planned | A tool-authored sample uses path following, with verified before, edited and restored media |
 
 ### A — Pendulum reference
@@ -47,4 +47,31 @@ With project dependencies, the Remotion browser, a CJK font and system FFmpeg an
 npm run accept:p2-1-a
 ```
 
-CI uploads `pendulum-reference-evidence` from `out/pendulum-reference/`. It contains the fixture, inspection and per-check evidence, snapshot-bound receipts, three PNGs and the reference MP4. P2.1-B can use the same frame and geometric checks when it substitutes the reusable path-following motion. [Acceptance script](../scripts/pendulum-reference-acceptance.ts) · [CI workflow](../.github/workflows/video-engine.yml).
+CI uploads `pendulum-reference-evidence` from `out/pendulum-reference/`. It contains the fixture, inspection and per-check evidence, snapshot-bound receipts, three PNGs and the reference MP4. B reuses the same frame and geometric checks. [Acceptance script](../scripts/pendulum-reference-acceptance.ts) · [CI workflow](../.github/workflows/video-engine.yml).
+
+### B — Path following
+
+Use an enabled, renderer-neutral `follow-path` constraint with a `progress` block. The source is the follower and the target is its SVG path node. The existing `parameters.pathNodeId` matches the target ID. Both nodes share a parent in the same scene. Progress keys are numbers from 0 to 1 and use scene-local frames and the existing keyframe easing, steps and optional looping. Decreasing progress moves backward and repeated values hold. Easing overshoot is limited to the path endpoints. A legacy reservation without a progress block does not move anything. [Binding](../src/platform/follow-path.ts) · [Project parameters](../src/contracts/project.ts).
+
+```json
+{
+  "id": "move-marker",
+  "type": "follow-path",
+  "sourceNodeId": "marker",
+  "targetNodeId": "guide",
+  "enabled": true,
+  "parameters": {
+    "pathNodeId": "guide",
+    "anchor": [14, 14],
+    "progress": { "keyframes": [{ "frame": 0, "value": 0 }, { "frame": 12, "value": 1 }, { "frame": 24, "value": 0 }] }
+  }
+}
+```
+
+The initial guide supports one open, continuous subpath of line commands (`M`, `L`, `H` and `V`) and circular `A` commands, including relative coordinates and implicit repetitions. It samples by distance along the guide in its own coordinate space, then projects through the guide's transform. An optional follower-local `anchor` places a point such as the center on the guide. Path following supplies the position while preserving the follower's own rotation, scale and opacity. It does not orient the object along the tangent. Other SVG commands still work for static art. A nonmatching path, disconnected guide or competing position driver is rejected for active motion. Existing engine support stays unchanged outside Remotion's 2D projection. The dedicated editing tools belong to C. [Sampler](../src/platform/motion-path.ts) · [Render projection](../src/renderers/remotion/project-render-model.ts).
+
+```sh
+npm run accept:p2-1-b
+```
+
+The acceptance leaves `pendulum-motion-v1` unchanged and derives a separate retained snapshot, `pendulum-path-motion-v1`. It splits the visible arc from the center guide and detaches the bob from the rotating arm. The arm keeps its original keys for the rod. The independent bob follows the arc with the same timing and easing. Disabling just its path binding leaves the bob at the lowest point in the model, confirming that path motion supplies its position. The two projected bob centers must agree to within 0.002 px across all 120 frames. The decoded PNGs and MP4 must pass A's unchanged position, radius, hold and crossing checks. CI publishes the two snapshot identities, comparison, receipts and media as `pendulum-path-following-evidence`. [Derived reference](../scripts/fixtures/pendulum-path-reference.ts) · [Motion tests](../src/platform/follow-path.test.ts).

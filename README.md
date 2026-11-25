@@ -139,6 +139,8 @@ Creative Host can opt into `SvgFfmpegProjectGraphRenderer` for a single shot of 
 
 `npm run accept:p2-1-a` renders the pinned pendulum snapshot with Remotion. It verifies three preview poses and the arc, hold and direction checks in the six-second export. CI publishes `pendulum-reference-evidence`. [P2.1-A specification](docs/P2-PLAN.md#a--pendulum-reference).
 
+`npm run accept:p2-1-b` uses a separate path-following snapshot and verifies it against the same frozen pendulum workload. CI publishes `pendulum-path-following-evidence`. [P2.1-B scope and checks](docs/P2-PLAN.md#b--path-following).
+
 ## Design and documentation
 
 Content generation and rendering remain independent. Creative tools share the canonical Project Graph; renderers interpret approved data without rewriting meaning. Track executable tools, catalogue entries and visually verified outputs separately.

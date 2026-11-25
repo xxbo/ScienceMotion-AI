@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { AbsoluteFill, Html5Audio, Img, Sequence, useCurrentFrame } from "remotion";
 import type { Clip, ProjectDocument } from "../contracts/project";
+import { prepareFollowPaths } from "../platform/follow-path";
 import { buildProjectRenderModel, type ProjectRenderModel } from "../renderers/remotion/project-render-model";
 import { ProjectChartSvg } from "./ProjectChartSvg";
 import { ProjectLayoutProbe } from "./ProjectLayoutProbe";
@@ -14,7 +15,10 @@ export interface ProjectGraphProps {
 }
 export const ProjectGraphComposition: React.FC<ProjectGraphProps> = ({ project, sceneId, imageSources, audioClips, layoutInspection }) => {
   const frame = useCurrentFrame();
-  const model = useMemo(() => buildProjectRenderModel(project, frame, sceneId), [project, frame, sceneId]);
+  const motion = useMemo(() => prepareFollowPaths(project), [project]);
+  const model = useMemo(() => buildProjectRenderModel(project, frame, sceneId, motion), [project, frame, sceneId, motion]);
+  const motionIssue = model.diagnostics.find(issue => issue.code === "RENDER_INVALID_FOLLOW_PATH");
+  if (motionIssue) throw new Error(motionIssue.message);
   return <>
     <ProjectGraphFrame model={model} imageSources={imageSources} />
     {!sceneId && audioClips?.map(({ clip, src }) => (

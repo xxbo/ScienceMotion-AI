@@ -390,6 +390,18 @@ jobs:
           path: out/pendulum-reference/
           if-no-files-found: error
 
+      - name: Verify reusable path following on the pendulum
+        id: pendulum-path-following
+        run: npm run accept:p2-1-b
+
+      - name: Upload pendulum path following evidence
+        if: ${{ !cancelled() && (steps.pendulum-path-following.outcome == 'success' || steps.pendulum-path-following.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: pendulum-path-following-evidence
+          path: out/pendulum-path-following/
+          if-no-files-found: error
+
       - name: Verify recorded AI trial and deterministic stdio replay
         # Replay is a regression of the retained interaction, not a new model trial.
         run: npm run accept:ai-trial

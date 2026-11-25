@@ -15,24 +15,30 @@ import { openCreativeHost } from "../src/platform/creative-host";
 import { FileSystemProjectWorkspace } from "../src/platform/filesystem-project-workspace";
 import { hashProject, type ProjectSnapshot } from "../src/platform/project-snapshots";
 import type { PendulumReference } from "./fixtures/pendulum-reference";
+import { derivePendulumPathReference } from "./fixtures/pendulum-path-reference";
 
 type Point = [number, number];
 type Receipt = { artifactId: string; contentHash: string; mediaType: string; metadata: Record<string, unknown> };
 const source = await readFile("examples/pendulum-motion-reference.json", "utf8");
-const { snapshot, workload } = JSON.parse(source) as PendulumReference;
+const [mode, extra] = process.argv.slice(2);
+assert.ok((mode === undefined || mode === "--path-follow") && extra === undefined);
+const reference = JSON.parse(source) as PendulumReference;
+const variant = mode === "--path-follow" ? derivePendulumPathReference(reference) : undefined;
+const { workload } = reference, snapshot = variant?.snapshot ?? reference.snapshot;
 const { id: snapshotId, document, contentHash: snapshotHash, projectId } = snapshot;
 const revisionId = document.revisions.at(-1)!.id;
 const { profile, video: range, motion, checkpoints, searchWindow: crop, tolerances } = workload;
 const { width, height } = profile;
 const sceneId = document.scenes[0].id;
 const renderer = { id: "remotion.project-graph", version: "1.0.0" };
-const output = resolve("out/pendulum-reference");
+const output = resolve(variant ? "out/pendulum-path-following" : "out/pendulum-reference");
 await mkdir(output, { recursive: true });
 const directory = await mkdtemp(join(tmpdir(), "sciencemotion-pendulum-reference-"));
 const artifacts = new FileSystemArtifactStore(join(directory, "artifacts"));
 const references = new FileSystemArtifactReferenceStore(join(directory, "references"));
 const evidence: Record<string, unknown> = {
   schemaVersion: "1.0.0", status: "running", snapshot: { id: snapshotId, revisionId, contentHash: snapshotHash }, profile, range, renderer,
+  ...(variant ? { referenceSnapshot: { id: reference.snapshot.id, contentHash: reference.snapshot.contentHash }, projection: variant.projection } : {}),
 };
 const digest = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
 const execute = promisify(execFile);
@@ -71,6 +77,7 @@ try {
   evidence.checkout = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
   assert.equal(hashProject(document), snapshotHash);
   await writeFile(join(output, "reference.json"), source);
+  if (variant) await writeFile(join(output, "path-snapshot.json"), JSON.stringify(snapshot, null, 2) + "\n");
   // Trusted fixture import retains the exact project revision and snapshot hash.
   const workspace = await FileSystemProjectWorkspace.open(join(directory, "projects"), new LocalArtifactLifecycleManager(artifacts, references));
   try {
