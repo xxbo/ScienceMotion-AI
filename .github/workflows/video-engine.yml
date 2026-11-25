@@ -378,6 +378,18 @@ jobs:
           path: out/engine-delivery/
           if-no-files-found: error
 
+      - name: Verify the pinned pendulum motion reference
+        id: pendulum-reference
+        run: npm run accept:p2-1-a
+
+      - name: Upload pendulum reference evidence
+        if: ${{ !cancelled() && (steps.pendulum-reference.outcome == 'success' || steps.pendulum-reference.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: pendulum-reference-evidence
+          path: out/pendulum-reference/
+          if-no-files-found: error
+
       - name: Verify recorded AI trial and deterministic stdio replay
         # Replay is a regression of the retained interaction, not a new model trial.
         run: npm run accept:ai-trial

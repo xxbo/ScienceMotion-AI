@@ -1,0 +1,859 @@
+{
+  "schemaVersion": "1.0.0",
+  "brief": {
+    "title": "单摆的运动与周期",
+    "audience": "第一次学习周期运动的观众",
+    "learningGoal": "能区分单程摆动和一个完整周期。",
+    "editorialClaim": "从同一侧极值出发，经过另一侧极值并回到原来的极值，完成一次完整摆动。",
+    "reference": "https://openstax.org/books/university-physics-volume-1/pages/15-4-pendulums",
+    "motionKind": "authored-angular-keyframes",
+    "scope": "示意动画。像素长度和播放时长不代表实际单摆的长度和周期。"
+  },
+  "snapshot": {
+    "id": "pendulum-motion-v1",
+    "projectId": "pendulum-motion-reference",
+    "schemaVersion": "1.1.0",
+    "createdAt": "2026-11-25T00:00:00.000Z",
+    "contentHash": "5c1b2b755416281dd823f519adb26576e43a170c84e67f27927f0a93f5611ef8",
+    "document": {
+      "schemaVersion": "1.1.0",
+      "project": {
+        "id": "pendulum-motion-reference",
+        "name": "单摆的运动与周期",
+        "createdAt": "2026-11-25T00:00:00.000Z",
+        "updatedAt": "2026-11-25T00:00:00.000Z",
+        "units": "unitless",
+        "coordinateSystem": "screen-y-down",
+        "timebase": {
+          "fps": 20,
+          "ticksPerFrame": 1
+        },
+        "colorSpace": "srgb"
+      },
+      "editorial": {
+        "episodeId": "pendulum-period"
+      },
+      "sequences": [
+        {
+          "id": "sequence-main",
+          "name": "Main Sequence",
+          "fps": 20,
+          "durationFrames": 120,
+          "width": 640,
+          "height": 360,
+          "shotIds": [
+            "shot-pendulum"
+          ]
+        }
+      ],
+      "scenes": [
+        {
+          "id": "pendulum-period",
+          "name": "单摆的运动与周期",
+          "durationFrames": 120,
+          "rootNodeIds": [
+            "background",
+            "diagram-card",
+            "explanation-card",
+            "swing-guide",
+            "swing-arm",
+            "pendulum-pivot",
+            "reference-kicker",
+            "reference-title",
+            "lowest-point",
+            "period-title",
+            "period-text",
+            "diagram-note"
+          ]
+        }
+      ],
+      "nodes": [
+        {
+          "id": "background",
+          "name": "background",
+          "type": "shape",
+          "transform": {
+            "position": [
+              0,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "components": [
+            {
+              "kind": "geometry",
+              "data": {
+                "primitive": "rect",
+                "width": 640,
+                "height": 360,
+                "fill": "#101a2b",
+                "radius": 0,
+                "strokeWidth": 0
+              }
+            }
+          ]
+        },
+        {
+          "id": "diagram-card",
+          "name": "diagram-card",
+          "type": "shape",
+          "transform": {
+            "position": [
+              24,
+              92,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "components": [
+            {
+              "kind": "geometry",
+              "data": {
+                "primitive": "rect",
+                "width": 396,
+                "height": 228,
+                "fill": "#15253b",
+                "radius": 12,
+                "strokeWidth": 0
+              }
+            }
+          ]
+        },
+        {
+          "id": "explanation-card",
+          "name": "explanation-card",
+          "type": "shape",
+          "transform": {
+            "position": [
+              432,
+              92,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "components": [
+            {
+              "kind": "geometry",
+              "data": {
+                "primitive": "rect",
+                "width": 184,
+                "height": 228,
+                "fill": "#1a2e46",
+                "radius": 12,
+                "strokeWidth": 0
+              }
+            }
+          ]
+        },
+        {
+          "id": "swing-guide",
+          "name": "swing-guide",
+          "type": "path",
+          "transform": {
+            "position": [
+              24,
+              92,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "components": [
+            {
+              "kind": "geometry",
+              "data": {
+                "pathData": "M 198 36 V 188 M 153.502 172.952 A 144 144 0 0 0 242.498 172.952",
+                "width": 396,
+                "height": 228,
+                "fill": "transparent",
+                "stroke": "#4b6b8c",
+                "strokeWidth": 2
+              }
+            }
+          ]
+        },
+        {
+          "id": "swing-arm",
+          "name": "swing-arm",
+          "type": "group",
+          "transform": {
+            "position": [
+              222,
+              128,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "components": [],
+          "childIds": [
+            "pendulum-rod",
+            "pendulum-bob"
+          ]
+        },
+        {
+          "id": "pendulum-rod",
+          "name": "pendulum-rod",
+          "type": "shape",
+          "transform": {
+            "position": [
+              -2,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "components": [
+            {
+              "kind": "geometry",
+              "data": {
+                "primitive": "rect",
+                "width": 4,
+                "height": 144,
+                "fill": "#c7d7ec",
+                "radius": 0,
+                "strokeWidth": 0
+              }
+            }
+          ],
+          "parentId": "swing-arm"
+        },
+        {
+          "id": "pendulum-bob",
+          "name": "pendulum-bob",
+          "type": "shape",
+          "transform": {
+            "position": [
+              -14,
+              130,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "components": [
+            {
+              "kind": "geometry",
+              "data": {
+                "primitive": "circle",
+                "width": 28,
+                "height": 28,
+                "fill": "#65e2de",
+                "radius": 0,
+                "strokeWidth": 0
+              }
+            }
+          ],
+          "parentId": "swing-arm"
+        },
+        {
+          "id": "pendulum-pivot",
+          "name": "pendulum-pivot",
+          "type": "shape",
+          "transform": {
+            "position": [
+              217,
+              123,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "components": [
+            {
+              "kind": "geometry",
+              "data": {
+                "primitive": "circle",
+                "width": 10,
+                "height": 10,
+                "fill": "#e6efff",
+                "radius": 0,
+                "strokeWidth": 0
+              }
+            }
+          ]
+        },
+        {
+          "id": "reference-kicker",
+          "name": "reference-kicker",
+          "type": "text",
+          "transform": {
+            "position": [
+              24,
+              15,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "components": [
+            {
+              "kind": "text",
+              "data": {
+                "text": "动作研究 01  /  2D 参考",
+                "width": 368,
+                "height": 18,
+                "fontSize": 12,
+                "color": "#9bb7d1",
+                "fontWeight": 600,
+                "fontFamily": "Noto Sans CJK SC, sans-serif"
+              }
+            }
+          ]
+        },
+        {
+          "id": "reference-title",
+          "name": "reference-title",
+          "type": "text",
+          "transform": {
+            "position": [
+              24,
+              36,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "components": [
+            {
+              "kind": "text",
+              "data": {
+                "text": "单摆的运动与周期",
+                "width": 592,
+                "height": 40,
+                "fontSize": 29,
+                "color": "#edf4ff",
+                "fontWeight": 700,
+                "fontFamily": "Noto Sans CJK SC, sans-serif"
+              }
+            }
+          ]
+        },
+        {
+          "id": "lowest-point",
+          "name": "lowest-point",
+          "type": "text",
+          "transform": {
+            "position": [
+              204,
+              292,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "components": [
+            {
+              "kind": "text",
+              "data": {
+                "text": "最低点",
+                "width": 80,
+                "height": 18,
+                "fontSize": 12,
+                "color": "#9bb7d1",
+                "fontWeight": 400,
+                "fontFamily": "Noto Sans CJK SC, sans-serif"
+              }
+            }
+          ]
+        },
+        {
+          "id": "period-title",
+          "name": "period-title",
+          "type": "text",
+          "transform": {
+            "position": [
+              449,
+              111,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "components": [
+            {
+              "kind": "text",
+              "data": {
+                "text": "一个周期",
+                "width": 150,
+                "height": 32,
+                "fontSize": 23,
+                "color": "#edf4ff",
+                "fontWeight": 700,
+                "fontFamily": "Noto Sans CJK SC, sans-serif"
+              }
+            }
+          ]
+        },
+        {
+          "id": "period-text",
+          "name": "period-text",
+          "type": "text",
+          "transform": {
+            "position": [
+              449,
+              153,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "components": [
+            {
+              "kind": "text",
+              "data": {
+                "text": "从一侧出发\n经过最低点到对侧\n回到出发的一侧",
+                "width": 148,
+                "height": 103,
+                "fontSize": 17,
+                "color": "#dce8fa",
+                "fontWeight": 400,
+                "fontFamily": "Noto Sans CJK SC, sans-serif"
+              }
+            }
+          ]
+        },
+        {
+          "id": "diagram-note",
+          "name": "diagram-note",
+          "type": "text",
+          "transform": {
+            "position": [
+              449,
+              284,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "components": [
+            {
+              "kind": "text",
+              "data": {
+                "text": "示意计时 · 非实测",
+                "width": 148,
+                "height": 18,
+                "fontSize": 12,
+                "color": "#9bb7d1",
+                "fontWeight": 400,
+                "fontFamily": "Noto Sans CJK SC, sans-serif"
+              }
+            }
+          ]
+        }
+      ],
+      "animationTracks": [
+        {
+          "id": "swing-angle",
+          "targetNodeId": "swing-arm",
+          "targetProperty": "transform.rotation",
+          "keyframes": [
+            {
+              "frame": 0,
+              "value": [
+                0,
+                0,
+                18
+              ]
+            },
+            {
+              "frame": 12,
+              "value": [
+                0,
+                0,
+                18
+              ]
+            },
+            {
+              "frame": 24,
+              "value": [
+                0,
+                0,
+                0
+              ],
+              "interpolation": "bezier",
+              "easing": "ease-in"
+            },
+            {
+              "frame": 36,
+              "value": [
+                0,
+                0,
+                -18
+              ],
+              "interpolation": "bezier",
+              "easing": "ease-out"
+            },
+            {
+              "frame": 48,
+              "value": [
+                0,
+                0,
+                0
+              ],
+              "interpolation": "bezier",
+              "easing": "ease-in"
+            },
+            {
+              "frame": 60,
+              "value": [
+                0,
+                0,
+                18
+              ],
+              "interpolation": "bezier",
+              "easing": "ease-out"
+            },
+            {
+              "frame": 72,
+              "value": [
+                0,
+                0,
+                0
+              ],
+              "interpolation": "bezier",
+              "easing": "ease-in"
+            },
+            {
+              "frame": 84,
+              "value": [
+                0,
+                0,
+                -18
+              ],
+              "interpolation": "bezier",
+              "easing": "ease-out"
+            },
+            {
+              "frame": 96,
+              "value": [
+                0,
+                0,
+                0
+              ],
+              "interpolation": "bezier",
+              "easing": "ease-in"
+            },
+            {
+              "frame": 108,
+              "value": [
+                0,
+                0,
+                18
+              ],
+              "interpolation": "bezier",
+              "easing": "ease-out"
+            }
+          ]
+        }
+      ],
+      "shots": [
+        {
+          "id": "shot-pendulum",
+          "name": "单摆的运动与周期",
+          "sceneId": "pendulum-period",
+          "startFrame": 0,
+          "durationFrames": 120
+        }
+      ],
+      "clips": [],
+      "tracks": [],
+      "assets": [],
+      "prefabs": [],
+      "constraints": [],
+      "dependencies": [],
+      "revisions": [
+        {
+          "id": "revision-initial",
+          "createdAt": "2026-11-25T00:00:00.000Z",
+          "message": "Pin the P2.1-A pendulum reference with existing angular keyframes",
+          "author": "ScienceMotion"
+        }
+      ]
+    }
+  },
+  "workload": {
+    "profile": {
+      "width": 640,
+      "height": 360,
+      "fps": 20
+    },
+    "video": {
+      "startFrame": 0,
+      "durationFrames": 120
+    },
+    "motion": {
+      "pivot": [
+        222,
+        128
+      ],
+      "radiusPx": 144,
+      "bobRadiusPx": 14,
+      "amplitudeDegrees": 18,
+      "releaseFrame": 12,
+      "cycleFrames": 48,
+      "cycles": 2
+    },
+    "previews": [
+      12,
+      24,
+      36
+    ],
+    "checkpoints": [
+      {
+        "frame": 0,
+        "phase": "opening-hold",
+        "center": [
+          177.502,
+          264.952
+        ]
+      },
+      {
+        "frame": 12,
+        "phase": "left-extreme",
+        "center": [
+          177.502,
+          264.952
+        ]
+      },
+      {
+        "frame": 24,
+        "phase": "lowest-rightward",
+        "center": [
+          222,
+          272
+        ]
+      },
+      {
+        "frame": 36,
+        "phase": "right-extreme",
+        "center": [
+          266.498,
+          264.952
+        ]
+      },
+      {
+        "frame": 48,
+        "phase": "lowest-leftward",
+        "center": [
+          222,
+          272
+        ]
+      },
+      {
+        "frame": 60,
+        "phase": "left-extreme",
+        "center": [
+          177.502,
+          264.952
+        ]
+      },
+      {
+        "frame": 72,
+        "phase": "lowest-rightward",
+        "center": [
+          222,
+          272
+        ]
+      },
+      {
+        "frame": 84,
+        "phase": "right-extreme",
+        "center": [
+          266.498,
+          264.952
+        ]
+      },
+      {
+        "frame": 96,
+        "phase": "lowest-leftward",
+        "center": [
+          222,
+          272
+        ]
+      },
+      {
+        "frame": 108,
+        "phase": "left-extreme",
+        "center": [
+          177.502,
+          264.952
+        ]
+      },
+      {
+        "frame": 119,
+        "phase": "closing-hold",
+        "center": [
+          177.502,
+          264.952
+        ]
+      }
+    ],
+    "searchWindow": {
+      "x": 154,
+      "y": 244,
+      "width": 136,
+      "height": 50
+    },
+    "bobRgb": [
+      101,
+      226,
+      222
+    ],
+    "pinRgb": [
+      230,
+      239,
+      255
+    ],
+    "directionChecks": [
+      {
+        "beforeFrame": 22,
+        "crossingFrame": 24,
+        "afterFrame": 26,
+        "direction": "right"
+      },
+      {
+        "beforeFrame": 46,
+        "crossingFrame": 48,
+        "afterFrame": 50,
+        "direction": "left"
+      },
+      {
+        "beforeFrame": 70,
+        "crossingFrame": 72,
+        "afterFrame": 74,
+        "direction": "right"
+      },
+      {
+        "beforeFrame": 94,
+        "crossingFrame": 96,
+        "afterFrame": 98,
+        "direction": "left"
+      }
+    ],
+    "tolerances": {
+      "pngChannel": 0,
+      "videoChannel": 10,
+      "pngPositionPx": 1,
+      "videoPositionPx": 2,
+      "minCrossingOffsetPx": 4
+    }
+  }
+}
