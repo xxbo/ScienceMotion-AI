@@ -145,7 +145,8 @@ jobs:
 
   validate-and-render:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    # The full acceptance suite can exceed 20 minutes when system package downloads are slow.
+    timeout-minutes: 25
     steps:
       - name: Checkout
         uses: actions/checkout@v4
