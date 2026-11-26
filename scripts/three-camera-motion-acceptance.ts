@@ -1,22 +1,22 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { PNG } from "pngjs";
 import type { CreativeHost, CreativeSession, SnapshotReceipt } from "../src/contracts/creative-host";
-import type { ProjectAnimationTrack, ProjectDocument } from "../src/contracts/project";
 import type { RenderJobRecord } from "../src/contracts/render-job";
-import { FileSystemArtifactReferenceStore, LocalArtifactLifecycleManager } from "../src/platform/artifact-lifecycle";
+import { FileSystemArtifactReferenceStore } from "../src/platform/artifact-lifecycle";
 import { FileSystemArtifactStore } from "../src/platform/artifact-store";
 import { verifyDeliveryPreview, verifyDeliveryVideo } from "../src/platform/creative-delivery-media";
 import { openCreativeHost } from "../src/platform/creative-host";
-import { FileSystemProjectWorkspace } from "../src/platform/filesystem-project-workspace";
 import { hashProject, type ProjectSnapshot } from "../src/platform/project-snapshots";
 import { readVerifiedJobArtifact } from "../src/platform/render-job-output";
 import { ThreeJsProjectGraphRenderer } from "../src/renderers/three/three-project-graph-renderer";
-import { inspectThreePixels, projectThreeBounds, threeProfile as profile } from "./fixtures/three-scene-pixels";
+import { measureThreeCameraVideo, projectThreeCameraBounds as predictedAt, retainThreeStaticStudy, threeCameraNodeId as camera,
+  threeCameraRange as range, threeCameraTracks as tracks, threeStudyProjectId as projectId, threeStudySource as source } from "./fixtures/three-camera-shot";
+import { inspectThreePixels, threeProfile as profile } from "./fixtures/three-scene-pixels";
 
 const output = resolve("out/three-camera-motion");
 await mkdir(output, { recursive: true });
@@ -25,14 +25,8 @@ const artifacts = new FileSystemArtifactStore(join(directory, "artifacts"));
 const references = new FileSystemArtifactReferenceStore(join(directory, "references"));
 const renderer = new ThreeJsProjectGraphRenderer();
 const identity = { id: renderer.id, version: renderer.version };
-const projectId = "three-static-study", runId = "p2-2-c-three-camera", camera = "view-camera";
-const source = { id: "three-static-v1", revisionId: "revision-three-static-v1", contentHash: "c6ac973ff3672a2e3db19d9d82c68859eeef2bfbec4eaff8e7343611e3c2b5b8" };
-const range = { startFrame: 6, durationFrames: 42 }, previewFrames = [6, 23, 47];
+const runId = "p2-2-c-three-camera", previewFrames = [6, 23, 47];
 const { width, height } = profile;
-const tracks: ProjectAnimationTrack[] = [
-  { id: "camera-slide", targetNodeId: camera, targetProperty: "transform.position", keyframes: [{ frame: 0, value: [0, 2.3, 8] }, { frame: 23, value: [1.15, 2.3, 8] }] },
-  { id: "camera-pan", targetNodeId: camera, targetProperty: "transform.rotation", keyframes: [{ frame: 23, value: [-14, 0, 0] }, { frame: 47, value: [-14, 14, 0] }] },
-];
 const evidence: Record<string, unknown> = { schemaVersion: "1.0.0", status: "running", source, renderer: identity, profile, range, tracks };
 let host: CreativeHost | undefined, calls = 0;
 const json = (file: string, value: unknown) => writeFile(join(output, file), JSON.stringify(value, null, 2) + "\n");
@@ -80,26 +74,10 @@ async function saveMedia(record: RenderJobRecord, snapshot: typeof source, reque
   return { file, bytes };
 }
 
-// Independent poses: the camera first slides right, then yaws left without moving.
-function predictedAt(frame: number) {
-  return projectThreeBounds({
-    position: [1.15 * Math.min(frame, 23) / 23, 2.3, 8],
-    rotation: [-14, 14 * Math.max(0, frame - 23) / 24, 0],
-  });
-}
-
 try {
   evidence.checkout = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
-  const document = JSON.parse(await readFile("examples/three-static-scene.json", "utf8")) as ProjectDocument;
-  assert.equal(document.project.id, projectId);
-  assert.equal(hashProject(document), source.contentHash);
-  const workspace = await FileSystemProjectWorkspace.open(join(directory, "projects"), new LocalArtifactLifecycleManager(artifacts, references));
-  let baseline: ProjectSnapshot;
-  try {
-    await workspace.create(document);
-    baseline = await workspace.saveSnapshot(projectId, source.revisionId, { id: source.id, createdAt: document.project.updatedAt });
-    assert.equal(baseline.contentHash, source.contentHash);
-  } finally { await workspace.close(); }
+  const baseline = await retainThreeStaticStudy(directory, artifacts, references);
+  const { document } = baseline;
   host = await openCreativeHost({ directory, renderer });
   const session = host.createSession({ projectId, toolIds: ["render.preview", "render.video", "project.snapshot.inspect", "project.snapshot.save", "animation.keyframes.set"],
     permissions: ["artifact.write", "snapshot.read", "snapshot.write", "project.read", "project.write"] });
@@ -142,16 +120,8 @@ try {
   const video = await saveMedia(rendered, snapshot, videoRequest, "camera-motion.mp4");
   const media = await verifyDeliveryVideo(video.file, profile, range, false, AbortSignal.timeout(20_000));
   assert.deepEqual([media.codec, media.frames, media.durationSeconds, media.audio], ["h264", 42, 1.75, undefined]);
-  const frameBytes = width * height * 3;
-  const rgb = execFileSync("ffmpeg", ["-v", "error", "-xerror", "-nostdin", "-threads", "1", "-i", video.file, "-map", "0:v:0",
-    "-fps_mode", "passthrough", "-threads", "1", "-c:v", "rawvideo", "-pix_fmt", "rgb24", "-f", "rawvideo", "pipe:1"],
-  { timeout: 20_000, maxBuffer: frameBytes * range.durationFrames + 1024 });
-  assert.equal(rgb.byteLength, frameBytes * range.durationFrames);
-  const frames = Array.from({ length: range.durationFrames }, (_, index) => {
-    const frame = range.startFrame + index, predicted = predictedAt(frame);
-    const pixels = inspectThreePixels(rgb.subarray(index * frameBytes, (index + 1) * frameBytes), 3, frame, predicted);
-    return { predicted, pixels };
-  });
+  const { frames, rgbHash } = measureThreeCameraVideo(video.file);
+  assert.equal(rgbHash, media.rgbHash);
   for (const preview of previews) {
     const frame = preview.pixels.frame;
     const { pixels } = frames[frame - range.startFrame];

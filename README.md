@@ -151,6 +151,8 @@ Creative Host can opt into `SvgFfmpegProjectGraphRenderer` for a single shot of 
 
 `npm run accept:p2-2-c` authors scene-local camera position and rotation keys on a new snapshot of the same scene. It verifies three PNGs and every decoded frame of a trimmed 42-frame H.264 video against independently projected bounds. CI publishes `three-camera-motion-evidence`. [P2.2-C camera keys](docs/P2-PLAN.md#c--camera-keys).
 
+`npm run accept:p2-2-d` uses the same opt-in Three.js adapter to deliver the original, edited and restored camera move. It verifies snapshot-bound receipts and requires the restored PNG and video pixels to match the original after reopening Creative Host. CI publishes `three-host-delivery-evidence`. [P2.2-D Host delivery and restore](docs/P2-PLAN.md#d--host-delivery-and-restore).
+
 ## Design and documentation
 
 Content generation and rendering remain independent. Creative tools share the canonical Project Graph; renderers interpret approved data without rewriting meaning. Track executable tools, catalogue entries and visually verified outputs separately.

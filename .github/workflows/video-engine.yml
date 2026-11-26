@@ -462,6 +462,18 @@ jobs:
           path: out/three-camera-motion/
           if-no-files-found: error
 
+      - name: Verify Three.js Host delivery and restore
+        id: three-host-delivery
+        run: npm run accept:p2-2-d
+
+      - name: Upload Three.js Host delivery evidence
+        if: ${{ !cancelled() && (steps.three-host-delivery.outcome == 'success' || steps.three-host-delivery.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: three-host-delivery-evidence
+          path: out/three-host-delivery/
+          if-no-files-found: error
+
       - name: Verify recorded AI trial and deterministic stdio replay
         # Replay is a regression of the retained interaction, not a new model trial.
         run: npm run accept:ai-trial

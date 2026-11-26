@@ -128,7 +128,7 @@ CI publishes `pendulum-delivery-evidence` with the three MP4s, nine PNGs, snapsh
 | A — Static scene contract | Implemented | A pinned ProjectDocument, an executable preflight for the first supported 3D scene and scoped diagnostics for unsupported inputs |
 | B — Static shot | Implemented | An opt-in Three.js adapter renders the pinned box and sphere, with decoded checks on a PNG and 48 MP4 frames |
 | C — Camera keys | Implemented | Position and rotation change the viewpoint in three decoded previews and all 42 frames of a trimmed export |
-| D — Host delivery and restore | Next | Snapshot-bound media and matching output after reopening and restoring |
+| D — Host delivery and restore | Implemented | Original, edited and restored deliveries, with 126 checked video frames and pixel-exact restore after reopen |
 
 ### A — Static scene contract
 
@@ -175,3 +175,16 @@ npm run accept:p2-2-c
 ```
 
 Acceptance keeps the pinned static snapshot unchanged and authors a new one containing a camera slide followed by a pan. It decodes previews at scene frames 6, 23 and 47 and all 42 frames of the silent H.264 range `[6, 48)` at 640 × 360 and 24 fps. It checks both silhouettes against independent perspective projections and verifies the preview and video agree at matching frames. A camera scale track fails before publication without adding artifacts. CI publishes `three-camera-motion-evidence` with the four media files, snapshot, job receipts and measured poses. D covers reopen and restore. [Camera motion acceptance](../scripts/three-camera-motion-acceptance.ts) · [CI workflow](../.github/workflows/video-engine.yml).
+
+### D — Host delivery and restore
+
+The same opt-in Three.js renderer now has an end-to-end check through the existing Creative Host delivery API. Start with the pinned static scene and save C's camera move as an approved snapshot. Use `animation.keyframes.edit` to change only the final yaw from 14° to 6° and retain an edited snapshot. Deliver both while the edited revision is live, so the first delivery must read the approved snapshot rather than the working project. Each verifies its retained job receipts, PNGs at scene frames 6, 26 and 47 and all 42 H.264 frames of `[6, 48)` at 640 × 360 and 24 fps. The first preview is unchanged by the edit, while the final angle visibly changes. [Acceptance](../scripts/three-host-delivery-acceptance.ts).
+
+Close and reopen the same workspace to verify the original and edited snapshots, jobs and artifact references. Restore the approved camera move over the edited revision and save a new snapshot with an explicit source hash and revision parent. The recovery check creates new jobs and requires decoded PNG and video pixels to match the original exactly. A final reopen confirms all 12 job receipts are retained. A mismatched approval and a restore candidate without the right lineage both fail without admitting render jobs or adding artifacts. The renderer and default engine are unchanged.
+
+```sh
+npx remotion browser ensure
+npm run accept:p2-2-d
+```
+
+CI publishes `three-host-delivery-evidence` with three MP4s, nine PNGs, three snapshots, job receipts, restore provenance and all 126 pose measurements. This closes P2.2 engineering acceptance. P2.3-A defines the physical model for the first simulation. Human viewing stays in the final acceptance workstream. [CI workflow](../.github/workflows/video-engine.yml) · [Final human acceptance](PLAN.md#final-human-acceptance-workstream).
