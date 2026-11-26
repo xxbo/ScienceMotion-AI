@@ -126,8 +126,8 @@ CI publishes `pendulum-delivery-evidence` with the three MP4s, nine PNGs, snapsh
 | Step | Status | Completion evidence |
 | --- | --- | --- |
 | A — Static scene contract | Implemented | A pinned ProjectDocument, an executable preflight for the first supported 3D scene and scoped diagnostics for unsupported inputs |
-| B — Static shot | Next | An opt-in Three.js adapter renders the pinned box and sphere, with decoded pixel checks |
-| C — Camera keys | Planned | Scene-local camera keyframes change the viewpoint predictably |
+| B — Static shot | Implemented | An opt-in Three.js adapter renders the pinned box and sphere, with decoded checks on a PNG and 48 MP4 frames |
+| C — Camera keys | Next | Scene-local camera keyframes change the viewpoint predictably |
 | D — Host delivery and restore | Planned | Snapshot-bound media and matching output after reopening and restoring |
 
 ### A — Static scene contract
@@ -148,4 +148,17 @@ Unsupported content is rejected, including hierarchy or prefabs, external geomet
 npm run accept:p2-2-a
 ```
 
-The pinned `three-static-v1` reference is a box, sphere, camera and two lights with a 48-frame shot at 640 × 360 and 24 fps. Acceptance verifies the standard schema, immutable snapshot, normalized preview and range requests and eight rejected cases. CI publishes `three-static-contract-evidence` with the snapshot, normalized scene and diagnostics. A does not load Three.js, register a renderer or produce media. Remotion stays the default, and B will render this reference rather than define a second scene format. [Pinned scene](../examples/three-static-scene.json) · [Acceptance](../scripts/three-static-contract-acceptance.ts).
+The pinned `three-static-v1` reference is a box, sphere, camera and two lights with a 48-frame shot at 640 × 360 and 24 fps. Acceptance verifies the standard schema, immutable snapshot, normalized preview and range requests and eight rejected cases. CI publishes `three-static-contract-evidence` with the snapshot, normalized scene and diagnostics. A does not load Three.js, register a renderer or produce media. Remotion stays the default, and B renders this reference without a second scene format. [Pinned scene](../examples/three-static-scene.json) · [Acceptance](../scripts/three-static-contract-acceptance.ts).
+
+### B — Static shot
+
+Applications can opt in with `openCreativeHost({ directory, renderer: new ThreeJsProjectGraphRenderer() })`. Without this selection, the Host still uses Remotion. The adapter validates the immutable request with A's preflight before launching the browser. The separate browser entry uses Three.js geometries, a perspective camera, Lambert materials and the authored lights. It uses the provisioned Remotion browser with software WebGL2 via ANGLE and SwiftShader, so the check does not require a hardware GPU. [Adapter](../src/renderers/three/three-project-graph-renderer.ts) · [Three.js drawing](../src/renderers/three/three-static-browser.tsx).
+
+The adapter returns an opaque PNG for the requested frame. For a static MP4 it paints once, then FFmpeg with `libx264` holds the raster for the requested number of frames at the snapshot FPS. The native browser surface admits dimensions up to 7680, subject to the actual WebGL2 limits. H.264 yuv420p additionally requires even dimensions and up to 900 frames. Media retains the exact snapshot and adapter identity through ordinary Host jobs. This slice still rejects enabled camera keys and does not add layout inspection or a new default renderer.
+
+```sh
+npx remotion browser ensure
+npm run accept:p2-2-b
+```
+
+The acceptance uses the unchanged `three-static-v1` hash and renders preview frame 24 plus the silent two-second range `[0, 48)` at 640 × 360 and 24 fps. It decodes every frame, verifies both silhouettes against independently projected bounds, and checks the opaque background and brighter lit side of the sphere. It also submits a snapshot with enabled camera keys and requires a scoped rejection before publication, with the artifact inventory unchanged. CI publishes `three-static-shot-evidence` containing both media files, the snapshot, receipts and pixel measurements. C adds camera motion. D verifies delivery and restore. [Static shot acceptance](../scripts/three-static-shot-acceptance.ts).

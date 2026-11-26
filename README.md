@@ -147,6 +147,8 @@ Creative Host can opt into `SvgFfmpegProjectGraphRenderer` for a single shot of 
 
 `npm run accept:p2-2-a` checks the first static Three.js input subset on the canonical Project Graph and reports exactly why unsupported scenes or requests are rejected. CI publishes `three-static-contract-evidence`. This step does not render or change the default engine. [P2.2-A static scene contract](docs/P2-PLAN.md#a--static-scene-contract).
 
+`npm run accept:p2-2-b` uses an opt-in `ThreeJsProjectGraphRenderer` with software WebGL2 and FFmpeg to render the pinned scene. It validates a PNG and the pixels in all 48 frames of a silent H.264 video. CI publishes `three-static-shot-evidence`. Remotion remains the default. [P2.2-B static shot](docs/P2-PLAN.md#b--static-shot).
+
 ## Design and documentation
 
 Content generation and rendering remain independent. Creative tools share the canonical Project Graph; renderers interpret approved data without rewriting meaning. Track executable tools, catalogue entries and visually verified outputs separately.
