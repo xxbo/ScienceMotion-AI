@@ -93,7 +93,8 @@ P1.1's engineering gates have evidence; full visual closure is deferred to the f
 | 15b — implemented | P2.2-B static Three.js shot | Opt-in, software-WebGL2 adapter with a retained PNG and 48-frame H.264 export, independent silhouette and light checks, and rejection before publication |
 | 15c — implemented | P2.2-C camera keys | Scene-local camera position and rotation tracks, with independently checked viewpoints in three PNGs and all 42 frames of a trimmed H.264 export |
 | 15d — implemented | P2.2-D Host delivery and restore | Deliver original and edited camera shots against retained snapshots, then verify exact decoded recovery and 12 retained job receipts after reopen |
-| 16a — next implementation | P2.3-A first physical model | Define the first simulation's model, units and checkpoints |
+| 16a — implemented | P2.3-A first physical model | A renderer-neutral SI pendulum model and ten analytic reference checkpoints, with exact finite-amplitude period targets and input diagnostics |
+| 16b — next implementation | P2.3-B retained trajectory | Solve both reference cases and retain time-stamped samples verified against period, pose and energy targets |
 | Final acceptance workstream — deferred | Consolidated human effect review | Review both P1.1 fixtures and representative later outputs, record defects/fixes and final reviewed main evidence |
 
 Land each verified increment independently. I2 is a bounded measurement feature, not a new Studio UI or a general autonomous video critic. Additional infrastructure needs an acceptance case that depends on it.
@@ -169,7 +170,7 @@ Project/plugin operation remains trusted and single-writer. The [P1.2 first slic
 | P1.3 | A–F implemented, including an integrated short with inspection, targeted repair, export and recovery. [P1.3 plan](P1.3-PLAN.md) |
 | P1.4 | A–C deliver proposal preflight, bounded execution and inspection-driven repair. D–E cover delivery checks and end-to-end acceptance. [P1.4 plan](P1.4-PLAN.md) |
 | P1.5 | A–D implemented, with cross-plugin composition, paired engine measurements and shared snapshot delivery and recovery. [P1.5 plan](P1.5-PLAN.md) |
-| P2 | Six milestones covering motion, Three.js and cinematography, simulation and Manim, multi-engine editing, Blender and audio delivery. P2.1 and P2.2 are implemented. P2.3-A is next. [P2 plan](P2-PLAN.md) |
+| P2 | Six milestones covering motion, Three.js and cinematography, simulation and Manim, multi-engine editing, Blender and audio delivery. P2.1, P2.2 and P2.3-A are implemented. P2.3-B is next. [P2 plan](P2-PLAN.md) |
 | P3 | Research/LLM/TTS/media providers, claims/sources, asset provenance and licensing |
 | P4 | Remote workers/storage, resumable/batch exports, metrics and optional Studio UI |
 

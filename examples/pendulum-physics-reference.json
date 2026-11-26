@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "pendulum-physics-reference-v1",
+  "solverAcceptance": {
+    "periodAbsoluteErrorSeconds": 0.001,
+    "checkpointAngleAbsoluteErrorRadians": 0.0001,
+    "checkpointAngularVelocityAbsoluteErrorRadiansPerSecond": 0.0001,
+    "maxRelativeSpecificEnergyDrift": 0.00001
+  },
+  "cases": [
+    {
+      "id": "short",
+      "model": {
+        "schemaVersion": "1.0.0",
+        "model": "ideal-simple-pendulum",
+        "units": "SI",
+        "coordinateSystem": "right-handed-y-up",
+        "lengthMeters": 0.5,
+        "gravityMetersPerSecondSquared": 9.80665,
+        "initialState": { "angleRadians": -0.5235987755982989, "angularVelocityRadiansPerSecond": 0 }
+      },
+      "periodSeconds": 1.4434442719053959,
+      "specificEnergySquareMetersPerSecondSquared": 0.65692098698866737,
+      "checkpoints": [
+        { "phase": "release-left", "timeSeconds": 0, "angleRadians": -0.5235987755982989, "angularVelocityRadiansPerSecond": 0, "bobPositionMeters": [-0.25, -0.43301270189221932, 0] },
+        { "phase": "lowest-rightward", "timeSeconds": 0.36086106797634897, "angleRadians": 0, "angularVelocityRadiansPerSecond": 2.2924589191323231, "bobPositionMeters": [0, -0.5, 0] },
+        { "phase": "opposite-extreme", "timeSeconds": 0.72172213595269794, "angleRadians": 0.5235987755982989, "angularVelocityRadiansPerSecond": 0, "bobPositionMeters": [0.25, -0.43301270189221932, 0] },
+        { "phase": "lowest-leftward", "timeSeconds": 1.0825832039290469, "angleRadians": 0, "angularVelocityRadiansPerSecond": -2.2924589191323231, "bobPositionMeters": [0, -0.5, 0] },
+        { "phase": "return-left", "timeSeconds": 1.4434442719053959, "angleRadians": -0.5235987755982989, "angularVelocityRadiansPerSecond": 0, "bobPositionMeters": [-0.25, -0.43301270189221932, 0] }
+      ]
+    },
+    {
+      "id": "long",
+      "model": {
+        "schemaVersion": "1.0.0",
+        "model": "ideal-simple-pendulum",
+        "units": "SI",
+        "coordinateSystem": "right-handed-y-up",
+        "lengthMeters": 2,
+        "gravityMetersPerSecondSquared": 9.80665,
+        "initialState": { "angleRadians": -0.5235987755982989, "angularVelocityRadiansPerSecond": 0 }
+      },
+      "periodSeconds": 2.8868885438107917,
+      "specificEnergySquareMetersPerSecondSquared": 2.6276839479546695,
+      "checkpoints": [
+        { "phase": "release-left", "timeSeconds": 0, "angleRadians": -0.5235987755982989, "angularVelocityRadiansPerSecond": 0, "bobPositionMeters": [-1, -1.7320508075688773, 0] },
+        { "phase": "lowest-rightward", "timeSeconds": 0.72172213595269794, "angleRadians": 0, "angularVelocityRadiansPerSecond": 1.1462294595661615, "bobPositionMeters": [0, -2, 0] },
+        { "phase": "opposite-extreme", "timeSeconds": 1.4434442719053959, "angleRadians": 0.5235987755982989, "angularVelocityRadiansPerSecond": 0, "bobPositionMeters": [1, -1.7320508075688773, 0] },
+        { "phase": "lowest-leftward", "timeSeconds": 2.1651664078580938, "angleRadians": 0, "angularVelocityRadiansPerSecond": -1.1462294595661615, "bobPositionMeters": [0, -2, 0] },
+        { "phase": "return-left", "timeSeconds": 2.8868885438107917, "angleRadians": -0.5235987755982989, "angularVelocityRadiansPerSecond": 0, "bobPositionMeters": [-1, -1.7320508075688773, 0] }
+      ]
+    }
+  ]
+}
