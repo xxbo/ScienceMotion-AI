@@ -143,6 +143,8 @@ Creative Host can opt into `SvgFfmpegProjectGraphRenderer` for a single shot of 
 
 `animation.path.bind` and `animation.path.edit` expose revisioned path and timing authoring. `npm run accept:p2-1-c` verifies three Remotion previews on the pendulum canvas and proves rejected edits leave the prior revision intact. CI publishes `pendulum-motion-edit-evidence`. [P2.1-C tool inputs and checks](docs/P2-PLAN.md#c--editable-motion).
 
+`npm run accept:p2-1-d` authors a new six-second pendulum through public tools, edits the swing and delivers the original, edited and restored snapshots. It verifies all 360 decoded poses and exact recovery after host reopen. CI publishes `pendulum-delivery-evidence`. [P2.1-D delivery and restore](docs/P2-PLAN.md#d--delivery-and-restore).
+
 ## Design and documentation
 
 Content generation and rendering remain independent. Creative tools share the canonical Project Graph; renderers interpret approved data without rewriting meaning. Track executable tools, catalogue entries and visually verified outputs separately.

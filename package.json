@@ -45,6 +45,7 @@
     "accept:p2-1-a": "tsx scripts/fixtures/pendulum-reference.ts && tsx scripts/pendulum-reference-acceptance.ts",
     "accept:p2-1-b": "tsx scripts/fixtures/pendulum-reference.ts && tsx scripts/pendulum-reference-acceptance.ts --path-follow",
     "accept:p2-1-c": "tsx scripts/fixtures/pendulum-reference.ts && tsx scripts/pendulum-motion-edit-acceptance.ts",
+    "accept:p2-1-d": "tsx scripts/pendulum-delivery-acceptance.ts",
     "accept:catalogue-scale": "tsx scripts/catalogue-scale-acceptance.ts",
     "host:stdio": "tsx scripts/creative-host-server.ts",
     "accept:ai-trial": "tsx scripts/ai-trial-acceptance.ts",

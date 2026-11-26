@@ -414,6 +414,18 @@ jobs:
           path: out/pendulum-motion-edit/
           if-no-files-found: error
 
+      - name: Verify tool-authored pendulum delivery and restore
+        id: pendulum-delivery
+        run: npm run accept:p2-1-d
+
+      - name: Upload pendulum delivery and restore evidence
+        if: ${{ !cancelled() && (steps.pendulum-delivery.outcome == 'success' || steps.pendulum-delivery.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: pendulum-delivery-evidence
+          path: out/pendulum-delivery/
+          if-no-files-found: error
+
       - name: Verify recorded AI trial and deterministic stdio replay
         # Replay is a regression of the retained interaction, not a new model trial.
         run: npm run accept:ai-trial

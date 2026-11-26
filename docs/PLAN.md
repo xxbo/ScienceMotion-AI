@@ -1,6 +1,6 @@
 # Development Plan
 
-Last updated 2026-11-25
+Last updated 2026-11-26
 
 ## Goal and current priority
 
@@ -88,7 +88,8 @@ P1.1's engineering gates have evidence; full visual closure is deferred to the f
 | 14a — implemented | P2.1-A pendulum motion reference | Frozen 6-second reference, explicit phase and geometry checks, verified previews and 120-frame Remotion export |
 | 14b — implemented | P2.1-B path following | A reusable 2D guide binding with length-based motion, scene-local keys and a verified 120-frame pendulum comparison |
 | 14c — implemented | P2.1-C editable motion | Revisioned bind and edit tools, three scoped Remotion previews, and persisted diagnostics for rejected edits with unchanged revision and hash |
-| 14d — next implementation | P2.1-D delivery and restore | Tool-authored path motion sample with verified before, edited and restored media |
+| 14d — implemented | P2.1-D delivery and restore | A tool-authored pendulum with all 360 decoded poses checked across the before, edited and restored deliveries and exact decoded recovery after reopen |
+| 15a — next implementation | P2.2-A first Three.js subset | Define supported 3D scene inputs and renderer diagnostics on the shared Project Graph |
 | Final acceptance workstream — deferred | Consolidated human effect review | Review both P1.1 fixtures and representative later outputs, record defects/fixes and final reviewed main evidence |
 
 Land each verified increment independently. I2 is a bounded measurement feature, not a new Studio UI or a general autonomous video critic. Additional infrastructure needs an acceptance case that depends on it.
@@ -164,7 +165,7 @@ Project/plugin operation remains trusted and single-writer. The [P1.2 first slic
 | P1.3 | A–F implemented, including an integrated short with inspection, targeted repair, export and recovery. [P1.3 plan](P1.3-PLAN.md) |
 | P1.4 | A–C deliver proposal preflight, bounded execution and inspection-driven repair. D–E cover delivery checks and end-to-end acceptance. [P1.4 plan](P1.4-PLAN.md) |
 | P1.5 | A–D implemented, with cross-plugin composition, paired engine measurements and shared snapshot delivery and recovery. [P1.5 plan](P1.5-PLAN.md) |
-| P2 | Six milestones covering motion, Three.js and cinematography, simulation and Manim, multi-engine editing, Blender and audio delivery. P2.1-A through C are implemented. [P2 plan](P2-PLAN.md) |
+| P2 | Six milestones covering motion, Three.js and cinematography, simulation and Manim, multi-engine editing, Blender and audio delivery. P2.1-A through D are implemented. P2.2-A is next. [P2 plan](P2-PLAN.md) |
 | P3 | Research/LLM/TTS/media providers, claims/sources, asset provenance and licensing |
 | P4 | Remote workers/storage, resumable/batch exports, metrics and optional Studio UI |
 
