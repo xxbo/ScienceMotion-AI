@@ -426,6 +426,18 @@ jobs:
           path: out/pendulum-delivery/
           if-no-files-found: error
 
+      - name: Verify the static Three.js input contract
+        id: three-static-contract
+        run: npm run accept:p2-2-a
+
+      - name: Upload static Three.js contract evidence
+        if: ${{ !cancelled() && (steps.three-static-contract.outcome == 'success' || steps.three-static-contract.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: three-static-contract-evidence
+          path: out/three-static-contract/
+          if-no-files-found: error
+
       - name: Verify recorded AI trial and deterministic stdio replay
         # Replay is a regression of the retained interaction, not a new model trial.
         run: npm run accept:ai-trial

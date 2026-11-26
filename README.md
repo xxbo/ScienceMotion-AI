@@ -145,6 +145,8 @@ Creative Host can opt into `SvgFfmpegProjectGraphRenderer` for a single shot of 
 
 `npm run accept:p2-1-d` authors a new six-second pendulum through public tools, edits the swing and delivers the original, edited and restored snapshots. It verifies all 360 decoded poses and exact recovery after host reopen. CI publishes `pendulum-delivery-evidence`. [P2.1-D delivery and restore](docs/P2-PLAN.md#d--delivery-and-restore).
 
+`npm run accept:p2-2-a` checks the first static Three.js input subset on the canonical Project Graph and reports exactly why unsupported scenes or requests are rejected. CI publishes `three-static-contract-evidence`. This step does not render or change the default engine. [P2.2-A static scene contract](docs/P2-PLAN.md#a--static-scene-contract).
+
 ## Design and documentation
 
 Content generation and rendering remain independent. Creative tools share the canonical Project Graph; renderers interpret approved data without rewriting meaning. Track executable tools, catalogue entries and visually verified outputs separately.

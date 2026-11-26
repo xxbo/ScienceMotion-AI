@@ -38,6 +38,7 @@
     "scripts/pendulum-reference-acceptance.ts",
     "scripts/pendulum-motion-edit-acceptance.ts",
     "scripts/pendulum-delivery-acceptance.ts",
+    "scripts/three-static-contract-acceptance.ts",
     "scripts/catalogue-scale-acceptance.ts",
     "scripts/creative-host-server.ts",
     "scripts/ai-trial-acceptance.ts",
