@@ -49,6 +49,7 @@
     "accept:p2-2-a": "tsx scripts/three-static-contract-acceptance.ts",
     "accept:p2-2-b": "tsx scripts/three-static-shot-acceptance.ts",
     "accept:p2-2-c": "tsx scripts/three-camera-motion-acceptance.ts",
+    "accept:p2-2-d": "tsx scripts/three-host-delivery-acceptance.ts",
     "accept:catalogue-scale": "tsx scripts/catalogue-scale-acceptance.ts",
     "host:stdio": "tsx scripts/creative-host-server.ts",
     "accept:ai-trial": "tsx scripts/ai-trial-acceptance.ts",
