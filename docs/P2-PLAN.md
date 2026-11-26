@@ -119,4 +119,33 @@ Each snapshot is delivered through the existing retained render-job verification
 npm run accept:p2-1-d
 ```
 
-CI publishes `pendulum-delivery-evidence` with the three MP4s, nine PNGs, snapshots, scoped tool calls, receipts and per-frame motion measurements. This closes P2.1's engineering scope. The next step is P2.2-A, defining the first supported Three.js subset. Human viewing and presentation review remain separate. [CI workflow](../.github/workflows/video-engine.yml) · [Final human acceptance](PLAN.md#final-human-acceptance-workstream).
+CI publishes `pendulum-delivery-evidence` with the three MP4s, nine PNGs, snapshots, scoped tool calls, receipts and per-frame motion measurements. This closes P2.1's engineering scope. P2.2 starts by defining the first supported Three.js subset. Human viewing and presentation review remain separate. [CI workflow](../.github/workflows/video-engine.yml) · [Final human acceptance](PLAN.md#final-human-acceptance-workstream).
+
+## P2.2 — Three.js and camera motion
+
+| Step | Status | Completion evidence |
+| --- | --- | --- |
+| A — Static scene contract | Implemented | A pinned ProjectDocument, an executable preflight for the first supported 3D scene and scoped diagnostics for unsupported inputs |
+| B — Static shot | Next | An opt-in Three.js adapter renders the pinned box and sphere, with decoded pixel checks |
+| C — Camera keys | Planned | Scene-local camera keyframes change the viewpoint predictably |
+| D — Host delivery and restore | Planned | Snapshot-bound media and matching output after reopening and restoring |
+
+### A — Static scene contract
+
+The first subset consumes the existing ProjectDocument 1.1.0 through the common snapshot render request. It requires one sequence, scene and full-length shot, starting at frame zero without a source trim. The scene uses `right-handed-y-up` coordinates, sRGB colors and unconverted world units. Preview frames and video ranges must fit the shot and use its native profile, retained revision and exact content hash. [Project schema](../schemas/project.schema.json) · [Static preflight](../src/renderers/three/three-static-scene.ts).
+
+| Root node | Required renderer-neutral components | Meaning |
+| --- | --- | --- |
+| `mesh` | `geometry` with `primitive: "box"` and `width`, `height`, `depth`, or `primitive: "sphere"` and `radius`. `material` with `model: "lambert"` and `color: "#RRGGBB"`. | Geometry is centered on the node origin. The material is opaque. |
+| `camera` | Exactly one camera node with `projection: "perspective"`, `fovYDegrees`, `near` and `far` in its `camera` component. | Field of view is vertical and strictly between 0 and 180 degrees. Clip distances are positive, with `near < far`. Before rotation the camera looks along local −Z with +Y up. |
+| `light` | `light` with `type: "ambient"` or `"directional"`, `color: "#RRGGBB"` and nonnegative `intensity`. A directional light also requires a three-number `target`. | Ambient light has no position. A directional light points from its world position to its distinct world target. |
+
+Mesh and camera rotations use XYZ Euler order in degrees and are normalized to radians for the adapter. Mesh scales must be positive. Cameras and lights use unit scale. Light rotations must be zero. Pivots must be zero if specified. Positions, geometry extents and camera projection coefficients must remain representable at float32 precision. The normalized background is `#07111f`. All nodes are unique scene roots. Editorial names, metadata and provenance are not render instructions.
+
+Unsupported content is rejected, including hierarchy or prefabs, external geometry or textures, engine-tagged or extra component data, enabled animation or constraints, media, timeline tracks, captions and transitions. Disabled animation and constraint entries remain inert. Failures provide a stable `THREE_STATIC_*` code, a JSON Pointer into the render request and any relevant scene, node, track or constraint ID. For example, an enabled camera track reports `THREE_STATIC_UNSUPPORTED_ANIMATION` at `/project/animationTracks/0` and names both the track and its camera. [Boundary tests](../src/platform/three-static-scene.test.ts).
+
+```sh
+npm run accept:p2-2-a
+```
+
+The pinned `three-static-v1` reference is a box, sphere, camera and two lights with a 48-frame shot at 640 × 360 and 24 fps. Acceptance verifies the standard schema, immutable snapshot, normalized preview and range requests and eight rejected cases. CI publishes `three-static-contract-evidence` with the snapshot, normalized scene and diagnostics. A does not load Three.js, register a renderer or produce media. Remotion stays the default, and B will render this reference rather than define a second scene format. [Pinned scene](../examples/three-static-scene.json) · [Acceptance](../scripts/three-static-contract-acceptance.ts).

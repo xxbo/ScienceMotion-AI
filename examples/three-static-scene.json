@@ -1,0 +1,67 @@
+{
+  "schemaVersion": "1.1.0",
+  "project": {
+    "id": "three-static-study",
+    "name": "Box and sphere in perspective",
+    "description": "A small renderer-neutral reference scene for the first static 3D subset.",
+    "createdAt": "2026-11-26T02:00:00.000Z",
+    "updatedAt": "2026-11-26T02:00:00.000Z",
+    "units": "unitless",
+    "coordinateSystem": "right-handed-y-up",
+    "timebase": { "fps": 24, "ticksPerFrame": 1 },
+    "colorSpace": "srgb"
+  },
+  "editorial": { "episodeId": "three-static-reference" },
+  "sequences": [
+    { "id": "sequence-main", "name": "Static study", "fps": 24, "durationFrames": 48, "width": 640, "height": 360, "shotIds": ["shot-study"] }
+  ],
+  "scenes": [
+    { "id": "scene-study", "name": "Box and sphere", "durationFrames": 48, "rootNodeIds": ["view-camera", "fill-light", "key-light", "blue-box", "amber-sphere"] }
+  ],
+  "shots": [
+    { "id": "shot-study", "name": "Static perspective", "sceneId": "scene-study", "startFrame": 0, "durationFrames": 48 }
+  ],
+  "nodes": [
+    {
+      "id": "view-camera", "name": "Perspective camera", "type": "camera",
+      "transform": { "position": [0, 2.3, 8], "rotation": [-14, 0, 0], "scale": [1, 1, 1] },
+      "components": [{ "kind": "camera", "data": { "projection": "perspective", "fovYDegrees": 38, "near": 0.1, "far": 50 } }]
+    },
+    {
+      "id": "fill-light", "name": "Ambient fill", "type": "light",
+      "transform": { "position": [0, 0, 0], "rotation": [0, 0, 0], "scale": [1, 1, 1] },
+      "components": [{ "kind": "light", "data": { "type": "ambient", "color": "#FFFFFF", "intensity": 0.45 } }]
+    },
+    {
+      "id": "key-light", "name": "Directional key", "type": "light",
+      "transform": { "position": [-4, 5, 6], "rotation": [0, 0, 0], "scale": [1, 1, 1] },
+      "components": [{ "kind": "light", "data": { "type": "directional", "color": "#ffffff", "intensity": 2, "target": [0, 0, 0] } }]
+    },
+    {
+      "id": "blue-box", "name": "Blue box", "type": "mesh",
+      "transform": { "position": [-1.35, 0, 0], "rotation": [12, 30, -10], "scale": [1.1, 1, 0.9] },
+      "components": [
+        { "kind": "geometry", "data": { "primitive": "box", "width": 1.8, "height": 1.6, "depth": 1.4 } },
+        { "kind": "material", "data": { "model": "lambert", "color": "#49bde9" } }
+      ]
+    },
+    {
+      "id": "amber-sphere", "name": "Amber sphere", "type": "mesh",
+      "transform": { "position": [1.35, 0, -0.2], "rotation": [0, 0, 0], "scale": [1, 1, 1] },
+      "components": [
+        { "kind": "geometry", "data": { "primitive": "sphere", "radius": 1 } },
+        { "kind": "material", "data": { "model": "lambert", "color": "#ffb454" } }
+      ]
+    }
+  ],
+  "animationTracks": [],
+  "tracks": [],
+  "clips": [],
+  "assets": [],
+  "prefabs": [],
+  "constraints": [],
+  "dependencies": [],
+  "revisions": [
+    { "id": "revision-three-static-v1", "createdAt": "2026-11-26T02:00:00.000Z", "message": "Pin the static 3D entry scene", "author": "ScienceMotion" }
+  ]
+}
