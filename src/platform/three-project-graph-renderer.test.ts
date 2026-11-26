@@ -11,9 +11,9 @@ const base = (project: ProjectDocument) => ({ project, revisionId: project.revis
 // Early rejections must never attempt to load this entry point or the encoder.
 const renderer = new ThreeJsProjectGraphRenderer({ entryPoint: "/invalid/three-entry.tsx", ffmpegPath: "/invalid/ffmpeg" });
 
-test("Three.js adapter runs the immutable static preflight before starting a browser or encoder", async () => {
+test("Three.js adapter rejects mesh animation before starting a browser or encoder", async () => {
   const project = fixture();
-  project.animationTracks.push({ id: "camera-keys", targetNodeId: "view-camera", targetProperty: "transform.position", keyframes: [{ frame: 0, value: [0, 2.3, 8] }] });
+  project.animationTracks.push({ id: "mesh-keys", targetNodeId: "blue-box", targetProperty: "transform.position", keyframes: [{ frame: 0, value: [-1.35, 0, 0] }] });
   const stages: string[] = [];
   const onProgress = (event: { phase: string }) => { stages.push(event.phase); };
   for (const attempt of [() => renderer.renderPreview({ ...base(project), frame: 24, onProgress }),
@@ -21,10 +21,20 @@ test("Three.js adapter runs the immutable static preflight before starting a bro
     await assert.rejects(attempt, error => {
       assert.ok(error instanceof ProjectGraphRendererError);
       assert.equal(error.code, "THREE_STATIC_UNSUPPORTED_ANIMATION");
-      assert.match(error.message, /view-camera.*\/project\/animationTracks\/0/);
+      assert.match(error.message, /blue-box.*\/project\/animationTracks\/0/);
       return true;
     });
   }
+  assert.equal(stages.length, 0);
+});
+
+test("Three.js adapter validates every requested camera pose before bundling", async () => {
+  const project = fixture();
+  project.animationTracks.push({ id: "overshoot", targetNodeId: "view-camera", targetProperty: "transform.position",
+    keyframes: [{ frame: 0, value: [0, 2.3, 8] }, { frame: 24, value: [2, 2.3, 8], interpolation: "bezier", easing: "cubic-bezier(0.2,1e40,0.8,1e40)" }] });
+  const stages: string[] = [];
+  await assert.rejects(() => renderer.renderVideo({ ...base(project), startFrame: 0, durationFrames: 25,
+    onProgress: event => { stages.push(event.phase); } }), { code: "THREE_STATIC_INVALID_ANIMATION", message: /view-camera.*scene frame 1/ });
   assert.equal(stages.length, 0);
 });
 

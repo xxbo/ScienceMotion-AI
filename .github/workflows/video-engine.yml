@@ -450,6 +450,18 @@ jobs:
           path: out/three-static-shot/
           if-no-files-found: error
 
+      - name: Render and verify Three.js camera motion
+        id: three-camera-motion
+        run: npm run accept:p2-2-c
+
+      - name: Upload Three.js camera motion evidence
+        if: ${{ !cancelled() && (steps.three-camera-motion.outcome == 'success' || steps.three-camera-motion.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: three-camera-motion-evidence
+          path: out/three-camera-motion/
+          if-no-files-found: error
+
       - name: Verify recorded AI trial and deterministic stdio replay
         # Replay is a regression of the retained interaction, not a new model trial.
         run: npm run accept:ai-trial

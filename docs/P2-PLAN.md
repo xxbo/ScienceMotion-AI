@@ -127,8 +127,8 @@ CI publishes `pendulum-delivery-evidence` with the three MP4s, nine PNGs, snapsh
 | --- | --- | --- |
 | A — Static scene contract | Implemented | A pinned ProjectDocument, an executable preflight for the first supported 3D scene and scoped diagnostics for unsupported inputs |
 | B — Static shot | Implemented | An opt-in Three.js adapter renders the pinned box and sphere, with decoded checks on a PNG and 48 MP4 frames |
-| C — Camera keys | Next | Scene-local camera keyframes change the viewpoint predictably |
-| D — Host delivery and restore | Planned | Snapshot-bound media and matching output after reopening and restoring |
+| C — Camera keys | Implemented | Position and rotation change the viewpoint in three decoded previews and all 42 frames of a trimmed export |
+| D — Host delivery and restore | Next | Snapshot-bound media and matching output after reopening and restoring |
 
 ### A — Static scene contract
 
@@ -152,13 +152,26 @@ The pinned `three-static-v1` reference is a box, sphere, camera and two lights w
 
 ### B — Static shot
 
-Applications can opt in with `openCreativeHost({ directory, renderer: new ThreeJsProjectGraphRenderer() })`. Without this selection, the Host still uses Remotion. The adapter validates the immutable request with A's preflight before launching the browser. The separate browser entry uses Three.js geometries, a perspective camera, Lambert materials and the authored lights. It uses the provisioned Remotion browser with software WebGL2 via ANGLE and SwiftShader, so the check does not require a hardware GPU. [Adapter](../src/renderers/three/three-project-graph-renderer.ts) · [Three.js drawing](../src/renderers/three/three-static-browser.tsx).
+Applications can opt in with `openCreativeHost({ directory, renderer: new ThreeJsProjectGraphRenderer() })`. Without this selection, the Host still uses Remotion. The adapter applies A's scene restrictions before launching the browser, with C's narrow extension for camera motion. The separate browser entry uses Three.js geometries, a perspective camera, Lambert materials and the authored lights. It uses the provisioned Remotion browser with software WebGL2 via ANGLE and SwiftShader, so the check does not require a hardware GPU. [Adapter](../src/renderers/three/three-project-graph-renderer.ts) · [Three.js drawing](../src/renderers/three/three-static-browser.tsx).
 
-The adapter returns an opaque PNG for the requested frame. For a static MP4 it paints once, then FFmpeg with `libx264` holds the raster for the requested number of frames at the snapshot FPS. The native browser surface admits dimensions up to 7680, subject to the actual WebGL2 limits. H.264 yuv420p additionally requires even dimensions and up to 900 frames. Media retains the exact snapshot and adapter identity through ordinary Host jobs. This slice still rejects enabled camera keys and does not add layout inspection or a new default renderer.
+The adapter returns an opaque PNG for the requested frame. For a static MP4 it paints once, then FFmpeg with `libx264` holds the raster for the requested number of frames at the snapshot FPS. The native browser surface admits dimensions up to 7680, subject to the actual WebGL2 limits. H.264 yuv420p additionally requires even dimensions and up to 900 frames. Media retains the exact snapshot and adapter identity through ordinary Host jobs. No layout inspection or new default renderer is added.
 
 ```sh
 npx remotion browser ensure
 npm run accept:p2-2-b
 ```
 
-The acceptance uses the unchanged `three-static-v1` hash and renders preview frame 24 plus the silent two-second range `[0, 48)` at 640 × 360 and 24 fps. It decodes every frame, verifies both silhouettes against independently projected bounds, and checks the opaque background and brighter lit side of the sphere. It also submits a snapshot with enabled camera keys and requires a scoped rejection before publication, with the artifact inventory unchanged. CI publishes `three-static-shot-evidence` containing both media files, the snapshot, receipts and pixel measurements. C adds camera motion. D verifies delivery and restore. [Static shot acceptance](../scripts/three-static-shot-acceptance.ts).
+The acceptance uses the unchanged `three-static-v1` hash and renders preview frame 24 plus the silent two-second range `[0, 48)` at 640 × 360 and 24 fps. It decodes every frame, verifies both silhouettes against independently projected bounds, and checks the opaque background and brighter lit side of the sphere. The current regression submits a snapshot with enabled mesh keys and requires a scoped rejection before publication, with the artifact inventory unchanged. CI publishes `three-static-shot-evidence` containing both media files, the snapshot, receipts and pixel measurements. [Static shot acceptance](../scripts/three-static-shot-acceptance.ts).
+
+### C — Camera keys
+
+The opt-in Three.js adapter version 1.1.0 accepts one enabled track per `transform.position` or `transform.rotation` on the selected camera. Author the tracks through `animation.keyframes.set` and save a new Project Graph snapshot with `project.snapshot.save`. Position uses world XYZ units. Rotation interpolates the authored XYZ Euler degrees component-wise with no angle wrapping and then converts them to radians. Each unkeyed channel keeps its base pose. Sampling follows the existing step, linear, Bézier easing, endpoint hold and loop rules. Keys are zero-based within the scene, including a possible terminal boundary key at its duration. [Camera preflight](../src/renderers/three/three-static-scene.ts) · [Sampling tests](../src/platform/three-camera-keys.test.ts).
+
+The preview samples the requested scene frame. The video samples `startFrame + outputFrame` and encodes the captured images in output order at the native FPS. With no enabled camera tracks the adapter still paints once and holds the static frame. Lens, scale, mesh and light animations remain unsupported. Invalid or unsupported tracks are rejected before browser work and publication, with track, node and scene identifiers and a request field path. No schema or default engine changes are needed.
+
+```sh
+npx remotion browser ensure
+npm run accept:p2-2-c
+```
+
+Acceptance keeps the pinned static snapshot unchanged and authors a new one containing a camera slide followed by a pan. It decodes previews at scene frames 6, 23 and 47 and all 42 frames of the silent H.264 range `[6, 48)` at 640 × 360 and 24 fps. It checks both silhouettes against independent perspective projections and verifies the preview and video agree at matching frames. A camera scale track fails before publication without adding artifacts. CI publishes `three-camera-motion-evidence` with the four media files, snapshot, job receipts and measured poses. D covers reopen and restore. [Camera motion acceptance](../scripts/three-camera-motion-acceptance.ts) · [CI workflow](../.github/workflows/video-engine.yml).

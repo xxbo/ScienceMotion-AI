@@ -1,14 +1,14 @@
 import React, { useLayoutEffect, useRef, useState } from "react";
-import { cancelRender, Composition, continueRender, delayRender, registerRoot } from "remotion";
+import { cancelRender, Composition, continueRender, delayRender, registerRoot, useCurrentFrame } from "remotion";
 import {
   AmbientLight, BoxGeometry, Color, DirectionalLight, Mesh, MeshLambertMaterial, NoToneMapping, PerspectiveCamera,
   Scene, SphereGeometry, SRGBColorSpace, WebGLRenderer, type BufferGeometry,
 } from "three";
-import type { ThreeStaticScene } from "./three-static-scene";
+import type { ThreeCameraPose, ThreeStaticScene } from "./three-static-scene";
 
-type Props = { model: ThreeStaticScene | null };
+type Props = { model: ThreeStaticScene | null; cameraFrames?: ThreeCameraPose[] };
 
-function draw(canvas: HTMLCanvasElement, model: ThreeStaticScene) {
+function createPainter(canvas: HTMLCanvasElement, model: ThreeStaticScene) {
   const { width, height } = model.profile;
   const context = canvas.getContext("webgl2", { alpha: false, antialias: true, preserveDrawingBuffer: true });
   if (!context) throw new Error("THREE_STATIC_WEBGL_UNAVAILABLE: The browser could not initialize WebGL2.");
@@ -35,8 +35,6 @@ function draw(canvas: HTMLCanvasElement, model: ThreeStaticScene) {
 
     const view = model.camera;
     const camera = new PerspectiveCamera(view.fovYDegrees, width / height, view.near, view.far);
-    camera.position.set(...view.position);
-    camera.rotation.set(...view.rotationRadians, "XYZ");
 
     for (const item of model.meshes) {
       const shape = item.geometry;
@@ -60,34 +58,54 @@ function draw(canvas: HTMLCanvasElement, model: ThreeStaticScene) {
         scene.add(light, light.target);
       }
     }
-    renderer.render(scene, camera);
-    if (context.isContextLost() || context.getError() !== context.NO_ERROR) throw new Error("The WebGL2 render did not complete.");
-    return dispose;
+    const activeRenderer = renderer;
+    const paint = (pose: ThreeCameraPose) => {
+      camera.position.set(...pose.position);
+      camera.rotation.set(...pose.rotationRadians, "XYZ");
+      activeRenderer.render(scene, camera);
+      if (context.isContextLost() || context.getError() !== context.NO_ERROR) throw new Error("The WebGL2 render did not complete.");
+    };
+    return { paint, dispose };
   } catch (error) {
     dispose();
     throw error;
   }
 }
 
-const StaticThreeFrame: React.FC<Props> = ({ model }) => {
+const ThreeFrame: React.FC<Props> = ({ model, cameraFrames }) => {
   const canvas = useRef<HTMLCanvasElement>(null);
-  const [handle] = useState(() => delayRender("Paint the static Three.js scene"));
+  const painter = useRef<ReturnType<typeof createPainter> | null>(null);
+  const waiting = useRef(true);
+  const frame = useCurrentFrame();
+  const [handle] = useState(() => delayRender("Paint the Three.js scene"));
   useLayoutEffect(() => {
     try {
-      if (!canvas.current || !model) throw new Error("Missing prepared static Three.js scene.");
-      const dispose = draw(canvas.current, model);
-      continueRender(handle);
-      return dispose;
+      if (!canvas.current || !model) throw new Error("Missing prepared Three.js scene.");
+      const current = createPainter(canvas.current, model);
+      painter.current = current;
+      return () => { painter.current = null; current.dispose(); };
     } catch (error) {
       cancelRender(error instanceof Error ? error : new Error(String(error)));
     }
-  }, [model, handle]);
+  }, [model]);
+  useLayoutEffect(() => {
+    if (!painter.current || !model) return;
+    try {
+      const pose = cameraFrames ? cameraFrames[frame] : model.camera;
+      if (!pose) throw new Error(`Missing camera pose for output frame ${frame}.`);
+      painter.current.paint(pose);
+      if (waiting.current) { waiting.current = false; continueRender(handle); }
+    } catch (error) {
+      cancelRender(error instanceof Error ? error : new Error(String(error)));
+    }
+  }, [model, cameraFrames, frame, handle]);
   return <canvas ref={canvas} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", display: "block" }} />;
 };
 
 function ThreeRoot() {
-  return <Composition id="ThreeStaticSnapshot" component={StaticThreeFrame} width={640} height={360} fps={24} durationInFrames={1}
-    defaultProps={{ model: null } as Props} calculateMetadata={({ props }) => props.model?.profile ?? {}} />;
+  return <Composition id="ThreeStaticSnapshot" component={ThreeFrame} width={640} height={360} fps={24} durationInFrames={1}
+    defaultProps={{ model: null } as Props} calculateMetadata={({ props }) =>
+      ({ ...props.model?.profile, durationInFrames: props.cameraFrames?.length ?? 1 })} />;
 }
 
 registerRoot(ThreeRoot);

@@ -1,5 +1,6 @@
-import type { ComponentKind, SceneNode, Vector3 } from "../../contracts/project";
+import type { ComponentKind, ProjectAnimationTrack, SceneNode, Vector3 } from "../../contracts/project";
 import { ProjectGraphRendererError, type ProjectGraphPreviewRequest, type ProjectGraphVideoRequest } from "../../contracts/renderer";
+import { sampleAnimationTrack, validateAnimationTrack } from "../../platform/animation";
 import { hashProject } from "../../platform/project-snapshots";
 
 export type ThreeStaticRequest = ProjectGraphPreviewRequest | ProjectGraphVideoRequest;
@@ -8,6 +9,7 @@ export type ThreeStaticMaterial = { model: "lambert"; color: string };
 export type ThreeStaticTransform = { position: Vector3; rotationRadians: Vector3; scale: Vector3 };
 export type ThreeStaticCamera = { nodeId: string; projection: "perspective"; position: Vector3; rotationRadians: Vector3;
   fovYDegrees: number; near: number; far: number };
+export type ThreeCameraPose = Pick<ThreeStaticCamera, "position" | "rotationRadians">;
 export type ThreeStaticLight = { nodeId: string; type: "ambient"; color: string; intensity: number } |
   { nodeId: string; type: "directional"; color: string; intensity: number; position: Vector3; target: Vector3 };
 
@@ -27,7 +29,7 @@ export interface ThreeStaticScene {
 type Location = { path: string; nodeId?: string; sceneId?: string; trackId?: string; constraintId?: string };
 type Problem = "INVALID_SNAPSHOT" | "INVALID_REQUEST" | "UNSUPPORTED_PROJECT" | "UNSUPPORTED_TIMELINE" | "UNSUPPORTED_FEATURE" |
   "INVALID_ROOTS" | "UNSUPPORTED_NODE" | "INVALID_TRANSFORM" | "INVALID_COMPONENT" | "UNSUPPORTED_FIELD" |
-  "INVALID_GEOMETRY" | "INVALID_MATERIAL" | "INVALID_CAMERA" | "INVALID_LIGHT" | "UNSUPPORTED_ANIMATION";
+  "INVALID_GEOMETRY" | "INVALID_MATERIAL" | "INVALID_CAMERA" | "INVALID_LIGHT" | "UNSUPPORTED_ANIMATION" | "INVALID_ANIMATION";
 export type ThreeStaticDiagnostic = Location & { code: `THREE_STATIC_${Problem}`; message: string };
 
 export class ThreeStaticSceneError extends ProjectGraphRendererError {
@@ -49,6 +51,7 @@ const vector = (value: unknown): value is Vector3 => Array.isArray(value) && val
 const uniform = (v: Vector3, n: number) => v.every(value => value === n);
 const integer = (v: number) => Number.isSafeInteger(v) && v > 0;
 const record = (value: unknown): value is Record<string, unknown> => !!value && typeof value === "object" && !Array.isArray(value);
+const radians = (v: Vector3): Vector3 => [v[0] * Math.PI / 180, v[1] * Math.PI / 180, v[2] * Math.PI / 180];
 
 function only(data: Record<string, unknown>, keys: string[], loc: Location) {
   const unsupported = Object.keys(data).find(key => !keys.includes(key));
@@ -71,7 +74,7 @@ function transform(node: SceneNode, loc: Location): ThreeStaticTransform {
     fail("INVALID_TRANSFORM", field(at, "pivot"), "Omit the pivot or use [0, 0, 0] for this static subset.");
   if (node.type === "light" && !uniform(rotation, 0))
     fail("INVALID_TRANSFORM", field(at, "rotation"), "Use zero rotation. A directional light aims from position toward its explicit target.");
-  return { position: [...position], rotationRadians: rotation.map(deg => deg * Math.PI / 180) as Vector3, scale: [...scale] };
+  return { position: [...position], rotationRadians: radians(rotation), scale: [...scale] };
 }
 
 function components(node: SceneNode, loc: Location, required: ComponentKind[]) {
@@ -157,8 +160,47 @@ function light(nodeId: string, { data, at }: { data: Record<string, unknown>; at
   return { nodeId, type, color: paint, intensity, position: pose.position, target: [...target] };
 }
 
-/** Pure preflight on an immutable canonical ProjectDocument render request. Nothing renders here. */
-export function prepareThreeStaticScene(request: ThreeStaticRequest): ThreeStaticScene {
+type PreparedThreeScene = { model: ThreeStaticScene; cameraAt?: (sceneFrame: number) => ThreeCameraPose };
+
+function cameraSampler(tracks: readonly ProjectAnimationTrack[], model: ThreeStaticScene, duration: number): PreparedThreeScene["cameraAt"] {
+  type Channel = "transform.position" | "transform.rotation";
+  const channels = new Map<Channel, { track: ProjectAnimationTrack; at: Location }>();
+  for (const [index, track] of tracks.entries()) {
+    if (track.enabled === false) continue;
+    const at = { ...where(`/project/animationTracks/${index}`, model.sceneId), nodeId: track.targetNodeId, trackId: track.id };
+    const channel = track.targetProperty;
+    if (track.targetNodeId !== model.camera.nodeId || (channel !== "transform.position" && channel !== "transform.rotation"))
+      fail("UNSUPPORTED_ANIMATION", at, "Only the selected camera's transform.position and transform.rotation can have enabled keys.");
+    if (channels.has(channel)) fail("INVALID_ANIMATION", field(at, "targetProperty"), "Use only one enabled track for each camera transform channel.");
+    const problems = validateAnimationTrack(track);
+    if (problems.length) fail("INVALID_ANIMATION", at, problems.join(". "));
+    for (const [keyIndex, key] of track.keyframes.entries()) {
+      const location = field(field(at, "keyframes"), keyIndex);
+      if (key.frame > duration) fail("INVALID_ANIMATION", field(location, "frame"), "The scene-local key is after the scene duration.");
+      if (!vector(key.value)) fail("INVALID_ANIMATION", field(location, "value"), "Use three finite float32-representable numbers for this camera key.");
+    }
+    channels.set(channel, { track: structuredClone(track), at });
+  }
+  if (!channels.size) return;
+  const sample = (channel: Channel, frame: number) => {
+    const entry = channels.get(channel);
+    if (!entry) return;
+    let value: unknown;
+    try { value = sampleAnimationTrack(entry.track, frame)?.value; }
+    catch { fail("INVALID_ANIMATION", entry.at, `Camera keys produced an invalid value at scene frame ${frame}.`); }
+    if (!vector(value)) fail("INVALID_ANIMATION", entry.at, `Camera keys must sample to three finite float32-representable numbers at scene frame ${frame}.`);
+    return value;
+  };
+  return frame => {
+    if (!Number.isSafeInteger(frame) || frame < 0 || frame >= duration)
+      fail("INVALID_REQUEST", where("/frame", model.sceneId), "Sample the camera inside the scene's zero-based frame range.");
+    const position = sample("transform.position", frame);
+    const rotation = sample("transform.rotation", frame);
+    return { position: position ?? [...model.camera.position], rotationRadians: rotation ? radians(rotation) : [...model.camera.rotationRadians] };
+  };
+}
+
+function prepare(request: ThreeStaticRequest, allowCameraKeys: boolean): PreparedThreeScene {
   const { project, revisionId, snapshotHash, profile, sceneId } = request;
   request.signal?.throwIfAborted();
   if (project.schemaVersion !== "1.1.0") fail("UNSUPPORTED_PROJECT", where("/project/schemaVersion"), "Use ProjectDocument 1.1.0.");
@@ -194,7 +236,7 @@ export function prepareThreeStaticScene(request: ThreeStaticRequest): ThreeStati
     [Object.keys(request.imageAssets ?? {}).length, "/imageAssets", "PNG inputs"],
     ["audioAssets" in request && Object.keys(request.audioAssets ?? {}).length, "/audioAssets", "WAV inputs"],
   ] as const) if (present) fail("UNSUPPORTED_FEATURE", here(path), `Remove ${label} from the static 3D render input.`);
-  const animation = project.animationTracks.findIndex(track => track.enabled !== false);
+  const animation = allowCameraKeys ? -1 : project.animationTracks.findIndex(track => track.enabled !== false);
   if (animation !== -1) {
     const track = project.animationTracks[animation];
     fail("UNSUPPORTED_ANIMATION", { ...here(`/project/animationTracks/${animation}`), nodeId: track.targetNodeId, trackId: track.id },
@@ -255,6 +297,18 @@ export function prepareThreeStaticScene(request: ThreeStaticRequest): ThreeStati
   if (missing) fail("INVALID_ROOTS", { ...rootLocation, nodeId: missing.id }, "List every project node as a root of the single scene.");
   if (!selectedCamera) fail("INVALID_CAMERA", rootLocation, "Add exactly one perspective camera.");
   if (!meshes.length) fail("INVALID_GEOMETRY", rootLocation, "Add at least one mesh with a supported primitive.");
-  return { sceneId: scene.id, sequenceId: sequence.id, shotId: shot.id, profile: { width, height, fps }, range: { startFrame, durationFrames },
+  const model: ThreeStaticScene = { sceneId: scene.id, sequenceId: sequence.id, shotId: shot.id, profile: { width, height, fps }, range: { startFrame, durationFrames },
     backgroundColor: "#07111f", camera: selectedCamera, meshes, lights };
+  const cameraAt = allowCameraKeys ? cameraSampler(project.animationTracks, model, scene.durationFrames) : undefined;
+  return { model, cameraAt };
+}
+
+/** The original static-only preflight. Nothing renders here. */
+export function prepareThreeStaticScene(request: ThreeStaticRequest): ThreeStaticScene {
+  return prepare(request, false).model;
+}
+
+/** The same scene with optional scene-local sampling for the selected camera's two pose channels. */
+export function prepareThreeCameraScene(request: ThreeStaticRequest): PreparedThreeScene {
+  return prepare(request, true);
 }
