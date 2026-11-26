@@ -171,6 +171,18 @@ jobs:
       - name: Run platform unit tests
         run: npm test
 
+      - name: Verify the SI pendulum model and analytic checkpoints
+        id: pendulum-physics-contract
+        run: npm run accept:p2-3-a
+
+      - name: Upload pendulum physics contract evidence
+        if: ${{ !cancelled() && (steps.pendulum-physics-contract.outcome == 'success' || steps.pendulum-physics-contract.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: pendulum-physics-contract-evidence
+          path: out/pendulum-physics-contract/
+          if-no-files-found: error
+
       - name: Verify bounded planning through a saved and reopened draft
         id: planning-run
         run: npm run accept:p1-4-b

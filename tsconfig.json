@@ -42,6 +42,7 @@
     "scripts/three-static-shot-acceptance.ts",
     "scripts/three-camera-motion-acceptance.ts",
     "scripts/three-host-delivery-acceptance.ts",
+    "scripts/pendulum-physics-acceptance.ts",
     "scripts/catalogue-scale-acceptance.ts",
     "scripts/creative-host-server.ts",
     "scripts/ai-trial-acceptance.ts",

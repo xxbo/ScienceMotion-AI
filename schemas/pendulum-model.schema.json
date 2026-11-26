@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://xxbo.github.io/ScienceMotion-AI/schemas/pendulum-model.schema.json",
+  "title": "Ideal simple pendulum model",
+  "description": "The renderer-neutral, undamped point-mass pendulum model released from rest. Time is measured in seconds from release.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "model", "units", "coordinateSystem", "lengthMeters", "gravityMetersPerSecondSquared", "initialState"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "model": { "const": "ideal-simple-pendulum" },
+    "units": { "const": "SI" },
+    "coordinateSystem": { "const": "right-handed-y-up" },
+    "lengthMeters": { "type": "number", "exclusiveMinimum": 0, "description": "Distance from pivot to point mass, in metres." },
+    "gravityMetersPerSecondSquared": { "type": "number", "exclusiveMinimum": 0, "description": "Magnitude of the uniform acceleration in the negative Y direction, in m/s²." },
+    "initialState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["angleRadians", "angularVelocityRadiansPerSecond"],
+      "properties": {
+        "angleRadians": {
+          "type": "number",
+          "exclusiveMinimum": -3.141592653589793,
+          "exclusiveMaximum": 3.141592653589793,
+          "description": "From vertically down, positive toward +X, in radians. The inverted position is outside this release model."
+        },
+        "angularVelocityRadiansPerSecond": { "type": "number", "const": 0, "description": "This version starts at rest." }
+      }
+    }
+  }
+}

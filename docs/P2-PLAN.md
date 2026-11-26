@@ -188,3 +188,42 @@ npm run accept:p2-2-d
 ```
 
 CI publishes `three-host-delivery-evidence` with three MP4s, nine PNGs, three snapshots, job receipts, restore provenance and all 126 pose measurements. This closes P2.2 engineering acceptance. P2.3-A defines the physical model for the first simulation. Human viewing stays in the final acceptance workstream. [CI workflow](../.github/workflows/video-engine.yml) · [Final human acceptance](PLAN.md#final-human-acceptance-workstream).
+
+## P2.3 — Simulation and Manim
+
+| Step | Status | Completion evidence |
+| --- | --- | --- |
+| A — Physical model | Implemented | Strict SI input, a nonlinear ideal pendulum, and ten verified analytic checkpoints for two rod lengths |
+| B — Retained trajectory | Next | Numerically solve both reference cases, check period and energy, and retain reproducible trajectory data |
+| C — Shared 2D and 3D samples | Planned | Both renderers consume the same retained physical samples and time mapping |
+| D — Mathematics shot | Planned | Make the Manim shot from the same model and reference timing |
+| E — Time alignment | Planned | Verify that the rendered motion and mathematics track the same events |
+
+### A — Physical model
+
+Use an ideal simple pendulum with a point mass, a massless rigid rod of fixed length `L`, and a fixed pivot at the origin. Gravity has uniform magnitude `g` along −Y. The bob moves in the XY plane without damping, a drive or collisions. Mass cancels from the equation. Time `t` is measured in seconds from release, length and position in metres, angle in radians and angular velocity in rad/s. At `θ = 0` the bob is directly below the pivot. Positive `θ` moves the bob toward +X from that position. The first model accepts release from rest with `−π < θ₀ < π`. A release at zero stays at equilibrium and has no observed oscillation period. [Model schema](../schemas/pendulum-model.schema.json) · [Model code](../src/platform/pendulum-model.ts).
+
+```text
+dθ/dt = ω
+dω/dt = −(g/L) sin(θ)
+bob position = (L sin(θ), −L cos(θ), 0)
+specific mechanical energy = ½(Lω)² + gL(1 − cos(θ))
+```
+
+The energy is per kilogram, with zero potential at the bottom. The nonlinear `sin(θ)` matters. At a nonzero release amplitude `A = |θ₀|`, the period is `T = 4 sqrt(L/g) K(sin(A/2))`, where `K(k)` is the complete elliptic integral of the first kind with modulus `k`. The small-angle expression `2π sqrt(L/g)` is an approximation. The pinned cases use standard gravity `g = 9.80665 m/s²` and release from −30°. Their periods for 0.5 m and 2 m are approximately 1.443444 s and 2.886889 s, about 1.74% above the small-angle values. With gravity and amplitude held fixed, four times the length gives twice the period. [Elliptic integral definition](https://dlmf.nist.gov/19.2#ii) · [AGM relation](https://dlmf.nist.gov/19.8#i).
+
+| Time | Angle from down | Angular velocity | Event |
+| --- | --- | --- | --- |
+| 0 | −A | 0 | Release at the left extreme |
+| T/4 | 0 | +ωmax | Pass the bottom toward +X |
+| T/2 | +A | 0 | Reach the opposite extreme |
+| 3T/4 | 0 | −ωmax | Pass the bottom toward −X |
+| T | −A | 0 | Return to the release state |
+
+At the bottom, energy conservation gives `ωmax = sqrt((2g/L)(1 − cos(A)))`. The fixture pins the five times, states and bob positions for each length. Its period targets come from the complete integral's series. Acceptance checks them with the arithmetic-geometric mean and independently checks acceleration, coordinates, fixed length and conserved energy at each checkpoint. Version, units, coordinate convention and physical parameters are explicit. Unsupported inputs fail with a field path. No screen pixels, FPS or editorial holds enter the model. The illustrated P2.1 scene and default renderer are unchanged. [Pinned reference](../examples/pendulum-physics-reference.json) · [Acceptance](../scripts/pendulum-physics-acceptance.ts).
+
+```sh
+npm run accept:p2-3-a
+```
+
+CI publishes `pendulum-physics-contract-evidence` with the reference, model schema and executable verification. A does not integrate, retain a trajectory or render media. For B the fixture requires period error at most 1 ms, checkpoint errors at most 0.0001 rad and 0.0001 rad/s, and relative specific-energy drift at most 0.00001 for these nonzero-energy reference cases. Measure a full cycle from the solved motion and compare states at the reference times. The nominal indices alone are not period measurements.
