@@ -149,6 +149,8 @@ Creative Host can opt into `SvgFfmpegProjectGraphRenderer` for a single shot of 
 
 `npm run accept:p2-2-b` uses an opt-in `ThreeJsProjectGraphRenderer` with software WebGL2 and FFmpeg to render the pinned scene. It validates a PNG and the pixels in all 48 frames of a silent H.264 video. CI publishes `three-static-shot-evidence`. Remotion remains the default. [P2.2-B static shot](docs/P2-PLAN.md#b--static-shot).
 
+`npm run accept:p2-2-c` authors scene-local camera position and rotation keys on a new snapshot of the same scene. It verifies three PNGs and every decoded frame of a trimmed 42-frame H.264 video against independently projected bounds. CI publishes `three-camera-motion-evidence`. [P2.2-C camera keys](docs/P2-PLAN.md#c--camera-keys).
+
 ## Design and documentation
 
 Content generation and rendering remain independent. Creative tools share the canonical Project Graph; renderers interpret approved data without rewriting meaning. Track executable tools, catalogue entries and visually verified outputs separately.
