@@ -1,6 +1,6 @@
 # P2 — Motion design and specialist rendering
 
-Last updated 2026-11-25
+Last updated 2026-11-26
 
 Build on the canonical Project Graph, retained snapshots, Creative Host and verified media delivery. Keep each increment independently testable and leave the default renderer in place. A Host currently selects one renderer at launch and the timeline's visual clips are still PNGs. Single-shot rendering and multi-engine editing therefore have separate milestones. [Engine boundary](P1.5-PLAN.md#engine-boundary) · [Timeline editing](P1.3-PLAN.md#b--timeline-editing).
 
@@ -22,7 +22,7 @@ The work starts with P2.1 and P2.2. P2.3 and the initial two-engine cut of P2.4 
 | A — Reference | Implemented | A frozen pendulum snapshot, exact checkpoint and direction expectations, and verified real PNG and MP4 outputs produced with the existing Remotion renderer |
 | B — Path following | Implemented | A reusable 2D guide binding follows straight segments and circular arcs by length. The separate path-driven bob matches A's scene timing and decoded frame checks |
 | C — Editable motion | Implemented | Tools bind and edit a single motion path by revision. Decoded previews isolate the changes, and rejected edits keep the same revision and hash |
-| D — Delivery and restore | Next | A tool-authored sample uses path following, with verified before, edited and restored media |
+| D — Delivery and restore | Implemented | A pendulum built from an empty workspace through public tools, with three verified deliveries and pixel-exact restore after reopen |
 
 ### A — Pendulum reference
 
@@ -100,3 +100,23 @@ npm run accept:p2-1-c
 ```
 
 The acceptance adds an independent amber probe to the spare area of B's pendulum canvas through public tools. It preserves the original pendulum and separates path and timing into two edits. The decoded frame-24 dot centers are `(90, 214)` before editing, `(85, 244)` with the reshaped path and `(138, 244)` after retiming. Every pixel outside the probe region must match. An unsupported guide, a combined path edit with invalid timing and a stale edit each preserve the exact prior revision and content hash. CI uploads the three snapshots, PNGs, receipts and recorded diagnostics as `pendulum-motion-edit-evidence`. The full tool-authored sample, export and restored output belong to D. [Acceptance script](../scripts/pendulum-motion-edit-acceptance.ts).
+
+### D — Delivery and restore
+
+The six-second **单摆的一个周期** sample starts from an empty project. Its scene, text, shapes, paths and rotation track are made through discovered Creative Host tools. `animation.path.bind` drives the bob and places its center on the circular guide. One `project.patch.apply` transaction uses `edit-follow-path` to change the guide and progress keys and `put-animation-track` to keep the rod aligned. The only authored changes are the guide path, the binding's timing and the rod's rotation keys. This is an illustration of one complete swing, not a measurement or solution of the pendulum equation. The two versions deliberately vary amplitude and authored time independently. A's pinned snapshot and B and C's checks remain unchanged. [Tool recipe](../scripts/fixtures/pendulum-delivery.ts).
+
+| Zero-based animation checkpoints | Before and restored | Edited |
+| --- | --- | --- |
+| Release at the left extreme | Frame 12 at `(166, 247)` | Frame 12 at `(138, 231)` |
+| Cross the lowest point to the right | Frame 30 at `(216, 257)` | Frame 34 at `(216, 257)` |
+| Reach the opposite extreme | Frame 48 at `(266, 247)` | Frame 56 at `(294, 231)` |
+| Cross to the left | Frame 66 at `(216, 257)` | Frame 78 at `(216, 257)` |
+| Return to the starting extreme | Frame 84 | Frame 100 |
+
+Each snapshot is delivered through the existing retained render-job verification. Remotion outputs PNGs at frames 0, 59 and 119 plus a silent 120-frame H.264 MP4 at 640 × 360 and 20 fps. Independent geometry checks verify the bob center, fixed pivot and aligned rod in all frames of all three videos, with a 2 px bob tolerance. Pixels outside the sweep region match in the before and edited PNGs. The host is closed and reopened, the two snapshots and their job receipts are re-read, then the original content is restored as a new revision that records the source snapshot hash. Fresh restore jobs must reproduce all three original decoded PNGs and all 120 original video frames exactly. [Delivery acceptance](../scripts/pendulum-delivery-acceptance.ts).
+
+```sh
+npm run accept:p2-1-d
+```
+
+CI publishes `pendulum-delivery-evidence` with the three MP4s, nine PNGs, snapshots, scoped tool calls, receipts and per-frame motion measurements. This closes P2.1's engineering scope. The next step is P2.2-A, defining the first supported Three.js subset. Human viewing and presentation review remain separate. [CI workflow](../.github/workflows/video-engine.yml) · [Final human acceptance](PLAN.md#final-human-acceptance-workstream).
