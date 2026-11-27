@@ -161,6 +161,8 @@ Creative Host can opt into `SvgFfmpegProjectGraphRenderer` for a single shot of 
 
 `npm run accept:p2-3-d` makes a standalone Manim mathematics shot from the same retained data and clock. It checks the five physical phases and all 89 decoded chart-marker positions. CI publishes `pendulum-math-evidence`. [P2.3-D setup and evidence](docs/P2-PLAN.md#d--mathematics-shot).
 
+`npm run accept:p2-3-e` renders all three views, then compares five events and one cycle from their decoded pixels. `npm run verify:p2-3-e` re-checks the retained deliveries from the same checkout without re-rendering. CI publishes `pendulum-alignment-evidence`. [P2.3-E time alignment](docs/P2-PLAN.md#e--time-alignment).
+
 ## Design and documentation
 
 Content generation and rendering remain independent. Creative tools share the canonical Project Graph; renderers interpret approved data without rewriting meaning. Track executable tools, catalogue entries and visually verified outputs separately.
