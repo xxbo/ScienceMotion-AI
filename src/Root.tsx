@@ -1,6 +1,7 @@
 import { Composition } from "remotion";
 import { ScienceMotionDemo } from "./compositions/ScienceMotionDemo";
 import { ProjectGraphComposition, type ProjectGraphProps } from "./compositions/ProjectGraphComposition";
+import { PendulumReplay2D } from "./compositions/PendulumReplay2D";
 import episode from "../episodes/cpu-cache/episode.json";
 import projectDemo from "../examples/project-graph-demo.props.json";
 
@@ -22,5 +23,8 @@ export const RemotionRoot: React.FC = () => (
       height={projectDemo.project.sequences[0].height}
       // A demo sceneId would survive input-prop merging and hide other projects' timeline scenes.
       defaultProps={{ project: projectDemo.project } as unknown as Record<string, unknown>} calculateMetadata={projectGraphMetadata} />
+    <Composition id="PendulumReplay2D" component={PendulumReplay2D} width={640} height={360} fps={25} durationInFrames={1}
+      defaultProps={{ replay: null }} calculateMetadata={({ props }) =>
+        ({ ...props.replay?.profile, durationInFrames: props.replay?.poses.length ?? 1 })} />
   </>
 );

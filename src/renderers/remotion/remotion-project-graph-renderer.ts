@@ -5,15 +5,19 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import type { LayoutFrameMeasurement } from "../../contracts/layout-inspection";
+import type { PendulumReplay } from "../../contracts/pendulum-replay";
+import { ProjectGraphRendererError } from "../../contracts/renderer";
 import type { ProjectGraphLayoutRequest, ProjectGraphPreviewRequest, ProjectGraphRenderProgress, ProjectGraphRenderRequest,
   ProjectGraphSnapshotRenderer, ProjectGraphRenderOutput, ProjectGraphVideoRequest } from "../../contracts/renderer";
 import { verifiedPngSources } from "../../platform/png-render-inputs";
 import { assertValidFollowPaths } from "../../platform/follow-path";
 import { verifiedRenderWavAssets } from "../../platform/wav-render-inputs";
+import { assertNoPendulumReplay, hasPendulumReplay, preparePendulumReplay } from "../../platform/pendulum-replay";
 import { serveRenderWavSources } from "./render-wav-sources";
 
 export class RemotionProjectGraphRenderer implements ProjectGraphSnapshotRenderer {
-  readonly id = "remotion.project-graph"; readonly version = "1.0.0";
+  readonly id: string = "remotion.project-graph"; readonly version = "1.0.0";
+  readonly supportsPendulumReplay?: true;
   private serveUrlPromise?: Promise<string>;
   private readonly browserOptions: { onBrowserDownload?: () => never };
   constructor(private readonly entryPoint = resolve("src/index.ts"), private readonly boundedTemporaryStorage = false,
@@ -49,7 +53,13 @@ export class RemotionProjectGraphRenderer implements ProjectGraphSnapshotRendere
     const imageSources = verifiedPngSources(request);
     return { project: structuredClone(request.project), sceneId: request.sceneId, ...(imageSources ? { imageSources } : {}) };
   }
+  protected replay(request: ProjectGraphPreviewRequest | ProjectGraphVideoRequest): PendulumReplay | undefined {
+    assertNoPendulumReplay(request);
+    return undefined;
+  }
   async measureLayout(request: ProjectGraphLayoutRequest): Promise<LayoutFrameMeasurement[]> {
+    if (this.supportsPendulumReplay || hasPendulumReplay(request.project) || request.pendulumTrajectory !== undefined)
+      throw new ProjectGraphRendererError("PENDULUM_REPLAY_LAYOUT_UNSUPPORTED", "Browser layout inspection is not available for trajectory replay.");
     const cancellation = this.cancellation(request);
     try {
       this.stage(request, "bundling");
@@ -77,13 +87,14 @@ export class RemotionProjectGraphRenderer implements ProjectGraphSnapshotRendere
   async renderPreview(request: ProjectGraphPreviewRequest): Promise<ProjectGraphRenderOutput> {
     const cancellation = this.cancellation(request); let directory: string | undefined;
     try {
+      const replay = this.replay(request);
       this.stage(request, "bundling");
-      const inputProps = this.inputProps(request), serveUrl = await this.serveUrl();
+      const inputProps = replay ? { replay } : this.inputProps(request), serveUrl = await this.serveUrl();
       this.stage(request, "selecting");
-      const composition = await selectComposition({ serveUrl, id: "ProjectGraph", inputProps, ...this.browserOptions });
+      const composition = await selectComposition({ serveUrl, id: replay ? "PendulumReplay2D" : "ProjectGraph", inputProps, ...this.browserOptions });
       directory = await mkdtemp(join(tmpdir(), "sciencemotion-preview-")); const output = join(directory, "preview.png");
       this.stage(request, "rendering", 0);
-      await renderStill({ composition, serveUrl, output, frame: request.frame, inputProps, cancelSignal: cancellation.cancelSignal, ...this.browserOptions });
+      await renderStill({ composition, serveUrl, output, frame: replay ? 0 : request.frame, inputProps, cancelSignal: cancellation.cancelSignal, ...this.browserOptions });
       this.stage(request, "rendering", 1);
       return { bytes: new Uint8Array(await readFile(output)), mediaType: "image/png", extension: "png", rendererId: this.id, rendererVersion: this.version };
     } finally { cancellation.dispose(); if (directory) await rm(directory, { recursive: true, force: true }); }
@@ -92,17 +103,19 @@ export class RemotionProjectGraphRenderer implements ProjectGraphSnapshotRendere
     const cancellation = this.cancellation(request); let directory: string | undefined;
     let wavServer: Awaited<ReturnType<typeof serveRenderWavSources>> | undefined;
     try {
+      const replay = this.replay(request);
       this.stage(request, "bundling");
-      const props = this.inputProps(request), { clips, files } = verifiedRenderWavAssets(request);
-      if (files.size) wavServer = await serveRenderWavSources(files);
-      const inputProps = wavServer ? { ...props, audioClips: clips.map(({ clip, source }) => ({ clip, src: wavServer!.url(source.artifactId) })) } : props;
+      const props = replay ? { replay } : this.inputProps(request), audio = replay ? undefined : verifiedRenderWavAssets(request);
+      if (audio?.files.size) wavServer = await serveRenderWavSources(audio.files);
+      const inputProps = wavServer && audio ? { ...props, audioClips: audio.clips.map(({ clip, source }) => ({ clip, src: wavServer!.url(source.artifactId) })) } : props;
       const serveUrl = await this.serveUrl();
       this.stage(request, "selecting");
-      const composition = await selectComposition({ serveUrl, id: "ProjectGraph", inputProps, ...this.browserOptions });
+      const composition = await selectComposition({ serveUrl, id: replay ? "PendulumReplay2D" : "ProjectGraph", inputProps, ...this.browserOptions });
       directory = await mkdtemp(join(tmpdir(), "sciencemotion-video-")); const output = join(directory, "render.mp4");
       this.stage(request, "rendering", 0);
       await renderMedia({ composition, serveUrl, codec: "h264", outputLocation: output, inputProps,
-        frameRange: [request.startFrame, request.startFrame + request.durationFrames - 1], pixelFormat: "yuv420p", cancelSignal: cancellation.cancelSignal,
+        frameRange: replay ? [0, replay.poses.length - 1] : [request.startFrame, request.startFrame + request.durationFrames - 1],
+        pixelFormat: "yuv420p", cancelSignal: cancellation.cancelSignal,
         ...(wavServer ? { audioCodec: "aac" as const } : {}),
         disableSharedMemoryCapture: this.boundedTemporaryStorage, ...this.browserOptions,
         onProgress: p => this.report(request, p.renderedDoneIn === null ? "rendering" : "encoding", p.progress) });
@@ -114,4 +127,11 @@ export class RemotionProjectGraphRenderer implements ProjectGraphSnapshotRendere
       finally { if (directory) await rm(directory, { recursive: true, force: true }); }
     }
   }
+}
+
+/** Opt-in renderer identity for snapshot-bound 2D trajectory playback. */
+export class RemotionPendulumReplayRenderer extends RemotionProjectGraphRenderer {
+  override readonly id = "remotion.pendulum-replay";
+  override readonly supportsPendulumReplay = true;
+  protected override replay(request: ProjectGraphPreviewRequest | ProjectGraphVideoRequest) { return preparePendulumReplay(request); }
 }

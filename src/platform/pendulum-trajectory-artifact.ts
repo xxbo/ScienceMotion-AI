@@ -4,7 +4,7 @@ import type { PendulumTrajectory } from "../contracts/pendulum-trajectory";
 import { parsePendulumTrajectory, PendulumTrajectoryError } from "./pendulum-trajectory";
 
 // A compact v1 trajectory with 10,001 finite samples fits under this byte limit.
-const maxTrajectoryBytes = 4 * 1024 * 1024;
+export const MAX_PENDULUM_TRAJECTORY_BYTES = 4 * 1024 * 1024;
 const sha = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
 const mediaType = "application/json";
 
@@ -12,7 +12,7 @@ function verifyRecord(record: ArtifactRecord | undefined, artifactId: string) {
   if (!record || record.kind !== "data" || record.mediaType !== mediaType || record.id !== artifactId ||
       !/^[0-9a-f]{64}$/.test(record.contentHash) || artifactId !== `sha256:${record.contentHash}` ||
       record.uri !== `artifact://sha256/${record.contentHash}` || !Number.isSafeInteger(record.sizeBytes) ||
-      record.sizeBytes < 1 || record.sizeBytes > maxTrajectoryBytes)
+      record.sizeBytes < 1 || record.sizeBytes > MAX_PENDULUM_TRAJECTORY_BYTES)
     throw new PendulumTrajectoryError("/artifact", "must be a retained JSON data artifact with a valid trajectory identity and size");
   return record;
 }
@@ -33,8 +33,14 @@ export async function readPendulumTrajectory(store: Pick<ArtifactStore, "get" | 
   const bytes = await store.read(artifactId);
   if (!bytes || bytes.byteLength !== record.sizeBytes || sha(bytes) !== record.contentHash)
     throw new PendulumTrajectoryError("/artifact", "does not match the retained trajectory bytes");
+  return { record, bytes, trajectory: decodePendulumTrajectory(bytes) };
+}
+
+export function decodePendulumTrajectory(bytes: Uint8Array) {
+  if (bytes.byteLength < 1 || bytes.byteLength > MAX_PENDULUM_TRAJECTORY_BYTES)
+    throw new PendulumTrajectoryError("/artifact", "exceeds the trajectory size limits");
   let value: unknown;
   try { value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)); }
   catch { throw new PendulumTrajectoryError("/artifact", "must contain valid UTF-8 JSON"); }
-  return { record, bytes, trajectory: parsePendulumTrajectory(value) };
+  return parsePendulumTrajectory(value);
 }

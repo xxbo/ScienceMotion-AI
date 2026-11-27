@@ -23,6 +23,7 @@ import { loadRenderPngAssets } from "./png-render-inputs";
 import { PngInputError } from "./png-input";
 import { WavInputError } from "./wav-input";
 import { loadRenderWavAssets } from "./wav-render-inputs";
+import { hasPendulumReplay, loadPendulumReplayTrajectory } from "./pendulum-replay";
 import projectSchema from "../../schemas/project.schema.json";
 import patchSchema from "../../schemas/project-patch.schema.json";
 import timelinePatchSchema from "../../schemas/project-timeline-patch.schema.json";
@@ -96,9 +97,15 @@ export async function openCreativeHost(options: OpenCreativeHostOptions): Promis
     const projects = workspace, evidence = executions;
     const registry = new InMemoryAgentToolRegistry();
     const manager = new InMemoryPluginManager(registry, { projectSchemaVersion: "1.1.0", healthCheckTimeoutMs: Math.min(limits.maxTimeoutMs, 5000) });
-    const renderer = options.renderer ?? ownedRenderer ?? new RemotionProjectGraphRenderer(options.renderEntryPoint ?? resolve("src/index.ts"));
+    const renderer: ProjectGraphSnapshotRenderer = options.renderer ?? ownedRenderer ?? new RemotionProjectGraphRenderer(options.renderEntryPoint ?? resolve("src/index.ts"));
     const rendering = async <Request extends ProjectGraphRenderRequest, T>(request: Request, work: (input: Request) => Promise<T>): Promise<T> => {
       try {
+        if (hasPendulumReplay(request.project)) {
+          if (!renderer.supportsPendulumReplay)
+            throw new ProjectGraphRendererError("PENDULUM_REPLAY_UNSUPPORTED_RENDERER", "Select a trajectory replay renderer for this snapshot.");
+          const pendulumTrajectory = await loadPendulumReplayTrajectory(request, artifacts);
+          return await work({ ...request, pendulumTrajectory });
+        }
         const imageAssets = await loadRenderPngAssets(request, artifacts);
         return await work(imageAssets ? { ...request, imageAssets } : request);
       } catch (error) {
