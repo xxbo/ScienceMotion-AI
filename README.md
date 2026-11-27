@@ -157,6 +157,8 @@ Creative Host can opt into `SvgFfmpegProjectGraphRenderer` for a single shot of 
 
 `npm run accept:p2-3-b` integrates both SI pendulum cases and retains 961 samples per case. It measures periods from the solved motion and verifies checkpoint accuracy, energy drift and snapshot-bound artifact recovery. CI publishes `pendulum-trajectory-evidence`. [P2.3-B retained trajectory](docs/P2-PLAN.md#b--retained-trajectory).
 
+`npm run accept:p2-3-c` replays one retained numeric trajectory with Remotion and Three.js. Both jobs bind the same snapshot and clock, and acceptance compares every decoded frame of the trimmed exports to its physical pose. CI publishes `pendulum-replay-evidence`. [P2.3-C shared samples](docs/P2-PLAN.md#c--shared-2d-and-3d-samples).
+
 ## Design and documentation
 
 Content generation and rendering remain independent. Creative tools share the canonical Project Graph; renderers interpret approved data without rewriting meaning. Track executable tools, catalogue entries and visually verified outputs separately.

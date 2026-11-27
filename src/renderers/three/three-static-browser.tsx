@@ -5,6 +5,7 @@ import {
   Scene, SphereGeometry, SRGBColorSpace, WebGLRenderer, type BufferGeometry,
 } from "three";
 import type { ThreeCameraPose, ThreeStaticScene } from "./three-static-scene";
+import { ThreePendulumReplayFrame } from "./three-pendulum-browser";
 
 type Props = { model: ThreeStaticScene | null; cameraFrames?: ThreeCameraPose[] };
 
@@ -103,9 +104,14 @@ const ThreeFrame: React.FC<Props> = ({ model, cameraFrames }) => {
 };
 
 function ThreeRoot() {
-  return <Composition id="ThreeStaticSnapshot" component={ThreeFrame} width={640} height={360} fps={24} durationInFrames={1}
-    defaultProps={{ model: null } as Props} calculateMetadata={({ props }) =>
-      ({ ...props.model?.profile, durationInFrames: props.cameraFrames?.length ?? 1 })} />;
+  return <>
+    <Composition id="ThreeStaticSnapshot" component={ThreeFrame} width={640} height={360} fps={24} durationInFrames={1}
+      defaultProps={{ model: null } as Props} calculateMetadata={({ props }) =>
+        ({ ...props.model?.profile, durationInFrames: props.cameraFrames?.length ?? 1 })} />
+    <Composition id="ThreePendulumReplay" component={ThreePendulumReplayFrame} width={640} height={360} fps={25} durationInFrames={1}
+      defaultProps={{ replay: null }} calculateMetadata={({ props }) =>
+        ({ ...props.replay?.profile, durationInFrames: props.replay?.poses.length ?? 1 })} />
+  </>;
 }
 
 registerRoot(ThreeRoot);

@@ -499,6 +499,18 @@ jobs:
           path: out/three-host-delivery/
           if-no-files-found: error
 
+      - name: Verify shared 2D and 3D pendulum replay
+        id: pendulum-replay
+        run: npm run accept:p2-3-c
+
+      - name: Upload pendulum replay evidence
+        if: ${{ !cancelled() && (steps.pendulum-replay.outcome == 'success' || steps.pendulum-replay.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: pendulum-replay-evidence
+          path: out/pendulum-replay/
+          if-no-files-found: error
+
       - name: Verify recorded AI trial and deterministic stdio replay
         # Replay is a regression of the retained interaction, not a new model trial.
         run: npm run accept:ai-trial

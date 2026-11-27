@@ -60,6 +60,8 @@ export interface ProjectGraphRenderRequest {
   project: ProjectDocument; revisionId: string; snapshotHash: string; sceneId?: string;
   /** Immutable PNG bytes in base64, keyed by the snapshot's canonical artifact IDs. */
   imageAssets?: Readonly<Record<string, string>>;
+  /** Immutable base64 JSON for the single trajectory bound by a pendulum replay snapshot. */
+  pendulumTrajectory?: string;
   profile?: { width: number; height: number; fps?: number }; signal?: AbortSignal; onProgress?: (progress: ProjectGraphRenderProgress) => void;
 }
 export interface ProjectGraphPreviewRequest extends ProjectGraphRenderRequest { frame: number }
@@ -81,7 +83,13 @@ export interface RenderWorkerResourceUsage {
 export interface ProjectGraphRenderOutput { bytes: Uint8Array; mediaType: "image/png" | "video/mp4"; extension: "png" | "mp4"; rendererId: string; rendererVersion: string;
   execution?: { kind: "local-process"; protocolVersion: "1.0.0"; jobId: string; processId: number; elapsedMs: number; resourceUsage?: RenderWorkerResourceUsage } }
 export interface ProjectGraphLayoutRequest extends ProjectGraphRenderRequest { frames: number[]; signal?: AbortSignal }
-export interface ProjectGraphSnapshotRenderer { readonly id: string; readonly version: string; renderPreview(request: ProjectGraphPreviewRequest): Promise<ProjectGraphRenderOutput>; renderVideo(request: ProjectGraphVideoRequest): Promise<ProjectGraphRenderOutput>; measureLayout?(request: ProjectGraphLayoutRequest): Promise<LayoutFrameMeasurement[]> }
+export interface ProjectGraphSnapshotRenderer {
+  readonly id: string; readonly version: string;
+  readonly supportsPendulumReplay?: true;
+  renderPreview(request: ProjectGraphPreviewRequest): Promise<ProjectGraphRenderOutput>;
+  renderVideo(request: ProjectGraphVideoRequest): Promise<ProjectGraphRenderOutput>;
+  measureLayout?(request: ProjectGraphLayoutRequest): Promise<LayoutFrameMeasurement[]>;
+}
 
 /** A renderer diagnostic that is safe to return through foreground tools and render jobs. */
 export class ProjectGraphRendererError extends Error {

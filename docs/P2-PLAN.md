@@ -195,8 +195,8 @@ CI publishes `three-host-delivery-evidence` with three MP4s, nine PNGs, three sn
 | --- | --- | --- |
 | A — Physical model | Implemented | Strict SI input, a nonlinear ideal pendulum, and ten verified analytic checkpoints for two rod lengths |
 | B — Retained trajectory | Implemented | Two retained numerical trajectories, verified periods, ten checkpoints, energy bounds and byte-identical replay after reopen |
-| C — Shared 2D and 3D samples | Next | Both renderers consume the same retained physical samples and time mapping |
-| D — Mathematics shot | Planned | Make the Manim shot from the same model and reference timing |
+| C — Shared 2D and 3D samples | Implemented | Remotion and Three.js replay the same retained trajectory, with six checked previews and 89 frame pairs mapped to physical time |
+| D — Mathematics shot | Next | Make the Manim shot from the same model and reference timing |
 | E — Time alignment | Planned | Verify that the rendered motion and mathematics track the same events |
 
 ### A — Physical model
@@ -241,3 +241,17 @@ npm run accept:p2-3-b
 ```
 
 CI publishes `pendulum-trajectory-evidence` with both JSON trajectories, the data snapshot and a report of periods, checkpoints, drift and retention.
+
+### C — Shared 2D and 3D samples
+
+The replay subset uses an immutable metric, Y-up ProjectDocument with one sequence, one full-length shot and one root `simulation` node. Its `simulation` component has `{ "model": "pendulum-trajectory-v1", "assetId": "..." }` and binds one retained JSON data asset by ID and SHA-256. It does not compose other nodes, authored trims, keyframes, constraints, timeline effects or media. An export range inside the shot is supported. [Binding and clock](../src/platform/pendulum-replay.ts).
+
+Select `RemotionPendulumReplayRenderer` or `ThreeJsPendulumReplayRenderer` when opening Creative Host. The Host reads the declared local artifact, then both adapters use the same preflight and Hermite sampler before their browsers start. For output index `i`, the source frame is `startFrame + i`, and physical time in seconds is `sourceFrame / fps`. A preview uses the same rule for one frame. The browser compositions receive verified poses in output order. Neither runs the solver nor resets the physical clock when an export starts mid-shot. Missing or altered data and ranges extending past the trajectory are rejected. The existing default renderer, worker and Three.js project-graph identities are unchanged. Layout inspection is not part of this replay subset.
+
+Both views fit the same world-space positions to a unit rod and the same front projection. Remotion paints the guide, pivot, rod and bob as SVG, and Three.js renders lit solid geometry with an orthographic camera. Acceptance reuses B's exact retained 2 m trajectory bytes and the same replay snapshot in two separately opened Hosts. It renders a 640 × 360, 25 fps silent clip for source frames `[7, 96)` and previews frames 7, 51 and 95. The 25 fps clock exercises interpolation between B's 240 Hz samples. It measures the decoded pivot, rod and bob, checks all 89 frame pairs against the retained positions within 2 px and verifies both engines' job receipts. [Acceptance](../scripts/pendulum-replay-acceptance.ts).
+
+```sh
+npm run accept:p2-3-c
+```
+
+CI publishes `pendulum-replay-evidence` with the two videos, six previews, the source trajectory, replay snapshot, receipts and per-frame comparison. D will build the separate Manim mathematics shot.
