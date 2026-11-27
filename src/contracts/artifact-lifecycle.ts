@@ -4,7 +4,7 @@ import type { ProjectDocument } from "./project";
 export interface ArtifactReference {
   id: string;
   artifactId: string;
-  ownerType: "project" | "tool-run" | "plugin" | "user" | "snapshot" | "transaction" | "render-job";
+  ownerType: "project" | "tool-run" | "plugin" | "user" | "snapshot" | "transaction" | "render-job" | "shot-segment";
   ownerId: string;
   role: string;
   createdAt: string;

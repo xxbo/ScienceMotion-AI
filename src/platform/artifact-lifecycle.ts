@@ -10,7 +10,7 @@ import { publishLocalFile } from "./local-file-publication";
 type Owner = Pick<ArtifactReference, "ownerType" | "ownerId">;
 type ReferenceInput = Omit<ArtifactReference, "id" | "createdAt">;
 type Query = { artifactId?: string; ownerType?: ArtifactReference["ownerType"]; ownerId?: string };
-const ownerTypes = new Set(["project", "tool-run", "plugin", "user", "snapshot", "transaction", "render-job"]);
+const ownerTypes = new Set(["project", "tool-run", "plugin", "user", "snapshot", "transaction", "render-job", "shot-segment"]);
 function assertReferenceId(id: string): string {
   if (!/^ref:[a-f0-9]{64}$/.test(id)) throw new Error("Invalid artifact reference ID");
   return id.slice(4);
@@ -105,6 +105,27 @@ export class LocalArtifactLifecycleManager implements ArtifactLifecycleManager {
     return (await this.referencesStore.list({ artifactId: input.artifactId })).find((r) => r.id === id) ?? reference;
   }
   async attach(input: ReferenceInput): Promise<ArtifactReference> { const copy = structuredClone(input); return this.exclusive(() => this.attachUnlocked(copy)); }
+  /** Pin a verified group in order, without GC interleaving. Put any publication marker last. */
+  async attachBatch(inputs: readonly ReferenceInput[]): Promise<void> {
+    const createdAt = new Date().toISOString();
+    const records = structuredClone(inputs).map(input => ({ ...input, id: referenceId(input), createdAt }));
+    await this.exclusive(async () => {
+      for (const id of new Set(records.map(record => record.artifactId))) {
+        if (!await this.checkedArtifact(id)) throw new Error("Cannot reference an artifact that does not exist: " + id);
+      }
+      const added: string[] = [];
+      try {
+        for (const record of records) if (await this.referencesStore.attach(record)) added.push(record.id);
+      } catch (error) {
+        const failures: unknown[] = [];
+        for (const id of added.reverse()) {
+          try { await this.referencesStore.detach(id); } catch (undo) { failures.push(undo); }
+        }
+        if (failures.length) throw new AggregateError([error, ...failures], "Artifact pin batch could not be rolled back");
+        throw error;
+      }
+    });
+  }
   async detach(id: string): Promise<boolean> { assertReferenceId(id); return this.exclusive(() => this.referencesStore.detach(id)); }
   async references(id: string): Promise<ArtifactReference[]> { return this.exclusive(() => this.referencesStore.list({ artifactId: id })); }
   async releaseOwner(owner: Owner, rolePrefix?: string): Promise<void> {

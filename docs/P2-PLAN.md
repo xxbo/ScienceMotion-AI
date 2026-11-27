@@ -288,3 +288,27 @@ npm run verify:p2-3-e  # Re-check C and D outputs from this checkout without re-
 ```
 
 CI downloads the actual `pendulum-replay-evidence` and `pendulum-math-evidence` from the same run and publishes `pendulum-alignment-evidence` with the three original videos, snapshot, trajectory, decoded observations and comparison report. This closes P2.3 engineering acceptance. P2.4-A defines retained shot segments for subsequent editing. No combined cut or deferred human presentation review is delivered here. [CI workflow](../.github/workflows/video-engine.yml).
+
+## P2.4 — Multi-engine editing
+
+| Step | Status | Completion evidence |
+| --- | --- | --- |
+| A — Retained shot segments | Implemented | Versioned descriptors for two verified MP4s, with independent retention and byte-exact recovery after reopen |
+| B — Two-engine cut | Next | Assemble a first cut from retained Remotion and Three.js segments and check its decoded boundaries |
+| C — Trim and reorder | Planned | Apply explicit segment-local trims and order changes while preserving inputs |
+| D — Manim and recovery | Planned | Admit the standalone Manim segment and verify rejection and reopen for the assembled cut |
+
+### A — Retained shot segments
+
+A segment describes one finished delivery, not a placement on an editing timeline. `RetainedShotSegment` v1 binds a project ID, source snapshot ID/revision/document hash, source coordinate scope, half-open frame range, native profile, renderer ID/version, render job ID/input hash and the verified MP4 identity. The scope is the explicitly requested scene or the snapshot's primary sequence. Source frame `startFrame + i` corresponds to MP4 frame `i`, even at a nonzero start. The v1 intake takes a trusted, succeeded Host video receipt. It verifies silent H.264 `yuv420p` at the admitted integer frame rate and native even dimensions. It decodes all advertised frames and verifies their presentation timestamps in integer ticks, so a valid average frame rate alone cannot pass. No resize, retime or transcode is performed. [Contract](../src/contracts/retained-shot-segment.ts) · [Schema](../schemas/retained-shot-segment.schema.json).
+
+`RetainedShotSegmentStore` publishes a canonical JSON descriptor as a content-addressed data artifact. The segment owns three references, one to its descriptor, one to the source snapshot envelope, and one to the original video. A repeat capture of the same receipt and content is idempotent. The decoded RGB hash is reported as evidence, not used as the segment ID. Using the shared local lifecycle manager, the store verifies the whole pin set and attaches the descriptor last. A reader needs all three references and checks hashes rather than reopening the original render job or re-rendering. Different segments may share their source snapshot artifact. The envelope is provenance, not a backup of every asset needed to render the source project. A installs no public Host tools and does not modify the default renderer or place anything on a timeline. [Store](../src/platform/retained-shot-segment.ts).
+
+Acceptance consumes C's actual Remotion and Three.js Host deliveries from one checkout. Each MP4 contains 89 frames at 640 × 360 and 25 fps from source range `[7, 96)`. It checks idempotent capture, rejects a mismatched snapshot and receipt, rejects selectively altered presentation timing, releases the original snapshot and video-owner references, and reopens after collecting unreferenced controls. The two recovered MP4s must match the originals byte for byte, and a changed video read must fail its hash check. [Acceptance](../scripts/retained-shot-segment-acceptance.ts).
+
+```sh
+npm run accept:p2-4-a
+npm run verify:p2-4-a  # Use C's retained outputs from the same checkout without rendering again.
+```
+
+CI publishes `retained-shot-segment-evidence` with both descriptors and original MP4s, their source snapshot, the v1 schema, and the recovery report. B will consume the retained segment IDs to make the first two-engine cut.

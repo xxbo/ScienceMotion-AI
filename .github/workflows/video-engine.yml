@@ -558,6 +558,18 @@ jobs:
           path: out/pendulum-replay/
           if-no-files-found: error
 
+      - name: Verify retained shot segments from the two replay deliveries
+        id: retained-shot-segments
+        run: npm run verify:p2-4-a
+
+      - name: Upload retained shot segment evidence
+        if: ${{ !cancelled() && (steps.retained-shot-segments.outcome == 'success' || steps.retained-shot-segments.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: retained-shot-segment-evidence
+          path: out/retained-shot-segments/
+          if-no-files-found: error
+
       - name: Verify recorded AI trial and deterministic stdio replay
         # Replay is a regression of the retained interaction, not a new model trial.
         run: npm run accept:ai-trial
