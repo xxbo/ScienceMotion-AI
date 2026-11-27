@@ -1,0 +1,99 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://xxbo.github.io/ScienceMotion-AI/schemas/retained-shot-segment.schema.json",
+  "title": "Retained shot segment",
+  "description": "A verified native MP4 and its immutable source snapshot, prior to any placement in an edit.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "projectId", "source", "origin", "renderer", "profile", "media"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "projectId": { "$ref": "#/definitions/identity" },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["snapshot", "scope", "range"],
+      "properties": {
+        "snapshot": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "revisionId", "contentHash", "artifactId"],
+          "properties": {
+            "id": { "$ref": "#/definitions/identity" },
+            "revisionId": { "$ref": "#/definitions/identity" },
+            "contentHash": { "$ref": "#/definitions/hash" },
+            "artifactId": { "$ref": "#/definitions/artifactId" }
+          }
+        },
+        "scope": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "id"],
+          "properties": {
+            "kind": { "enum": ["sequence", "scene"] },
+            "id": { "$ref": "#/definitions/identity" }
+          }
+        },
+        "range": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["startFrame", "durationFrames"],
+          "properties": {
+            "startFrame": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+            "durationFrames": { "type": "integer", "minimum": 1, "maximum": 900 }
+          }
+        }
+      }
+    },
+    "origin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "jobId", "inputHash"],
+      "properties": {
+        "kind": { "const": "render-job" },
+        "jobId": { "$ref": "#/definitions/identity" },
+        "inputHash": { "$ref": "#/definitions/hash" }
+      }
+    },
+    "renderer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version"],
+      "properties": {
+        "id": { "$ref": "#/definitions/identity" },
+        "version": { "$ref": "#/definitions/identity" }
+      }
+    },
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["width", "height", "fps"],
+      "properties": {
+        "width": { "$ref": "#/definitions/dimension" },
+        "height": { "$ref": "#/definitions/dimension" },
+        "fps": { "type": "integer", "minimum": 1, "maximum": 120 }
+      }
+    },
+    "media": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifactId", "contentHash", "sizeBytes", "mediaType", "codec", "pixelFormat", "frameCount", "silent"],
+      "properties": {
+        "artifactId": { "$ref": "#/definitions/artifactId" },
+        "contentHash": { "$ref": "#/definitions/hash" },
+        "sizeBytes": { "type": "integer", "minimum": 8, "maximum": 67108864 },
+        "mediaType": { "const": "video/mp4" },
+        "codec": { "const": "h264" },
+        "pixelFormat": { "const": "yuv420p" },
+        "frameCount": { "type": "integer", "minimum": 1, "maximum": 900 },
+        "silent": { "const": true }
+      }
+    }
+  },
+  "definitions": {
+    "identity": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[^\\u0000]*\\S[^\\u0000]*$" },
+    "hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "artifactId": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "dimension": { "type": "integer", "minimum": 2, "maximum": 7680, "multipleOf": 2 }
+  }
+}

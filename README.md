@@ -163,6 +163,8 @@ Creative Host can opt into `SvgFfmpegProjectGraphRenderer` for a single shot of 
 
 `npm run accept:p2-3-e` renders all three views, then compares five events and one cycle from their decoded pixels. `npm run verify:p2-3-e` re-checks the retained deliveries from the same checkout without re-rendering. CI publishes `pendulum-alignment-evidence`. [P2.3-E time alignment](docs/P2-PLAN.md#e--time-alignment).
 
+`npm run accept:p2-4-a` captures two source-bound shot segments with their original verified MP4s. It reopens storage after releasing the upstream ownership and checks exact recovery. CI publishes `retained-shot-segment-evidence`. [P2.4-A contract and recovery](docs/P2-PLAN.md#a--retained-shot-segments).
+
 ## Design and documentation
 
 Content generation and rendering remain independent. Creative tools share the canonical Project Graph; renderers interpret approved data without rewriting meaning. Track executable tools, catalogue entries and visually verified outputs separately.

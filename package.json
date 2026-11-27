@@ -56,6 +56,8 @@
     "accept:p2-3-d": "npm run accept:p2-3-b && tsx scripts/pendulum-math-acceptance.ts",
     "accept:p2-3-e": "npm run accept:p2-3-b && tsx scripts/pendulum-replay-acceptance.ts && tsx scripts/pendulum-math-acceptance.ts && npm run verify:p2-3-e",
     "verify:p2-3-e": "tsx scripts/pendulum-alignment-acceptance.ts",
+    "accept:p2-4-a": "npm run accept:p2-3-c && npm run verify:p2-4-a",
+    "verify:p2-4-a": "tsx scripts/retained-shot-segment-acceptance.ts",
     "accept:catalogue-scale": "tsx scripts/catalogue-scale-acceptance.ts",
     "host:stdio": "tsx scripts/creative-host-server.ts",
     "accept:ai-trial": "tsx scripts/ai-trial-acceptance.ts",
