@@ -165,6 +165,8 @@ Creative Host can opt into `SvgFfmpegProjectGraphRenderer` for a single shot of 
 
 `npm run accept:p2-4-a` captures two source-bound shot segments with their original verified MP4s. It reopens storage after releasing the upstream ownership and checks exact recovery. CI publishes `retained-shot-segment-evidence`. [P2.4-A contract and recovery](docs/P2-PLAN.md#a--retained-shot-segments).
 
+`npm run accept:p2-4-b` appends the two retained MP4s without re-encoding and verifies all 178 decoded frames and the engine switch. CI publishes `two-engine-cut-evidence`. [P2.4-B time map and cut](docs/P2-PLAN.md#b--two-engine-cut).
+
 ## Design and documentation
 
 Content generation and rendering remain independent. Creative tools share the canonical Project Graph; renderers interpret approved data without rewriting meaning. Track executable tools, catalogue entries and visually verified outputs separately.

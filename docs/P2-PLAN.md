@@ -294,8 +294,8 @@ CI downloads the actual `pendulum-replay-evidence` and `pendulum-math-evidence` 
 | Step | Status | Completion evidence |
 | --- | --- | --- |
 | A — Retained shot segments | Implemented | Versioned descriptors for two verified MP4s, with independent retention and byte-exact recovery after reopen |
-| B — Two-engine cut | Next | Assemble a first cut from retained Remotion and Three.js segments and check its decoded boundaries |
-| C — Trim and reorder | Planned | Apply explicit segment-local trims and order changes while preserving inputs |
+| B — Two-engine cut | Implemented | Append the two retained MP4s without re-encoding, then check the frame map, all 178 decoded frames and the cut point |
+| C — Trim and reorder | Next | Apply explicit segment-local trims and order changes while preserving inputs |
 | D — Manim and recovery | Planned | Admit the standalone Manim segment and verify rejection and reopen for the assembled cut |
 
 ### A — Retained shot segments
@@ -311,4 +311,19 @@ npm run accept:p2-4-a
 npm run verify:p2-4-a  # Use C's retained outputs from the same checkout without rendering again.
 ```
 
-CI publishes `retained-shot-segment-evidence` with both descriptors and original MP4s, their source snapshot, the v1 schema, and the recovery report. B will consume the retained segment IDs to make the first two-engine cut.
+CI publishes `retained-shot-segment-evidence` with both descriptors and original MP4s, their source snapshot, the v1 schema, and the recovery report.
+
+### B — Two-engine cut
+
+`assembleShotCut` accepts two ordered full segment IDs and reads both through the verified A store. A versioned plan preserves each renderer and exact source binding, and assigns contiguous, half-open output ranges. Both segments must have the same native width, height and integer FPS. There is no renderer invocation, resize, retime, trim, transition or persistent edit in this slice. [Plan contract](../src/contracts/shot-cut.ts) · [Assembly](../src/platform/shot-cut.ts).
+
+The two real input engines emit different MP4 track timescales even at 25 fps. FFmpeg remuxes each to a common integer clock and copies the compressed video into one silent H.264 MP4. The `avc3` sample entry permits the clips' H.264 parameter sets in-band. The assembler checks the output profile, start, full presentation clock and per-frame decoded RGB hashes in the declared order. It rejects any incompatible media or changed, lost, duplicated or misordered decoded frame, with no transcode fallback.
+
+Acceptance recovers both A IDs from their receipts and exact archived bytes. The cut has 178 frames at 640 × 360, 25 fps and lasts 7.12 s. Remotion covers output `[0, 89)` and Three.js covers `[89, 178)`. At the cut, output frame 88 maps to Remotion source frame 95, and output frame 89 maps to Three.js source frame 7. Both previews are extracted from the cut and verified against the matching decoded frame. A duplicated seam frame fails, even with the original frame count. [Acceptance](../scripts/two-engine-cut-acceptance.ts).
+
+```sh
+npm run accept:p2-4-b
+npm run verify:p2-4-b  # Assemble from A's retained outputs for the same checkout.
+```
+
+CI publishes `two-engine-cut-evidence` with the cut, plan and frame hashes, two seam PNGs and the acceptance report. C will add explicit segment-local trims and reorder an edit without changing its retained inputs. D will add Manim and test assembled-cut recovery.

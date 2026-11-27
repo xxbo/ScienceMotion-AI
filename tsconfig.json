@@ -48,6 +48,7 @@
     "scripts/pendulum-math-acceptance.ts",
     "scripts/pendulum-alignment-acceptance.ts",
     "scripts/retained-shot-segment-acceptance.ts",
+    "scripts/two-engine-cut-acceptance.ts",
     "scripts/catalogue-scale-acceptance.ts",
     "scripts/creative-host-server.ts",
     "scripts/ai-trial-acceptance.ts",
