@@ -159,6 +159,8 @@ Creative Host can opt into `SvgFfmpegProjectGraphRenderer` for a single shot of 
 
 `npm run accept:p2-3-c` replays one retained numeric trajectory with Remotion and Three.js. Both jobs bind the same snapshot and clock, and acceptance compares every decoded frame of the trimmed exports to its physical pose. CI publishes `pendulum-replay-evidence`. [P2.3-C shared samples](docs/P2-PLAN.md#c--shared-2d-and-3d-samples).
 
+`npm run accept:p2-3-d` makes a standalone Manim mathematics shot from the same retained data and clock. It checks the five physical phases and all 89 decoded chart-marker positions. CI publishes `pendulum-math-evidence`. [P2.3-D setup and evidence](docs/P2-PLAN.md#d--mathematics-shot).
+
 ## Design and documentation
 
 Content generation and rendering remain independent. Creative tools share the canonical Project Graph; renderers interpret approved data without rewriting meaning. Track executable tools, catalogue entries and visually verified outputs separately.

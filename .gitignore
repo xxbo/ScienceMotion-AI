@@ -12,4 +12,5 @@ coverage/
 .remotion/
 
 .venv/
+.venv-manim/
 public/episodes/**/narration.mp3

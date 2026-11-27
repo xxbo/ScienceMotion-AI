@@ -1,11 +1,10 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { PNG } from "pngjs";
-import type { ArtifactRecord } from "../src/contracts/artifact";
 import type { ProjectGraphSnapshotRenderer } from "../src/contracts/renderer";
 import { FileSystemArtifactReferenceStore, LocalArtifactLifecycleManager } from "../src/platform/artifact-lifecycle";
 import { FileSystemArtifactStore } from "../src/platform/artifact-store";
@@ -13,11 +12,12 @@ import { verifyCreativeDelivery } from "../src/platform/creative-delivery";
 import { openCreativeHost } from "../src/platform/creative-host";
 import { FileSystemProjectWorkspace } from "../src/platform/filesystem-project-workspace";
 import { decodePendulumTrajectory } from "../src/platform/pendulum-trajectory-artifact";
-import { hashProject, type ProjectSnapshot } from "../src/platform/project-snapshots";
+import type { ProjectSnapshot } from "../src/platform/project-snapshots";
 import { readVerifiedJobArtifact } from "../src/platform/render-job-output";
 import { RemotionPendulumReplayRenderer } from "../src/renderers/remotion/remotion-project-graph-renderer";
 import { ThreeJsPendulumReplayRenderer } from "../src/renderers/three/three-project-graph-renderer";
-import { createPendulumReplayProject, replayAssetId, replayProfile as profile, replayProjectId as projectId, replayRange as range } from "./fixtures/pendulum-replay-project";
+import { createPendulumReplayProject, replayProfile as profile, replayProjectId as projectId, replayRange as range, replaySnapshotId } from "./fixtures/pendulum-replay-project";
+import { readRetainedLongPendulum } from "./fixtures/pendulum-retained-source";
 
 const output = resolve("out/pendulum-replay");
 await mkdir(output, { recursive: true });
@@ -32,7 +32,6 @@ const write = async (file: string, bytes: Uint8Array | string) => {
   return path;
 };
 const save = (file: string, value: unknown) => write(file, JSON.stringify(value, null, 2) + "\n");
-const readJson = async <T>(file: string) => JSON.parse(await readFile(file, "utf8")) as T;
 const previewFrames = [7, 51, 95];
 const { width, height, fps } = profile;
 const pixelsPerRod = 0.32 * Math.min(width, height), pivot = [width / 2, 0.42 * height] as const;
@@ -130,19 +129,11 @@ async function render(label: string, renderer: ProjectGraphSnapshotRenderer, sna
 try {
   const checkout = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
   evidence.checkout = checkout;
-  const b = await readJson<{ checkout: string; status: string; cases: Array<{ id: string; artifact: ArtifactRecord }> }>("out/pendulum-trajectory/evidence.json");
-  const source = await readJson<ProjectSnapshot>("out/pendulum-trajectory/snapshot.json");
-  const trajectoryBytes = await readFile("out/pendulum-trajectory/long-trajectory.json");
-  assert.deepEqual([b.checkout, b.status, source.id, source.contentHash], [checkout, "passed", "pendulum-trajectories-v1", hashProject(source.document)]);
-  const retained = b.cases.find(item => item.id === "long")?.artifact;
-  const contentHash = sha(trajectoryBytes);
-  assert.ok(retained);
-  assert.equal(retained.id, `sha256:${contentHash}`);
-  assert.deepEqual(source.document.assets.find(asset => asset.id === replayAssetId),
-    { id: replayAssetId, kind: "data", uri: retained.uri, contentHash });
+  const { bytes: trajectoryBytes, identity } = await readRetainedLongPendulum(checkout);
+  const { artifactId, contentHash } = identity;
   const saved = await artifacts.put({ bytes: trajectoryBytes, kind: "data", mediaType: "application/json", provenance: { projectId } });
-  assert.equal(saved.id, retained.id);
-  evidence.source = { artifactId: retained.id, bSnapshotHash: source.contentHash, contentHash };
+  assert.equal(saved.id, artifactId);
+  evidence.source = identity;
   await write("trajectory.json", trajectoryBytes);
 
   const project = createPendulumReplayProject(contentHash);
@@ -152,7 +143,7 @@ try {
   try {
     await workspace.create(project);
     snapshot = await workspace.saveSnapshot(projectId, project.revisions[0].id,
-      { id: "pendulum-replay-v1", createdAt: project.project.createdAt });
+      { id: replaySnapshotId, createdAt: project.project.createdAt });
   } finally { await workspace.close(); }
   await save("snapshot.json", snapshot);
   evidence.snapshot = { id: snapshot.id, contentHash: snapshot.contentHash };
@@ -172,7 +163,7 @@ try {
     maxRemotionErrorPixels: Math.max(...remotion.frames.map(item => item.errorPixels)),
     maxThreeErrorPixels: Math.max(...three.frames.map(item => item.errorPixels)) };
   evidence.status = "passed";
-  console.log(`Verified ${range.durationFrames} matched frame pairs from retained trajectory ${retained.id}. Maximum 2D/3D bob delta ${maxCrossRendererDeltaPixels.toFixed(3)} px.`);
+  console.log(`Verified ${range.durationFrames} matched frame pairs from retained trajectory ${artifactId}. Maximum 2D/3D bob delta ${maxCrossRendererDeltaPixels.toFixed(3)} px.`);
 } catch (error) {
   evidence.status = "failed";
   evidence.failure = error instanceof Error ? error.message : String(error);

@@ -196,8 +196,8 @@ CI publishes `three-host-delivery-evidence` with three MP4s, nine PNGs, three sn
 | A — Physical model | Implemented | Strict SI input, a nonlinear ideal pendulum, and ten verified analytic checkpoints for two rod lengths |
 | B — Retained trajectory | Implemented | Two retained numerical trajectories, verified periods, ten checkpoints, energy bounds and byte-identical replay after reopen |
 | C — Shared 2D and 3D samples | Implemented | Remotion and Three.js replay the same retained trajectory, with six checked previews and 89 frame pairs mapped to physical time |
-| D — Mathematics shot | Next | Make the Manim shot from the same model and reference timing |
-| E — Time alignment | Planned | Verify that the rendered motion and mathematics track the same events |
+| D — Mathematics shot | Implemented | Manim shows the model, measured cycle and angle trace, with 89 checked chart frames from the same replay clock |
+| E — Time alignment | Next | Verify that the rendered motion and mathematics track the same events |
 
 ### A — Physical model
 
@@ -254,4 +254,22 @@ Both views fit the same world-space positions to a unit rod and the same front p
 npm run accept:p2-3-c
 ```
 
-CI publishes `pendulum-replay-evidence` with the two videos, six previews, the source trajectory, replay snapshot, receipts and per-frame comparison. D will build the separate Manim mathematics shot.
+CI publishes `pendulum-replay-evidence` with the two videos, six previews, the source trajectory, replay snapshot, receipts and per-frame comparison.
+
+### D — Mathematics shot
+
+Manim Cairo renders a standalone Mandarin mathematics shot with the nonlinear equation `θ̈ + (g/L) sin θ = 0`, the 2 m model parameters, and a plot of `θ(t)`. The curve connects B's exact 240 Hz retained samples. Two rightward bottom crossings give the measured period of about 2.887 s. The comparison of about 2.837 s is the small-angle expression `2π sqrt(L/g)`, not a second measurement. The chart marks the first five phases at continuous physical times inferred from the sampled angle or angular velocity, with no snapping to video frames. [Shot preparation](../src/platform/pendulum-math-shot.ts) · [Manim scene](../src/renderers/manim/pendulum_math_scene.py).
+
+The Manim input binds the same trajectory hash and replay snapshot as C. The shared replay sampler supplies one time and angle per exported frame, so the first chart cursor and readout use `7 / 25 = 0.28 s`. Manim draws those poses in output order and neither integrates the model nor restarts physical time. Acceptance checks the five phase times against A (within 1 ms), verifies the formula and plot are visible, independently locates the orange chart marker on each of the 89 decoded frames (within 2 px of the retained angle and time), and retains three previews. [Acceptance](../scripts/pendulum-math-acceptance.ts).
+
+The standalone path requires Manim 0.19.1, Cairo/Pango, DejaVu Sans and Sans Mono, Noto Sans CJK SC, and FFmpeg/ffprobe. For example, on Ubuntu 24.04 after `npm install`:
+
+```sh
+sudo apt-get install --no-install-recommends build-essential pkg-config libcairo2-dev libpango1.0-dev \
+  python3-venv fonts-dejavu-core fonts-dejavu-mono fonts-noto-cjk ffmpeg
+python3 -m venv .venv-manim
+.venv-manim/bin/python -m pip install -r requirements-manim.txt
+PENDULUM_MANIM_PYTHON=.venv-manim/bin/python npm run accept:p2-3-d
+```
+
+CI publishes `pendulum-math-evidence` with the MP4, the three PNGs, source and snapshot JSON, Manim input, and per-frame verification. E will compare events across all three rendered views. Host integration and multi-engine editing of the Manim segment belong to P2.4.
