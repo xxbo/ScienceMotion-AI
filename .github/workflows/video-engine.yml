@@ -570,6 +570,18 @@ jobs:
           path: out/retained-shot-segments/
           if-no-files-found: error
 
+      - name: Assemble and verify the first two-engine cut
+        id: two-engine-cut
+        run: npm run verify:p2-4-b
+
+      - name: Upload verified two-engine cut evidence
+        if: ${{ !cancelled() && (steps.two-engine-cut.outcome == 'success' || steps.two-engine-cut.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: two-engine-cut-evidence
+          path: out/two-engine-cut/
+          if-no-files-found: error
+
       - name: Verify recorded AI trial and deterministic stdio replay
         # Replay is a regression of the retained interaction, not a new model trial.
         run: npm run accept:ai-trial

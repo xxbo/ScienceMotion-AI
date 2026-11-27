@@ -58,6 +58,8 @@
     "verify:p2-3-e": "tsx scripts/pendulum-alignment-acceptance.ts",
     "accept:p2-4-a": "npm run accept:p2-3-c && npm run verify:p2-4-a",
     "verify:p2-4-a": "tsx scripts/retained-shot-segment-acceptance.ts",
+    "accept:p2-4-b": "npm run accept:p2-4-a && npm run verify:p2-4-b",
+    "verify:p2-4-b": "tsx scripts/two-engine-cut-acceptance.ts",
     "accept:catalogue-scale": "tsx scripts/catalogue-scale-acceptance.ts",
     "host:stdio": "tsx scripts/creative-host-server.ts",
     "accept:ai-trial": "tsx scripts/ai-trial-acceptance.ts",
