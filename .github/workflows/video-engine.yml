@@ -143,6 +143,53 @@ jobs:
           path: out/render-engine-comparison/
           if-no-files-found: error
 
+  render-pendulum-math:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install native Manim dependencies and fonts
+        run: |
+          sudo sed -i -E 's@mirror\+file:/+etc/apt/apt-mirrors\.txt|http://[^[:space:]]+\.ec2\.archive\.ubuntu\.com/ubuntu/?@https://archive.ubuntu.com/ubuntu/@g' /etc/apt/sources.list.d/ubuntu.sources
+          apt_options=(-o Acquire::Retries=2 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30 -o Acquire::Languages=none)
+          sudo apt-get "${apt_options[@]}" update
+          sudo apt-get "${apt_options[@]}" install -y --no-install-recommends \
+            build-essential pkg-config libcairo2-dev libpango1.0-dev fonts-dejavu-core fonts-dejavu-mono fonts-noto-cjk ffmpeg
+
+      - name: Set up Manim Cairo
+        run: |
+          python -m venv .venv-manim
+          .venv-manim/bin/python -m pip install -r requirements-manim.txt
+
+      - name: Render and verify the Manim pendulum mathematics shot
+        id: pendulum-math
+        env:
+          PENDULUM_MANIM_PYTHON: .venv-manim/bin/python
+        run: npm run accept:p2-3-d
+
+      - name: Upload pendulum mathematics evidence
+        if: ${{ !cancelled() && (steps.pendulum-math.outcome == 'success' || steps.pendulum-math.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: pendulum-math-evidence
+          path: out/pendulum-math/
+          if-no-files-found: error
+
   validate-and-render:
     runs-on: ubuntu-24.04
     # The full acceptance suite can exceed 20 minutes when system package downloads are slow.

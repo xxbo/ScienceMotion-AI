@@ -53,6 +53,7 @@
     "accept:p2-3-a": "tsx scripts/pendulum-physics-acceptance.ts",
     "accept:p2-3-b": "tsx scripts/pendulum-trajectory-acceptance.ts",
     "accept:p2-3-c": "npm run accept:p2-3-b && tsx scripts/pendulum-replay-acceptance.ts",
+    "accept:p2-3-d": "npm run accept:p2-3-b && tsx scripts/pendulum-math-acceptance.ts",
     "accept:catalogue-scale": "tsx scripts/catalogue-scale-acceptance.ts",
     "host:stdio": "tsx scripts/creative-host-server.ts",
     "accept:ai-trial": "tsx scripts/ai-trial-acceptance.ts",

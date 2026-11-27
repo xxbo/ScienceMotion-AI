@@ -45,6 +45,7 @@
     "scripts/pendulum-physics-acceptance.ts",
     "scripts/pendulum-trajectory-acceptance.ts",
     "scripts/pendulum-replay-acceptance.ts",
+    "scripts/pendulum-math-acceptance.ts",
     "scripts/catalogue-scale-acceptance.ts",
     "scripts/creative-host-server.ts",
     "scripts/ai-trial-acceptance.ts",

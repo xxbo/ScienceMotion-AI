@@ -3,6 +3,7 @@ import { createEmptyProject } from "../../src/platform/empty-project";
 
 export const replayProjectId = "pendulum-shared-replay", replaySceneId = "pendulum";
 export const replayAssetId = "pendulum-long-trajectory";
+export const replaySnapshotId = "pendulum-replay-v1";
 export const replayProfile = { width: 640, height: 360, fps: 25 };
 export const replayRange = { startFrame: 7, durationFrames: 89 };
 
