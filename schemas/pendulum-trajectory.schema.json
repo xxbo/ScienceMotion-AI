@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://xxbo.github.io/ScienceMotion-AI/schemas/pendulum-trajectory.schema.json",
+  "title": "Retained ideal pendulum trajectory",
+  "description": "Uniform SI samples of an ideal simple pendulum including release and the last step.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "model", "solver", "timeStepSeconds", "stepCount", "samples"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "model": { "$ref": "https://xxbo.github.io/ScienceMotion-AI/schemas/pendulum-model.schema.json" },
+    "solver": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version"],
+      "properties": {
+        "id": { "const": "pendulum-rk4" },
+        "version": { "const": "1.0.0" }
+      }
+    },
+    "timeStepSeconds": { "type": "number", "exclusiveMinimum": 0 },
+    "stepCount": { "type": "integer", "minimum": 1, "maximum": 10000 },
+    "samples": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 10001,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["timeSeconds", "angleRadians", "angularVelocityRadiansPerSecond", "bobPositionMeters", "specificEnergySquareMetersPerSecondSquared"],
+        "properties": {
+          "timeSeconds": { "type": "number", "minimum": 0 },
+          "angleRadians": { "type": "number" },
+          "angularVelocityRadiansPerSecond": { "type": "number" },
+          "bobPositionMeters": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "type": "number" } },
+          "specificEnergySquareMetersPerSecondSquared": { "type": "number", "minimum": 0 }
+        }
+      }
+    }
+  }
+}

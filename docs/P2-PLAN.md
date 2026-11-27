@@ -1,6 +1,6 @@
 # P2 — Motion design and specialist rendering
 
-Last updated 2026-11-26
+Last updated 2026-11-27
 
 Build on the canonical Project Graph, retained snapshots, Creative Host and verified media delivery. Keep each increment independently testable and leave the default renderer in place. A Host currently selects one renderer at launch and the timeline's visual clips are still PNGs. Single-shot rendering and multi-engine editing therefore have separate milestones. [Engine boundary](P1.5-PLAN.md#engine-boundary) · [Timeline editing](P1.3-PLAN.md#b--timeline-editing).
 
@@ -194,8 +194,8 @@ CI publishes `three-host-delivery-evidence` with three MP4s, nine PNGs, three sn
 | Step | Status | Completion evidence |
 | --- | --- | --- |
 | A — Physical model | Implemented | Strict SI input, a nonlinear ideal pendulum, and ten verified analytic checkpoints for two rod lengths |
-| B — Retained trajectory | Next | Numerically solve both reference cases, check period and energy, and retain reproducible trajectory data |
-| C — Shared 2D and 3D samples | Planned | Both renderers consume the same retained physical samples and time mapping |
+| B — Retained trajectory | Implemented | Two retained numerical trajectories, verified periods, ten checkpoints, energy bounds and byte-identical replay after reopen |
+| C — Shared 2D and 3D samples | Next | Both renderers consume the same retained physical samples and time mapping |
 | D — Mathematics shot | Planned | Make the Manim shot from the same model and reference timing |
 | E — Time alignment | Planned | Verify that the rendered motion and mathematics track the same events |
 
@@ -227,3 +227,17 @@ npm run accept:p2-3-a
 ```
 
 CI publishes `pendulum-physics-contract-evidence` with the reference, model schema and executable verification. A does not integrate, retain a trajectory or render media. For B the fixture requires period error at most 1 ms, checkpoint errors at most 0.0001 rad and 0.0001 rad/s, and relative specific-energy drift at most 0.00001 for these nonzero-energy reference cases. Measure a full cycle from the solved motion and compare states at the reference times. The nominal indices alone are not period measurements.
+
+### B — Retained trajectory
+
+Solver `pendulum-rk4` version 1.0.0 uses classical fourth-order Runge–Kutta on A's nonlinear equations. It takes an SI model and an explicit step size and count. Each reference case runs for 960 steps of 1/240 s and retains 961 samples, including time zero and 4 s. Four seconds covers at least two rightward bottom crossings in both cases. The solver receives neither a reference period nor an editorial clock. The v1 solver bounds its step count to 10,000 and requires `0 < h sqrt(g/L) <= 0.1` to resolve the natural time scale. [Solver](../src/platform/pendulum-trajectory.ts) · [Trajectory schema](../schemas/pendulum-trajectory.schema.json).
+
+Each time-stamped sample stores angle, angular velocity, bob position and specific mechanical energy. Same-direction zero crossings are measured from neighboring retained samples, and time differences between them give the observed period. The acceptance compares the ten analytic checkpoints at their exact reference times using cubic Hermite interpolation of angle and angular velocity. It independently recomputes energy and checks the rod length at every retained sample against the physical model. [Acceptance](../scripts/pendulum-trajectory-acceptance.ts).
+
+A data-only Project Graph snapshot binds the two content-addressed JSON artifacts. The test removes the working project's references, reopens the workspace and confirms garbage collection retains the snapshot's data but removes an unreferenced control blob. It checks the original SHA-256 identities and verifies byte-identical re-solving for the same input, solver and runtime. No rendered scenes or media are produced. C will map video frames to physical seconds and use the same retained data in both renderers.
+
+```sh
+npm run accept:p2-3-b
+```
+
+CI publishes `pendulum-trajectory-evidence` with both JSON trajectories, the data snapshot and a report of periods, checkpoints, drift and retention.

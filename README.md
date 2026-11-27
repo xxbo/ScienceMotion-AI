@@ -155,6 +155,8 @@ Creative Host can opt into `SvgFfmpegProjectGraphRenderer` for a single shot of 
 
 `npm run accept:p2-3-a` validates the renderer-neutral SI model for an ideal pendulum and checks ten analytic checkpoints across two rod lengths. It distinguishes the nonlinear period from the small-angle approximation. CI publishes `pendulum-physics-contract-evidence`. No trajectory or video is produced in this step. [P2.3-A physical model](docs/P2-PLAN.md#a--physical-model).
 
+`npm run accept:p2-3-b` integrates both SI pendulum cases and retains 961 samples per case. It measures periods from the solved motion and verifies checkpoint accuracy, energy drift and snapshot-bound artifact recovery. CI publishes `pendulum-trajectory-evidence`. [P2.3-B retained trajectory](docs/P2-PLAN.md#b--retained-trajectory).
+
 ## Design and documentation
 
 Content generation and rendering remain independent. Creative tools share the canonical Project Graph; renderers interpret approved data without rewriting meaning. Track executable tools, catalogue entries and visually verified outputs separately.

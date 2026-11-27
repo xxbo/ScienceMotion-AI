@@ -183,6 +183,18 @@ jobs:
           path: out/pendulum-physics-contract/
           if-no-files-found: error
 
+      - name: Verify retained nonlinear pendulum trajectories
+        id: pendulum-trajectory
+        run: npm run accept:p2-3-b
+
+      - name: Upload pendulum trajectory evidence
+        if: ${{ !cancelled() && (steps.pendulum-trajectory.outcome == 'success' || steps.pendulum-trajectory.outcome == 'failure') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: pendulum-trajectory-evidence
+          path: out/pendulum-trajectory/
+          if-no-files-found: error
+
       - name: Verify bounded planning through a saved and reopened draft
         id: planning-run
         run: npm run accept:p1-4-b
