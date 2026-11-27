@@ -8,7 +8,7 @@ import { PNG } from "pngjs";
 import reference from "../examples/pendulum-physics-reference.json";
 import { preparePendulumMathShot } from "../src/platform/pendulum-math-shot";
 import { decodePendulumTrajectory } from "../src/platform/pendulum-trajectory-artifact";
-import { hashProject, type ProjectSnapshot } from "../src/platform/project-snapshots";
+import { InMemorySnapshotStore } from "../src/platform/project-snapshots";
 import { createPendulumReplayProject, replayProfile as profile, replayRange as range, replaySceneId, replaySnapshotId } from "./fixtures/pendulum-replay-project";
 import { readRetainedLongPendulum } from "./fixtures/pendulum-retained-source";
 
@@ -83,8 +83,7 @@ try {
   const { bytes, identity } = await readRetainedLongPendulum(checkout);
   evidence.source = identity;
   const project = createPendulumReplayProject(identity.contentHash);
-  const snapshot: ProjectSnapshot = { schemaVersion: "1.0.0", id: replaySnapshotId, projectId: project.project.id,
-    createdAt: project.project.createdAt, contentHash: hashProject(project), document: project };
+  const snapshot = new InMemorySnapshotStore().save(project, { id: replaySnapshotId, createdAt: project.project.createdAt });
   const revisionId = project.revisions.at(-1)!.id;
   evidence.snapshot = { id: snapshot.id, revisionId, contentHash: snapshot.contentHash };
   const shot = preparePendulumMathShot({ project, revisionId, snapshotHash: snapshot.contentHash,

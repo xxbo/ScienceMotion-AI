@@ -97,7 +97,8 @@ P1.1's engineering gates have evidence; full visual closure is deferred to the f
 | 16b — implemented | P2.3-B retained trajectory | Solve both reference cases, check measured period, pose and energy, and verify two content-addressed trajectories survive reopen |
 | 16c — implemented | P2.3-C shared 2D and 3D samples | Replay one retained trajectory in Remotion and Three.js and verify each decoded pose against its source frame time |
 | 16d — implemented | P2.3-D mathematics shot | Render the nonlinear equation and measured period with a Manim angle plot driven by the same retained samples and clock |
-| 16e — next implementation | P2.3-E time alignment | Verify the same events in the decoded Remotion, Three.js and Manim views |
+| 16e — implemented | P2.3-E time alignment | Verify five visible events and one full cycle across three independently decoded views within one 25 fps frame |
+| 17a — next implementation | P2.4-A retained shot segments | Define the retained shot segment contract for multi-engine editing |
 | Final acceptance workstream — deferred | Consolidated human effect review | Review both P1.1 fixtures and representative later outputs, record defects/fixes and final reviewed main evidence |
 
 Land each verified increment independently. I2 is a bounded measurement feature, not a new Studio UI or a general autonomous video critic. Additional infrastructure needs an acceptance case that depends on it.
@@ -173,7 +174,7 @@ Project/plugin operation remains trusted and single-writer. The [P1.2 first slic
 | P1.3 | A–F implemented, including an integrated short with inspection, targeted repair, export and recovery. [P1.3 plan](P1.3-PLAN.md) |
 | P1.4 | A–C deliver proposal preflight, bounded execution and inspection-driven repair. D–E cover delivery checks and end-to-end acceptance. [P1.4 plan](P1.4-PLAN.md) |
 | P1.5 | A–D implemented, with cross-plugin composition, paired engine measurements and shared snapshot delivery and recovery. [P1.5 plan](P1.5-PLAN.md) |
-| P2 | Six milestones covering motion, Three.js and cinematography, simulation and Manim, multi-engine editing, Blender and audio delivery. P2.1, P2.2 and P2.3-A–D are implemented. P2.3-E is next. [P2 plan](P2-PLAN.md) |
+| P2 | Six milestones covering motion, Three.js and cinematography, simulation and Manim, multi-engine editing, Blender and audio delivery. P2.1, P2.2 and P2.3 are implemented. P2.4-A is next. [P2 plan](P2-PLAN.md) |
 | P3 | Research/LLM/TTS/media providers, claims/sources, asset provenance and licensing |
 | P4 | Remote workers/storage, resumable/batch exports, metrics and optional Studio UI |
 

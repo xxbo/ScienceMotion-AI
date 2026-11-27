@@ -197,7 +197,7 @@ CI publishes `three-host-delivery-evidence` with three MP4s, nine PNGs, three sn
 | B — Retained trajectory | Implemented | Two retained numerical trajectories, verified periods, ten checkpoints, energy bounds and byte-identical replay after reopen |
 | C — Shared 2D and 3D samples | Implemented | Remotion and Three.js replay the same retained trajectory, with six checked previews and 89 frame pairs mapped to physical time |
 | D — Mathematics shot | Implemented | Manim shows the model, measured cycle and angle trace, with 89 checked chart frames from the same replay clock |
-| E — Time alignment | Next | Verify that the rendered motion and mathematics track the same events |
+| E — Time alignment | Implemented | Independently decode the three deliveries, match five visible events and one full cycle, and reject a three-frame timing slip |
 
 ### A — Physical model
 
@@ -272,4 +272,19 @@ python3 -m venv .venv-manim
 PENDULUM_MANIM_PYTHON=.venv-manim/bin/python npm run accept:p2-3-d
 ```
 
-CI publishes `pendulum-math-evidence` with the MP4, the three PNGs, source and snapshot JSON, Manim input, and per-frame verification. E will compare events across all three rendered views. Host integration and multi-engine editing of the Manim segment belong to P2.4.
+CI publishes `pendulum-math-evidence` with the MP4, the three PNGs, source and snapshot JSON, Manim input, and per-frame verification. Host integration and multi-engine editing of the Manim segment belong to P2.4.
+
+### E — Time alignment
+
+Verify the exact C and D deliveries from one checkout. The acceptance binds their immutable replay snapshot, revision, and B trajectory SHA-256, checks the two Creative Host receipts and Manim manifest against the three distinct MP4s, and decodes all 89 frames of each clip again. The MP4 presentation clock starts at zero, but the corresponding physical times span 0.28–3.80 s. The release at zero is outside the export and is not counted. [Input bindings](../scripts/fixtures/pendulum-alignment-inputs.ts).
+
+The two motion views recover a signed angle from the orange bob relative to the fixed pivot. The mathematics view recovers an angle from the orange chart marker's vertical coordinate and checks its horizontal time coordinate. The detector uses those decoded observations, not the renderers' per-frame reports or the expected event times. Consecutive sign changes give directed bottom crossings by linear interpolation. An 11-frame quadratic fit around each interior maximum or minimum reduces pixel quantization at the two turns. The reference comes separately from zero crossings of angle and angular velocity in the 240 Hz retained trajectory and agrees with A's analytic times within 1 ms. [Event detector](../src/platform/pendulum-event-alignment.ts).
+
+The three views must show the same five events in order, including three bottom crossings and two turns. Each event must be within one 25 fps frame (40 ms) of the reference, and the spread across views must also be at most 40 ms. The period between the two rightward crossings must meet the same limits. As a negative control, advancing just the decoded Manim angle trace by three frames must preserve the event order but fail the timing comparison. Sub-frame estimates describe the comparison, not a higher video capture rate. [Acceptance](../scripts/pendulum-alignment-acceptance.ts).
+
+```sh
+PENDULUM_MANIM_PYTHON=.venv-manim/bin/python npm run accept:p2-3-e
+npm run verify:p2-3-e  # Re-check C and D outputs from this checkout without re-rendering.
+```
+
+CI downloads the actual `pendulum-replay-evidence` and `pendulum-math-evidence` from the same run and publishes `pendulum-alignment-evidence` with the three original videos, snapshot, trajectory, decoded observations and comparison report. This closes P2.3 engineering acceptance. P2.4-A defines retained shot segments for subsequent editing. No combined cut or deferred human presentation review is delivered here. [CI workflow](../.github/workflows/video-engine.yml).
